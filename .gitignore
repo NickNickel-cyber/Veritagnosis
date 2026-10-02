@@ -1,0 +1,46 @@
+assets/external/
+.web
+.states
+# --- secrets: the most important lines in this file ---
+.env
+*.key
+*.pem
+
+# --- the database and anything derived from it ---
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3
+backups/
+
+# --- Reflex / Python ---
+.web/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- scratch produced while packaging; safe to delete ---
+_vgship.tgz
+*.tgz
+.last_backup_name
+_to_delete/
+reflex.lock
+
+# --- local snapshots: kept on disk, never shipped ---
+#
+# Point-in-time copies of the whole project. Useful locally and actively
+# harmful in a repository: they triple the file count, and anyone reading
+# the code (or grepping it) hits three stale copies of every module.
+_backup_*/
+design/

@@ -1,0 +1,36 @@
+# Veritagnosis dependencies.
+#
+# Versions are pinned, not floated. The app was broken once by exactly the
+# problem a floating range invites: `reflex>=0.6` resolved to a build whose
+# internals import `reflex_components_lucide`, that package was not present in
+# the interpreter actually running, and the app died at startup with a
+# ModuleNotFoundError from inside Reflex rather than from anything in this
+# repository. Pinning means the version that was tested is the version that
+# runs, on every machine, every time.
+#
+# The reflex_components_* lines are Reflex's own plugin packages. Reflex pulls
+# them in itself, so naming them here is belt and braces — but they are the
+# precise thing that went missing, and an explicit pin makes a partial or
+# interrupted install visible to pip instead of at startup.
+#
+# To move to a newer Reflex: change the versions here, run the test suite
+# (python -m pytest), and run `python start.py` once to confirm the frontend
+# still builds. Do not loosen the pins.
+
+# --- app framework ---
+reflex==0.9.9
+reflex-components-lucide==1.0.4
+reflex-components-radix==0.9.8
+reflex-components-core==0.9.9
+
+# --- security ---
+argon2-cffi==25.1.0        # Argon2id password hashing (OWASP first choice)
+cryptography==50.0.1       # AES-256-GCM field encryption
+python-dotenv==1.2.3       # load secrets from .env, never from source
+
+# --- data ---
+sqlmodel==0.0.42           # SQLAlchemy + Pydantic; parameterised queries by default
+
+# --- optional: whole-file SQLite encryption ---
+# Prebuilt wheels including Windows, so no compiler needed.
+# sqlcipher3-binary>=0.5

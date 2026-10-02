@@ -1,0 +1,7 @@
+# Everything in requirements.txt, plus the test tooling.
+#
+# Kept separate so a client running the app does not install a test runner,
+# and so `python start.py` stays as small as it can be.
+-r requirements.txt
+
+pytest==9.1.1
