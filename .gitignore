@@ -44,3 +44,4 @@ reflex.lock
 # the code (or grepping it) hits three stale copies of every module.
 _backup_*/
 design/
+*.bundle
