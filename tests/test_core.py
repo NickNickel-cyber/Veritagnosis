@@ -775,7 +775,11 @@ def test_the_profile_screen_survives_an_unreadable_profile():
         def _analyse(self, _uid): pass
 
     f = _Fake()
-    asyncio.get_event_loop().run_until_complete(ProfileState.load.fn(f))
+    # asyncio.run, not get_event_loop: the latter is deprecated, and it
+    # depends on global loop state that any earlier test using asyncio.run
+    # will have torn down — which made this test pass or fail depending on
+    # what ran before it.
+    asyncio.run(ProfileState.load.fn(f))
     assert f.load_error, "an unreadable profile produced no explanation"
     assert f.career_interest == ""
 
