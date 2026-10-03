@@ -409,12 +409,22 @@ class VersionRow:
 
 @dataclasses.dataclass
 class PromptRow:
+    """One prompt in the chooser.
+
+    `short` used to be the only thing rendered — the first 78 characters of a
+    prompt, followed by an ellipsis. A student cannot choose between eleven
+    essay prompts by reading the first 78 characters of each, which is most of
+    why the old picker was useless as well as ugly. The full text and the
+    coaching note are both carried now, and the chooser shows them.
+    """
+
     key: str
     text: str
     note: str
     words: int
     short: str
     picked: bool
+    group: str      # "Common App" | "Supplemental"
 
 
 @dataclasses.dataclass
@@ -604,7 +614,9 @@ class EssayState(FeatureState, rx.State):
 
     @rx.var
     def step_of(self) -> str:
-        return f"Step {min(self.step + 1, len(STEPS))} of {len(STEPS)}"
+        # "Tip", not "Step". These six are writing advice, and calling them
+        # steps implied a process you could be behind on.
+        return f"Tip {min(self.step + 1, len(STEPS))} of {len(STEPS)}"
 
     @rx.var(deps=["stat_words", "word_target"])
     def target_percent(self) -> int:
@@ -663,13 +675,20 @@ class EssayState(FeatureState, rx.State):
 
     @rx.var
     def prompt_list(self) -> list[PromptRow]:
+        common = {p["key"] for p in promptlib.COMMON_APP}
         return [
             PromptRow(key=p["key"], text=p["text"], note=p["note"],
                       words=p["words"],
                       short=(p["text"][:78] + "…") if len(p["text"]) > 78 else p["text"],
-                      picked=self.prompt.strip() == p["text"])
+                      picked=self.prompt.strip() == p["text"],
+                      group="Common App" if p["key"] in common else "Supplemental")
             for p in promptlib.ALL
         ]
+
+    @rx.var(deps=["prompt"])
+    def prompt_words_hint(self) -> str:
+        p = promptlib.find(self.prompt)
+        return f"{p['words']}-word limit" if p else ""
 
     # --------------------------------------------------- the coach panel
     @rx.event
@@ -1168,6 +1187,15 @@ class EssayState(FeatureState, rx.State):
     @rx.event
     def toggle_prompts(self):
         self.show_prompts = not self.show_prompts
+
+    @rx.event
+    def open_prompts(self):
+        self.show_prompts = True
+        self.coach_open = False      # the drawer would sit on top of the modal
+
+    @rx.event
+    def close_prompts(self):
+        self.show_prompts = False
 
     @rx.event
     async def pick_prompt(self, key: str):

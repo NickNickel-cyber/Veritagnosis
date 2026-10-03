@@ -254,8 +254,9 @@ class AidState(FeatureState, rx.State):
         with db.get_session() as s:
             schools = list(s.exec(
                 select(School).where(School.user_id == self.owner_id)).all())
-
-        rows = fafsa.price_your_list(r, schools)
+            # Inside the session: pricing now consults the imported College
+            # Scorecard catalogue for any school not in the curated file.
+            rows = fafsa.price_your_list(r, schools, s)
         priced = [e for e in rows if e.has_cost]
         cheapest = priced[0].name if priced else ""
         return [

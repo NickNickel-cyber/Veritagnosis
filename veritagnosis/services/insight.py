@@ -23,6 +23,7 @@ from veritagnosis.models import (
     utcnow,
 )
 from veritagnosis.content.colleges import BY_NAME, COLLEGES, COVERAGE_NOTE
+from veritagnosis.services import catalog
 from veritagnosis.models import School, TestScore, Tier, User
 import json
 from datetime import timedelta
@@ -707,9 +708,17 @@ def classify(college: dict, stats: dict) -> tuple[str | None, str]:
     return tier, f"{stand[0].sentence} Their admit rate is {rate}%."
 
 
-def for_school(school: School, stats: dict) -> Fit:
-    """Measure one school on the student's list."""
-    entry = BY_NAME.get((school.name or "").strip().lower())
+def for_school(school: School, stats: dict, session: Session | None = None) -> Fit:
+    """Measure one school on the student's list.
+
+    `session` is optional so the two dozen curated colleges still work with no
+    database at all (and so the existing tests keep calling this with two
+    arguments). When it is supplied, a school that is not in the curated file
+    is looked up in the imported College Scorecard catalogue instead of being
+    reported as "no data" — which, before the import existed, was the answer
+    for almost every school a real student actually types.
+    """
+    entry = catalog.lookup(session, school.name or "")
     student_tier = school.tier.value if hasattr(school.tier, "value") else str(school.tier)
 
     if entry is None:
@@ -758,7 +767,8 @@ def review(uid: int) -> dict:
     with db.get_session() as s:
         schools = list(s.exec(select(School).where(School.user_id == uid)).all())
 
-    fits = [for_school(sc, stats) for sc in schools]
+    with db.get_session() as s:
+        fits = [for_school(sc, stats, s) for sc in schools]
     known = [f for f in fits if f.has_data and f.data_tier]
 
     by_tier = {"reach": 0, "target": 0, "safety": 0}

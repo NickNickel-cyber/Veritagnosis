@@ -986,3 +986,134 @@ def test_a_reroll_never_repeats_the_line_already_showing():
         src = _source(path)
         assert "!= self.quote_text" in src or "q[0] != self.quote_text" in src, (
             f"{path} can reroll to the quote already on screen")
+
+
+# ------------------------------------------------------- today's one task
+#
+# The home screen used to tell every student, forever, to "Start essay draft
+# for NYU application". NYU came from the wireframe. The branch that produced
+# it fired whenever an unfinished essay row existed, which is always, because
+# opening the essay screen creates one. A student whose list is Rutgers and
+# TCNJ was told to work on NYU.
+#
+# The first test is the one that matters: the task may only ever name a school
+# this student actually typed.
+
+def _task_school(db, uid, name, **kw):
+    from veritagnosis.models import School
+    row = School(user_id=uid, name=name, **kw)
+    db.add(row); db.commit(); db.refresh(row)
+    return row
+
+
+def _task_essay(db, uid, school_id=None, body="", target=650):
+    from veritagnosis.models import Essay
+    row = Essay(user_id=uid, school_id=school_id, prompt="p",
+                body=body, word_target=target)
+    db.add(row); db.commit(); db.refresh(row)
+    return row
+
+
+def test_the_task_never_names_a_school_the_student_does_not_have(db):
+    """The actual regression. Any invented name fails this."""
+    from veritagnosis.services import apply as progress
+    uid = auth.register(db, "nick", "Str0ng-Pass!42",
+                        email="nick@example.com").id
+    mine = {"Rutgers", "TCNJ"}
+    _task_school(db, uid, "Rutgers")
+    _task_school(db, uid, "TCNJ")
+    _task_essay(db, uid)                      # the row the essay screen creates
+
+    t = progress.next_task(db, uid)
+    named = {w for w in mine if w in t.title}
+    foreign = [n for n in ("NYU", "UMich", "UCLA", "Harvard", "Stanford")
+               if n in t.title]
+    assert not foreign, f"invented a school: {t.title!r}"
+    assert t.title and t.route.startswith("/")
+
+
+def test_an_empty_list_asks_for_a_college_first(db):
+    from veritagnosis.services import apply as progress
+    uid = auth.register(db, "nick", "Str0ng-Pass!42",
+                        email="nick@example.com").id
+    t = progress.next_task(db, uid)
+    assert "first college" in t.title.lower()
+    assert t.route == "/applications"
+
+
+def test_a_deadline_inside_two_weeks_outranks_everything(db):
+    from datetime import timedelta
+    from veritagnosis.models import utcnow
+    from veritagnosis.services import apply as progress
+    uid = auth.register(db, "nick", "Str0ng-Pass!42",
+                        email="nick@example.com").id
+    _task_school(db, uid, "Faraway")
+    soon = _task_school(db, uid, "Rutgers", deadline=utcnow() + timedelta(days=3))
+    _task_essay(db, uid, school_id=soon.id)
+
+    t = progress.next_task(db, uid)
+    assert "Rutgers" in t.title
+    assert "3 days left" in t.title
+
+
+def test_a_blank_essay_is_the_task_when_no_deadline_is_close(db):
+    from veritagnosis.services import apply as progress
+    uid = auth.register(db, "nick", "Str0ng-Pass!42",
+                        email="nick@example.com").id
+    s = _task_school(db, uid, "TCNJ")
+    _task_essay(db, uid, school_id=s.id, body="")
+    t = progress.next_task(db, uid)
+    assert "TCNJ" in t.title and "Start" in t.title
+    assert t.route == "/essays"
+
+
+def test_a_short_essay_reports_its_real_word_counts(db):
+    """No invented numbers: the meta line must be arithmetic on the draft."""
+    from veritagnosis.services import apply as progress
+    uid = auth.register(db, "nick", "Str0ng-Pass!42",
+                        email="nick@example.com").id
+    s = _task_school(db, uid, "TCNJ")
+    _task_essay(db, uid, school_id=s.id, body=" ".join(["word"] * 120), target=650)
+    t = progress.next_task(db, uid)
+    assert "TCNJ" in t.title
+    assert "120 of 650 words" in t.meta
+    assert "530 to go" in t.meta
+
+
+def test_the_task_carries_no_invented_xp_or_step_counts(db):
+    """'~47 xp' and 'Due in 3 steps' were both made up."""
+    import re
+    from veritagnosis.services import apply as progress
+    uid = auth.register(db, "nick", "Str0ng-Pass!42",
+                        email="nick@example.com").id
+    _task_school(db, uid, "Rutgers")
+    _task_essay(db, uid)
+    for _ in range(2):
+        t = progress.next_task(db, uid)
+        assert "xp" not in t.meta.lower(), f"invented xp: {t.meta!r}"
+        assert not re.search(r"\bin \d+ steps\b", t.meta), t.meta
+
+
+def test_everything_submitted_says_so_instead_of_inventing_work(db):
+    from veritagnosis.models import AppStatus
+    from veritagnosis.services import apply as progress
+    uid = auth.register(db, "nick", "Str0ng-Pass!42",
+                        email="nick@example.com").id
+    s = _task_school(db, uid, "Rutgers")
+    s.status = AppStatus.submitted
+    db.add(s); db.commit()
+    t = progress.next_task(db, uid)
+    assert "every application is in" in t.title.lower()
+
+
+def test_the_task_is_stable_and_never_raises_on_odd_data(db):
+    """Runs on every home load, so it must not be the thing that breaks it."""
+    from veritagnosis.services import apply as progress
+    uid = auth.register(db, "nick", "Str0ng-Pass!42",
+                        email="nick@example.com").id
+    _task_school(db, uid, "")                      # blank name
+    _task_essay(db, uid, school_id=None, body=None, target=0)
+    t = progress.next_task(db, uid)
+    assert isinstance(t.title, str) and t.title
+
+

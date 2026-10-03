@@ -208,6 +208,85 @@ class LoginChallenge(SQLModel, table=True):
                 and self.attempts < 5)
 
 
+
+class College(SQLModel, table=True):
+    """One institution, imported from the federal College Scorecard.
+
+    Why a table and not another Python list
+    ---------------------------------------
+    content/colleges.py holds two dozen colleges read by hand out of each
+    institution's own Common Data Set. That file is the right shape for data
+    somebody curates: it carries a source URL and a confidence per entry, and a
+    human can see the whole thing.
+
+    It is the wrong shape for every college in the country. There are about
+    6,500, a student's actual list is mostly not in the curated two dozen, and
+    nobody is going to hand-check six thousand entries — so those come from the
+    US Department of Education's College Scorecard and live here, where they can
+    be searched with a query instead of a linear scan through a module.
+
+    Both are kept. A lookup prefers the curated entry when one exists, because
+    a number read out of the institution's own CDS beats the same number
+    averaged into a federal release a year later. Scorecard rows are marked
+    `confidence="medium"` for exactly that reason, and they carry the real
+    Scorecard URL for the institution so the screen can still answer "where did
+    this come from".
+
+    Field names match the curated dicts on purpose, so insight.py and money.py
+    treat the two sources identically.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+
+    # The Scorecard's stable institution id. Unique, so a re-import updates
+    # rows in place rather than doubling the table.
+    unitid: int = Field(index=True, unique=True)
+
+    name: str = Field(index=True, max_length=200)
+    # Lowercased name, for case-insensitive matching without a function index
+    # (SQLite will not use an index for lower(name)).
+    name_key: str = Field(index=True, max_length=200)
+    state: str = Field(default="", max_length=2, index=True)
+    city: str = Field(default="", max_length=120)
+    control: str = Field(default="", max_length=20)   # public | private | for-profit
+
+    accept_rate: float | None = None      # percent, 0-100, to match the curated set
+    sat_25: int | None = None
+    sat_75: int | None = None
+    act_25: int | None = None
+    act_75: int | None = None
+
+    cost_year: int | None = None          # average total annual cost
+    tuition_in: int | None = None
+    tuition_out: int | None = None
+    net_price: int | None = None          # average net price after aid
+    size: int | None = None               # undergraduate enrolment
+
+    data_year: str = Field(default="", max_length=16)
+    source_url: str = Field(default="", max_length=300)
+    source_kind: str = Field(default="college_scorecard", max_length=40)
+    confidence: str = Field(default="medium", max_length=10)
+    test_optional_note: str | None = Field(default=None, max_length=300)
+
+    def as_dict(self) -> dict:
+        """The same shape content/colleges.py uses, so callers need no branch."""
+        return {
+            "name": self.name, "state": self.state, "city": self.city,
+            "control": self.control,
+            "accept_rate": self.accept_rate,
+            "sat_25": self.sat_25, "sat_75": self.sat_75,
+            "act_25": self.act_25, "act_75": self.act_75,
+            "gpa_375_plus_pct": None,     # the Scorecard does not publish this
+            "cost_year": self.cost_year,
+            "tuition_in": self.tuition_in, "tuition_out": self.tuition_out,
+            "net_price": self.net_price, "size": self.size,
+            "data_year": self.data_year, "source_url": self.source_url,
+            "source_kind": self.source_kind, "confidence": self.confidence,
+            "test_optional_note": self.test_optional_note,
+            "note": "",
+        }
+
+
 class School(SQLModel, table=True):
     """One college on the list. The wireframe groups these into Safety / Reach
     columns, which is what `tier` drives."""

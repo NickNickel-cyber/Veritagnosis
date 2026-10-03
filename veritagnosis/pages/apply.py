@@ -298,7 +298,7 @@ def applications_page() -> rx.Component:
                     rx.box(
                         rx.el.label("School"),
                         rx.el.input(class_name="input", name="name",
-                                    placeholder="NYU"),
+                                    placeholder="Type a college name"),
                         class_name="field",
                     ),
                     rx.box(
@@ -435,12 +435,71 @@ def _version(v) -> rx.Component:
 
 
 def _prompt_row(p) -> rx.Component:
+    """One prompt, readable.
+
+    The whole prompt, the word limit, and the one line of advice about what
+    that prompt tends to do to a draft. A student choosing between eleven of
+    these is making a real decision and needs the actual words to make it.
+    """
     return rx.el.button(
-        rx.box(p.short, class_name="pr-text"),
-        rx.box(p.words, " words", class_name="pr-words"),
+        rx.box(
+            rx.el.span(p.words, " words", class_name="pr-words"),
+            rx.cond(p.picked,
+                    rx.el.span("Current", class_name="pr-current"),
+                    rx.fragment()),
+            class_name="pr-tags",
+        ),
+        rx.box(p.text, class_name="pr-text"),
+        rx.box(p.note, class_name="pr-note"),
         type="button", class_name="pr",
         custom_attrs={"aria-pressed": p.picked},
         on_click=EssayState.pick_prompt(p.key),
+    )
+
+
+def _prompt_picker() -> rx.Component:
+    """The chooser, as a modal.
+
+    It used to be an inline list that unrolled underneath everything else:
+    click "change prompt" and eleven truncated rows appeared below the fold,
+    pushing the page down, with no indication that was what the click did. On a
+    narrow screen the coach panel is stacked under the editor, so they appeared
+    at the very bottom — which is how this was reported, and fairly.
+
+    A modal is the right shape because choosing a prompt is modal in the real
+    sense: it is one decision, it is the only thing you are doing while you do
+    it, and it ends. The backdrop is a sibling rather than a parent so that
+    clicking the dialog cannot bubble up and dismiss it.
+    """
+    return rx.cond(
+        EssayState.show_prompts,
+        rx.fragment(
+            rx.box(class_name="pp-backdrop",
+                   on_click=EssayState.close_prompts),
+            rx.box(
+                rx.box(
+                    rx.box(
+                        rx.heading("Choose your prompt", size="4"),
+                        rx.text("You can change this later — it does not delete "
+                                "your draft.", class_name="faint tiny"),
+                        class_name="pp-head-text",
+                    ),
+                    rx.spacer(),
+                    rx.el.button("✕", type="button", class_name="pp-close",
+                                 id="vg-prompt-close",
+                                 custom_attrs={"aria-label": "Close"},
+                                 on_click=EssayState.close_prompts),
+                    class_name="pp-head",
+                ),
+                rx.box(
+                    rx.foreach(EssayState.prompt_list, _prompt_row),
+                    class_name="pp-body",
+                ),
+                class_name="pp-modal", id="vg-prompt-modal",
+                custom_attrs={"role": "dialog", "aria-modal": "true"},
+            ),
+        ),
+        rx.fragment(),
     )
 
 
@@ -454,14 +513,11 @@ def _toolbar() -> rx.Component:
         rx.el.button(rx.el.span("◱ Focus", class_name="lbl"),
                      type="button", id="vg-focus", class_name="btn btn-ghost",
                      title="Hide everything but the words. Escape to leave."),
-        rx.el.button("💾 Save version", type="button", class_name="btn btn-ghost",
-                     on_click=EssayState.snapshot,
-                     title="Keep this draft so you can come back to it"),
-        rx.el.button(
-            rx.cond(EssayState.show_versions, "Hide versions",
-                    "🕘 Versions (" + EssayState.versions.length().to_string() + ")"),
-            type="button", class_name="btn btn-ghost",
-            on_click=EssayState.toggle_versions),
+        # "Save version" and "Versions" used to live here. They are about the
+        # history of the draft, not about writing it, and the Draft Journey
+        # section below already has both — so this toolbar went from seven
+        # controls to four. Fifteen buttons around a text box is the reason a
+        # student does not start typing.
         rx.spacer(),
         rx.el.span("Sprint", class_name="faint tiny"),
         *[
@@ -492,6 +548,9 @@ def _editor() -> rx.Component:
     the right — or the same words marked up, or the outline."""
     return rx.box(
         rx.box(
+            # Four unexplained emoji down the side of a text box look like
+            # decoration, so nobody touched them. The label says what they are.
+            rx.el.span("How's it going?", class_name="rx-label"),
             *[
                 rx.el.button(
                     emoji, type="button", title=label,
@@ -888,23 +947,36 @@ def _pane_structure() -> rx.Component:
 
 
 def _pane_prompt() -> rx.Component:
+    """What you are answering, and the advice that comes with it.
+
+    The chooser is a modal (see _prompt_picker) rather than a list that unrolls
+    inside this panel — eleven prompts pushed everything else off the screen,
+    and on a narrow layout they landed at the very bottom of the page.
+    """
     return rx.box(
+        rx.box(
+            rx.el.span("You are answering", class_name="pane-h"),
+            rx.cond(
+                EssayState.prompt_words_hint != "",
+                rx.el.span(EssayState.prompt_words_hint, class_name="pq-limit"),
+                rx.fragment(),
+            ),
+            class_name="pq-head-row",
+        ),
         rx.box(EssayState.prompt, class_name="pq-full"),
         rx.cond(
             EssayState.prompt_note != "",
-            rx.text(EssayState.prompt_note, class_name="faint pq-note"),
+            rx.box(
+                rx.el.span("Watch out for", class_name="pq-note-tag"),
+                rx.text(EssayState.prompt_note),
+                class_name="pq-advice",
+            ),
             rx.fragment(),
         ),
-        rx.el.button(
-            rx.cond(EssayState.show_prompts, "Close the list", "Change prompt"),
-            type="button", class_name="btn btn-ghost",
-            on_click=EssayState.toggle_prompts),
-        rx.cond(
-            EssayState.show_prompts,
-            rx.box(rx.foreach(EssayState.prompt_list, _prompt_row),
-                   class_name="pr-list"),
-            rx.fragment(),
-        ),
+        rx.el.button("Choose a different prompt", type="button",
+                     class_name="btn btn-secondary",
+                     style={"width": "100%"},
+                     on_click=EssayState.open_prompts),
         class_name="pane",
     )
 
@@ -918,6 +990,19 @@ def _coach_panel() -> rx.Component:
             rx.box(
                 rx.text(EssayState.coach_says, class_name="says"),
                 rx.text(EssayState.coach_hint, class_name="hint"),
+                # These two walk the six writing tips. They belong here, beside
+                # the tip, rather than beside Save where the forward one looked
+                # like "I have finished my essay".
+                rx.box(
+                    rx.el.button("←", type="button", class_name="tip-nav",
+                                 custom_attrs={"aria-label": "Previous tip"},
+                                 on_click=EssayState.back_step),
+                    rx.el.span(EssayState.step_of, class_name="tip-of"),
+                    rx.el.button("Next tip →", type="button",
+                                 class_name="tip-nav tip-next",
+                                 on_click=EssayState.next_step),
+                    class_name="tip-row",
+                ),
                 class_name="bubble",
             ),
             class_name="coach",
@@ -926,10 +1011,12 @@ def _coach_panel() -> rx.Component:
         _next_best_edit(),
 
         rx.box(
-            _tab("overview", "Overview"),
-            _tab("problems", "Problems", EssayState.total_issues),
-            _tab("strengths", "Strengths", EssayState.strengths.length()),
-            _tab("structure", "Structure", EssayState.story_done),
+            # "Overview", "Problems", "Strengths", "Structure" are the words a
+            # teacher would use. These are the words the student would.
+            _tab("overview", "Score"),
+            _tab("problems", "Fixes", EssayState.total_issues),
+            _tab("strengths", "Working", EssayState.strengths.length()),
+            _tab("structure", "Story", EssayState.story_done),
             _tab("prompt", "Prompt"),
             class_name="ct-row",
         ),
@@ -1033,7 +1120,7 @@ def essays_page() -> rx.Component:
                 rx.el.span(EssayState.prompt, class_name="pq-text"),
                 rx.spacer(),
                 rx.el.button("Change", type="button", class_name="mini",
-                             on_click=EssayState.set_coach_tab("prompt")),
+                             on_click=EssayState.open_prompts),
                 class_name="lab-prompt",
             ),
 
@@ -1055,11 +1142,11 @@ def essays_page() -> rx.Component:
                                 "data-target": EssayState.word_target.to_string(),
                             }),
                         rx.spacer(),
-                        rx.el.button("← Back a step", class_name="btn btn-ghost",
-                                     type="button", on_click=EssayState.back_step),
-                        rx.el.button("I'm done!", class_name="btn btn-secondary",
-                                     type="button", on_click=EssayState.next_step),
-                        rx.spacer(),
+                        # The step buttons used to be here, and the forward one
+                        # was labelled "I'm done!". It does not finish the
+                        # essay — it advances a coaching tip — but sitting
+                        # beside Save it read as submitting the thing. Moved
+                        # next to the tip it actually controls.
                         rx.el.button("Save", class_name="btn btn-primary",
                                      type="button", id="vg-save",
                                      on_click=EssayState.save),
@@ -1072,6 +1159,7 @@ def essays_page() -> rx.Component:
             ),
 
             _journey(),
+            _prompt_picker(),
 
             rx.script(src="/essay.js"),
             rx.script(src="/lab.js"),

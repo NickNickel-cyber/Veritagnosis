@@ -374,7 +374,7 @@ class RealEstimate:
     has_cost: bool
 
 
-def price_your_list(result: "Result", schools) -> list[RealEstimate]:
+def price_your_list(result: "Result", schools, session=None) -> list[RealEstimate]:
     """Run the SAI against the student's actual colleges.
 
     `schools` is any iterable of objects with a `.name`. Colleges we have no
@@ -386,11 +386,13 @@ def price_your_list(result: "Result", schools) -> list[RealEstimate]:
     expensive college that meets full need routinely costs a family less than
     a cheap one that does not.
     """
-    from veritagnosis.content.colleges import BY_NAME
+    from veritagnosis.services import catalog
 
     out: list[RealEstimate] = []
     for sc in schools:
-        entry = BY_NAME.get((getattr(sc, "name", "") or "").strip().lower())
+        # Curated first, then the imported Scorecard catalogue. `session` is
+        # optional so this still works with only the curated file.
+        entry = catalog.lookup(session, getattr(sc, "name", "") or "")
         if entry is None or not entry.get("cost_year"):
             out.append(RealEstimate(
                 name=getattr(sc, "name", ""), cost=0, need=0, pell=0,

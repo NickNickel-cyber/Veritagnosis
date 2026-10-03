@@ -2590,3 +2590,109 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 .demo-note{font-size:var(--fs-xs);line-height:1.5;color:var(--warn-ink)}
 .demo-banner.demo-slim{padding:var(--s3) var(--s4)}
 .demo-banner.demo-slim .demo-note{margin-top:var(--s2)}
+
+/* ======================================================================
+   THE PROMPT CHOOSER
+
+   Was an inline list that unrolled below the coach panel: eleven rows, each
+   truncated to 78 characters, appearing under the fold with no sign that
+   the click had done anything. On a stacked layout they landed at the very
+   bottom of the page.
+
+   Now a modal, because choosing a prompt is one decision that ends. The
+   backdrop is a SIBLING of the dialog, not its parent, so a click on the
+   dialog cannot bubble up and dismiss it — which is the usual bug in
+   hand-rolled modals.
+   ====================================================================== */
+.pp-backdrop{position:fixed;inset:0;z-index:90;
+  background:color-mix(in srgb,var(--bg) 70%,transparent);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+
+.pp-modal{position:fixed;z-index:91;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:min(680px,calc(100vw - 2*var(--s4)));
+  max-height:min(80vh,760px);display:flex;flex-direction:column;
+  background:var(--surface);border:1px solid var(--border-strong);
+  border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden}
+
+.pp-head{display:flex;align-items:flex-start;gap:var(--s3);
+  padding:var(--s4) var(--s5);border-bottom:1px solid var(--border);
+  background:var(--surface-2);flex:none}
+.pp-head-text{min-width:0}
+.pp-close{flex:none;width:32px;height:32px;border-radius:var(--r-full);
+  border:1px solid var(--border);background:var(--surface);cursor:pointer;
+  font-family:inherit;font-size:var(--fs-sm);color:var(--text-dim);
+  display:flex;align-items:center;justify-content:center}
+.pp-close:hover{background:var(--surface-3);color:var(--text)}
+
+/* The list scrolls inside the dialog, so the page behind never moves. */
+.pp-body{flex:1;min-height:0;overflow-y:auto;padding:var(--s4) var(--s5) var(--s5);
+  display:flex;flex-direction:column;gap:var(--s3);overscroll-behavior:contain}
+
+/* one prompt */
+.pr{display:block;width:100%;text-align:left;cursor:pointer;
+  padding:var(--s4);border-radius:var(--r-md);background:var(--surface-2);
+  border:1px solid var(--border);font-family:inherit;color:var(--text);
+  transition:border-color var(--dur) var(--ease),background var(--dur) var(--ease)}
+.pr:hover{border-color:var(--accent);background:var(--surface)}
+.pr[aria-pressed="true"]{border-color:var(--accent);border-width:2px;
+  background:var(--accent-soft)}
+.pr-tags{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s2)}
+.pr-words{font-size:var(--fs-xs);font-weight:700;color:var(--text-faint);
+  padding:2px 8px;border-radius:var(--r-full);background:var(--surface-3)}
+.pr-current{font-size:var(--fs-xs);font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;padding:2px 8px;border-radius:var(--r-full);
+  background:var(--accent);color:var(--accent-text)}
+.pr-text{font-size:var(--fs-base);line-height:1.5;color:var(--text)}
+.pr-note{margin-top:var(--s2);padding-top:var(--s2);
+  border-top:1px dashed var(--border);
+  font-size:var(--fs-sm);line-height:1.5;color:var(--text-dim)}
+@media (prefers-reduced-motion:reduce){.pr{transition:none}}
+
+/* the current prompt, in the coach panel */
+.pq-head-row{display:flex;align-items:baseline;gap:var(--s2)}
+.pq-head-row .pane-h{margin-bottom:0}
+.pq-limit{margin-left:auto;font-size:var(--fs-xs);font-weight:700;
+  color:var(--text-faint);padding:2px 8px;border-radius:var(--r-full);
+  background:var(--surface-3)}
+.pq-advice{margin-top:var(--s2);padding:var(--s3);border-radius:var(--r-sm);
+  background:var(--surface-2);border-left:3px solid var(--accent);
+  font-size:var(--fs-sm);line-height:1.55;color:var(--text-dim)}
+.pq-note-tag{display:block;font-size:var(--fs-xs);font-weight:800;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--accent-ink);
+  margin-bottom:4px}
+
+@media (max-width:620px){
+  .pp-modal{width:calc(100vw - var(--s3));max-height:88vh}
+  .pp-head{padding:var(--s3) var(--s4)}
+  .pp-body{padding:var(--s3) var(--s4) var(--s4)}
+  .pr{padding:var(--s3)}
+}
+
+/* ---- teen-usability pass on the Essay Lab -------------------------------
+   The page had roughly fifteen controls arranged around a text box, and the
+   most prominent of them said "I'm done!" while actually advancing a
+   coaching tip. These styles support moving that pair next to the tip, and
+   labelling the reaction strip so it stops looking like decoration. */
+
+/* the six writing tips, navigated where the tip is */
+.tip-row{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s3);
+  padding-top:var(--s3);border-top:1px solid var(--border)}
+.tip-nav{padding:4px 10px;border-radius:var(--r-full);cursor:pointer;
+  border:1px solid var(--border);background:var(--surface);
+  font-family:inherit;font-size:var(--fs-xs);font-weight:700;
+  color:var(--text-dim)}
+.tip-nav:hover{border-color:var(--accent);color:var(--text)}
+.tip-next{margin-left:auto;background:var(--accent-soft);
+  border-color:var(--accent);color:var(--accent-ink)}
+.tip-of{font-size:var(--fs-xs);font-weight:700;color:var(--text-faint);
+  letter-spacing:.03em}
+
+/* the reaction strip, which nobody touched while it was four bare emoji */
+.rx-label{display:block;font-size:10px;font-weight:700;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--text-faint);
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  margin:0 auto var(--s2);white-space:nowrap}
+@media (max-width:1079px){
+  .rx-label{writing-mode:horizontal-tb;transform:none;margin:0 0 4px}
+}

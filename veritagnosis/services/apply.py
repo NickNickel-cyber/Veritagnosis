@@ -326,18 +326,12 @@ def next_deadline(session: Session, user_id: int) -> School | None:
     return min(rows, key=lambda s: s.deadline) if rows else None
 
 
-STARTER = [("NYU", "reach"), ("UMich", "reach"), ("UCLA", "reach"),
-           ("UMD", "target"), ("ASU", "safety"), ("CMU", "reach")]
-
-
-def seed_starter_list(session: Session, user_id: int) -> None:
-    """A new account with an empty list has nothing to look at, and an empty
-    dashboard reads as broken. Seeds the schools from the wireframe."""
-    if school_list_for(session, user_id):
-        return
-    for name, tier in STARTER:
-        session.add(School(user_id=user_id, name=name, tier=Tier(tier)))
-    session.commit()
+# Removed: seed_starter_list(), which filled a new account with six schools
+# from the wireframe (NYU, UMich, UCLA, UMD, ASU, CMU). Nothing called it, and
+# it should not be called: a student's list is the one thing on this screen
+# that is unambiguously theirs, and pre-filling it with somebody else's
+# aspirations is both confusing and a little insulting. An empty list now
+# earns an honest "Add your first college" from next_task() instead.
 
 
 # ====================================================================
@@ -433,6 +427,124 @@ LADDER = [
 STATUS_LABEL = {k: label for k, label, _ in LADDER}
 NEXT_ACTION = {k: action for k, _, action in LADDER}
 _ORDER = [k for k, _, _ in LADDER]
+
+
+
+# --------------------------------------------------------------------------
+# Today's one task
+# --------------------------------------------------------------------------
+#
+# This replaces a hardcoded string. The home screen used to say
+#
+#     "Start essay draft for NYU application"   /   "Due in 3 steps  ~47 xp"
+#
+# to everybody, forever. NYU was a name from the wireframe, "3 steps" was
+# invented, and the branch that produced it fired whenever an unfinished essay
+# row existed — which is always, because opening the essay screen creates one.
+# A student whose list is Rutgers and TCNJ was told to work on NYU.
+#
+# That is worse than showing nothing. The entire promise of the screen is "here
+# is the one thing to do next", and a student who catches it naming a school
+# they never typed has no reason to believe the next thing it says either.
+#
+# So every field below is read from that student's own rows, and when there is
+# genuinely nothing to point at, it says so instead of inventing something.
+
+
+@dataclasses.dataclass
+class Task:
+    """The one thing on the home screen."""
+
+    title: str
+    meta: str
+    route: str
+
+
+def next_task(session: Session, user_id: int) -> Task:
+    """The most useful real thing this student could do next.
+
+    Ordered by what actually matters at eleven at night in October: a deadline
+    that is about to pass, then an essay that does not exist yet, then an essay
+    that is short, then the letters nobody asks for until it is too late.
+    """
+    schools = list(session.exec(
+        select(School).where(School.user_id == user_id)).all())
+
+    # 1. Nothing to work on yet.
+    if not schools:
+        return Task("Add your first college",
+                    "Takes a minute — everything else builds on this",
+                    "/applications")
+
+    live = [s for s in schools
+            if s.status in (AppStatus.not_started, AppStatus.in_progress)]
+
+    # 2. A deadline inside two weeks beats everything else.
+    dated = [s for s in live if days_left(s) is not None and days_left(s) >= 0]
+    dated.sort(key=lambda s: days_left(s))
+    if dated and days_left(dated[0]) <= 14:
+        s = dated[0]
+        d = days_left(s)
+        when = "due today" if d == 0 else "due tomorrow" if d == 1 else f"{d} days left"
+        step = next_step(milestones(session, user_id, s))
+        return Task(f"{s.name} is {when}",
+                    step.hint if step else f"{s.progress}% done — check what is left",
+                    step.route if step else "/applications")
+
+    # 3. An essay that has not been started.
+    essays = list(session.exec(
+        select(Essay).where(Essay.user_id == user_id)).all())
+    by_school = {e.school_id: e for e in essays if e.school_id}
+    blank = [s for s in live
+             if word_count(by_school.get(s.id).body if by_school.get(s.id) else None) == 0]
+    if blank:
+        # Soonest deadline first; an undated school is less urgent than a dated one.
+        blank.sort(key=lambda s: (days_left(s) is None, days_left(s) or 9999))
+        s = blank[0]
+        due = deadline_phrase(s)
+        return Task(f"Start your {s.name} essay",
+                    "Blank page — write it badly first"
+                    + (f" · {due}" if s.deadline else ""),
+                    "/essays")
+
+    # 4. An essay that is under its own word target.
+    short = []
+    for s in live:
+        e = by_school.get(s.id)
+        if e is None:
+            continue
+        n = word_count(e.body)
+        target = e.word_target or 650
+        if 0 < n < target:
+            short.append((target - n, s, n, target))
+    if short:
+        short.sort()
+        left, s, n, target = short[0]
+        return Task(f"Keep going on your {s.name} essay",
+                    f"{n} of {target} words — {left} to go", "/essays")
+
+    # 5. Letters, which nobody asks for until it is too late.
+    for s in sorted(live, key=lambda x: (days_left(x) is None, days_left(x) or 9999)):
+        ms = milestones(session, user_id, s)
+        rec = next((m for m in ms if m.key == "recs" and not m.done), None)
+        if rec:
+            return Task(f"Ask a teacher for your {s.name} letter",
+                        rec.detail or rec.hint, rec.route)
+
+    # 6. Whatever is heaviest and still unfinished, anywhere.
+    for s in sorted(live, key=lambda x: (days_left(x) is None, days_left(x) or 9999)):
+        step = next_step(milestones(session, user_id, s))
+        if step:
+            return Task(f"{s.name}: {step.label.lower()}", step.hint, step.route)
+
+    # 7. Genuinely nothing outstanding. Say that, rather than inventing work.
+    done = sum(1 for s in schools if s.status not in
+               (AppStatus.not_started, AppStatus.in_progress))
+    if done and done == len(schools):
+        return Task("Every application is in",
+                    "Nothing to do but wait. That is allowed.", "/applications")
+    return Task("Take a breath before you start",
+                "Two minutes — the list will still be there", "/meditation")
 
 
 def rec_list_for(session: Session, user_id: int, role: str | None = None) -> list[Recommender]:

@@ -74,6 +74,52 @@ then on codes are emailed, the demo banner disappears, and 2FA is real.
 
 Test it with `python scripts/manage.py email-test`.
 
+**Using a dedicated sending account.** Make a new Google account for the app
+(say `veritagnosis.app@gmail.com`), turn on 2-Step Verification, create an app
+password for it, and put that in `.env`:
+
+```
+VG_SMTP_USER=veritagnosis.app@gmail.com
+VG_SMTP_PASSWORD=aaaabbbbccccdddd
+VG_MAIL_FROM_NAME=Veritagnosis
+```
+
+No code changes. That address is only ever the **sender** — each code is
+delivered to whatever address the student typed when they signed up, which is
+read from their own account row. One sending account serves everybody.
+
+---
+
+## The college catalogue
+
+Out of the box the app knows about two dozen colleges, read by hand out of each
+institution's own Common Data Set — those are the most reliable admissions
+numbers that exist, and each one links to the PDF it came from.
+
+That is not enough for a real student's list. To load every college in the
+country:
+
+1. Go to <https://collegescorecard.ed.gov/data/> (free, no account needed)
+2. Download **"Most Recent Institution-Level Data"** and unzip it
+3. Run:
+
+```
+python scripts/manage.py import-colleges path/to/Most-Recent-Cohorts-Institution.csv
+```
+
+That imports roughly 2,000 bachelor's-degree institutions with admission rate,
+SAT/ACT ranges, cost, tuition and average net price. Importing again updates in
+place rather than duplicating, so you can refresh when a new release comes out.
+
+**Which source wins.** When a college is in both, the hand-read Common Data Set
+entry is used, because it is better data. Scorecard rows are marked
+`confidence: medium` and carry the real Scorecard URL for that institution, so
+every number on screen can still be checked. Nothing is ever invented: a figure
+the Scorecard suppresses or omits stays empty rather than becoming a zero.
+
+It is skipped for institutions that are closed, award mostly certificates, or
+have no undergraduates — a college applicant is not choosing between those.
+
 ---
 
 ## Troubleshooting
@@ -213,7 +259,7 @@ anything drops below WCAG AA.** Hand-picked hexes usually miss.
 
 See [SECURITY.md](SECURITY.md). Short version: Argon2id passwords, AES-256-GCM
 on sensitive columns, hashed session tokens with expiry and lockout, secrets
-from `.env` with a fail-fast config, mandatory two-factor sign-in, and 429
+from `.env` with a fail-fast config, mandatory two-factor sign-in, and 457
 tests including one that greps the raw database file for plaintext.
 
 ```

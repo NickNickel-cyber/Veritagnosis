@@ -90,8 +90,24 @@
     if (b) b.click();
   }
 
+  /* ---------------------------------------------------------------- modal */
+
+  /* The prompt chooser. Escape has to close it, and it has to take priority
+     over the drawer: when both are open the modal is the thing on top, and
+     dismissing the thing underneath it first would be wrong. */
+  function promptModalOpen() {
+    return !!document.getElementById('vg-prompt-modal');
+  }
+
+  function closePromptModal() {
+    var b = document.getElementById('vg-prompt-close');
+    if (b) b.click();
+  }
+
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && drawerOpen()) closeDrawer();
+    if (e.key !== 'Escape') return;
+    if (promptModalOpen()) { closePromptModal(); return; }
+    if (drawerOpen()) closeDrawer();
   }, false);
 
   document.addEventListener('pointerdown', function (e) {

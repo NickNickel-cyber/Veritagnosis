@@ -4,6 +4,7 @@ Project admin tasks.
 
     python scripts/manage.py init-keys     generate .env with fresh secrets
     python scripts/manage.py init-db       create tables
+    python scripts/manage.py import-colleges <csv>   load the College Scorecard
     python scripts/manage.py seed-quotes   load the quote pools
     python scripts/manage.py demo-user     create a demo account
     python scripts/manage.py check         report on the security configuration
@@ -283,10 +284,24 @@ def encrypt_profiles():
     return 0
 
 
+def import_colleges():
+    """Load the federal College Scorecard into the catalogue."""
+    if len(sys.argv) < 3:
+        print("\n  Usage:  python scripts/manage.py import-colleges <path-to-csv>")
+        print("\n  Get the file (free, no account) from")
+        print("      https://collegescorecard.ed.gov/data/")
+        print("  Download 'Most Recent Institution-Level Data', unzip it, and")
+        print("  pass the .csv inside.\n")
+        return 1
+    from scripts.import_colleges import run
+    return 0 if run(sys.argv[2]) >= 0 else 1
+
+
 COMMANDS = {"init-keys": init_keys, "init-db": init_db, "seed-quotes": seed_quotes,
             "demo-user": demo_user, "check": check,
             "email-setup": email_setup, "email-test": email_test,
-            "encrypt-profiles": encrypt_profiles}
+            "encrypt-profiles": encrypt_profiles,
+            "import-colleges": import_colleges}
 
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""

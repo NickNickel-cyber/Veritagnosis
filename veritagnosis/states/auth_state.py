@@ -39,8 +39,16 @@ class AuthState(rx.State):
     xp_needed: int = 500
     streak: int = 0
     avatar_json: str = "{}"
-    essays_left: int = 1
+    essays_left: int = 0
     schools_count: int = 0
+
+    # Today's task, as chosen by services.apply.next_task from this student's
+    # real schools and essays. Held as plain vars rather than computed, because
+    # working it out reads several tables and that belongs in one deliberate
+    # call on load, not in a @rx.var that re-runs on every render.
+    task_title_v: str = "Loading your list"
+    task_meta_v: str = ""
+    task_route_v: str = "/home"
 
     # Which user the display vars above describe. A Reflex state outlives a
     # login — it belongs to the browser session — so without this stamp the
@@ -118,33 +126,31 @@ class AuthState(rx.State):
     def xp_to_go(self) -> int:
         return max(0, self.xp_needed - self.xp)
 
-    @rx.var(deps=["essays_left", "schools_count"])
+    @rx.var(deps=["task_title_v", "task_meta_v", "task_route_v"])
     def task_title(self) -> str:
         return self._task[0]
 
-    @rx.var(deps=["essays_left", "schools_count"])
+    @rx.var(deps=["task_title_v", "task_meta_v", "task_route_v"])
     def task_meta(self) -> str:
         return self._task[1]
 
-    @rx.var(deps=["essays_left", "schools_count"])
+    @rx.var(deps=["task_title_v", "task_meta_v", "task_route_v"])
     def task_route(self) -> str:
         return self._task[2]
 
     @property
     def _task(self) -> tuple[str, str, str]:
-        """Today's one task, chosen from what is actually unfinished.
+        """Today's one task — read from this student's own rows.
 
         Deliberately one thing. The whole point of the screen is that a student
         opening it at 11pm sees a single next action, not a backlog.
+
+        The work of choosing it is in services.apply.next_task, next to the
+        deadline and milestone helpers it needs. These three vars are filled by
+        load_home; the defaults below are what shows for the half-second before
+        that returns, so they promise nothing.
         """
-        if self.essays_left > 0:
-            return ("Start essay draft for NYU application",
-                    f"Due in 3 steps  ~47 xp", "/essays")
-        if self.schools_count == 0:
-            return ("Add your first college",
-                    "Takes a minute  ~30 xp", "/applications")
-        return ("Take a breath before you start",
-                "2 minutes  ~20 xp", "/meditation")
+        return (self.task_title_v, self.task_meta_v, self.task_route_v)
 
     @rx.var
     def step_label(self) -> str:
@@ -415,6 +421,10 @@ class AuthState(rx.State):
             if user is None:
                 return
             progress.recompute_all(s, user.id)
+            task = progress.next_task(s, user.id)
+            self.task_title_v = task.title
+            self.task_meta_v = task.meta
+            self.task_route_v = task.route
             stats = achievements.gather(s, user.id)
             achievements.award(s, user.id, stats)
             t = achievements.totals(s, user.id)
