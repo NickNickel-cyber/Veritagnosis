@@ -5,6 +5,7 @@ Project admin tasks.
     python scripts/manage.py init-keys     generate .env with fresh secrets
     python scripts/manage.py init-db       create tables
     python scripts/manage.py import-colleges <csv>   load the College Scorecard
+    python scripts/manage.py seed-colleges  freeze the catalogue for the exe
     python scripts/manage.py seed-quotes   load the quote pools
     python scripts/manage.py demo-user     create a demo account
     python scripts/manage.py check         report on the security configuration
@@ -297,11 +298,77 @@ def import_colleges():
     return 0 if run(sys.argv[2]) >= 0 else 1
 
 
+def seed_colleges():
+    """Freeze the imported college catalogue into a file the exe can bundle.
+
+    The live database holds a student's own account alongside the catalogue, so
+    it cannot be shipped. This writes a copy containing ONLY the college table —
+    no users, no essays, no scores — which build_exe.py bundles and launch.py
+    copies in on a client's first run.
+    """
+    import shutil
+    import sqlite3
+    from veritagnosis import config, db
+    from veritagnosis.models import College
+    from sqlmodel import select, func
+
+    src = config.DB_PATH
+    if not src.exists():
+        print(f"\n  No database at {src}. Run init-db first.\n")
+        return 1
+
+    db.init_db()
+    with db.get_session() as s:
+        n = s.exec(select(func.count()).select_from(College)).one()
+        n = n[0] if isinstance(n, tuple) else n
+    if not n:
+        print("\n  The college table is empty — nothing to seed.")
+        print("  Run:  python scripts/manage.py import-colleges <csv>\n")
+        return 1
+
+    out = config.DATA_DIR / "colleges.seed.db"
+    if out.exists():
+        out.unlink()
+    shutil.copy2(src, out)
+
+    # Strip everything that is not the catalogue. A seed file that shipped a
+    # developer's own account and essays to every client would be a serious
+    # mistake, so this is explicit rather than relying on the copy being clean.
+    con = sqlite3.connect(out)
+    keep = {"college"}
+    tables = [r[0] for r in con.execute(
+        "select name from sqlite_master where type='table' "
+        "and name not like 'sqlite_%'")]
+    for t in tables:
+        if t not in keep:
+            con.execute(f'delete from "{t}"')
+    con.commit()
+    con.execute("vacuum")
+    con.close()
+
+    # Prove it.
+    con = sqlite3.connect(out)
+    left = {t: con.execute(f'select count(*) from "{t}"').fetchone()[0]
+            for t in tables}
+    con.close()
+    leaked = {t: c for t, c in left.items() if t not in keep and c}
+    if leaked:
+        out.unlink()
+        print(f"\n  Refused: rows survived in {leaked}. Seed not written.\n")
+        return 1
+
+    mb = out.stat().st_size / 1048576
+    print(f"\n  Wrote {out} ({mb:.1f}MB) with {left.get('college', 0)} colleges")
+    print("  and no user data. build_exe.py will bundle it.\n")
+    return 0
+
+
 COMMANDS = {"init-keys": init_keys, "init-db": init_db, "seed-quotes": seed_quotes,
             "demo-user": demo_user, "check": check,
             "email-setup": email_setup, "email-test": email_test,
             "encrypt-profiles": encrypt_profiles,
-            "import-colleges": import_colleges}
+            "import-colleges": import_colleges,
+            "seed-colleges": seed_colleges}
 
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""

@@ -773,6 +773,9 @@ def test_the_profile_screen_survives_an_unreadable_profile():
         coverage_note = ""; school_count = 0; analysed = False
         async def _user_id(self): return uid
         def _analyse(self, _uid): pass
+        # Mirrors the real class: load() reads the GPA and test scores too.
+        gpa_input = sat_input = act_input = ""
+        def _load_scores(self, _s, _uid): pass
 
     f = _Fake()
     # asyncio.run, not get_event_loop: the latter is deprecated, and it
@@ -816,7 +819,8 @@ def test_env_template_is_ascii():
 def test_file_io_declares_an_encoding(path):
     """Every open()/write_text()/read_text() on a text file names its encoding.
 
-    Binary modes are exempt: bytes have no encoding.
+    Binary modes are exempt: bytes have no encoding. So is anything spelled
+    <module>.open — webbrowser.open and friends are not file I/O.
     """
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     problems = []
@@ -827,7 +831,11 @@ def test_file_io_declares_an_encoding(path):
         fn = node.func
         name = getattr(fn, "id", None) or getattr(fn, "attr", None)
 
-        if name == "open":
+        # Only the BUILTIN open() opens a file. webbrowser.open(url),
+        # os.open(), zipfile.open() and anything else spelled <thing>.open are
+        # different functions that take no encoding, and flagging them sent
+        # this check chasing code that does no file I/O at all.
+        if name == "open" and not isinstance(fn, ast.Attribute):
             mode = ""
             if len(node.args) > 1 and isinstance(node.args[1], ast.Constant):
                 mode = node.args[1].value or ""

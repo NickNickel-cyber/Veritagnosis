@@ -44,4 +44,11 @@ reflex.lock
 # the code (or grepping it) hits three stale copies of every module.
 _backup_*/
 design/
-*.bundle
+
+# --- PyInstaller output (build_exe.py) ---
+build/
+dist/
+*.spec
+# The frozen college catalogue, built by `manage.py seed-colleges`. It is
+# derived data and can be hundreds of megabytes.
+data/colleges.seed.db

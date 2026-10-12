@@ -242,3 +242,39 @@
   setInterval(sendBeat, HEARTBEAT_MS);
   setTimeout(sendBeat, 3000);      /* first check shortly after load */
 })();
+
+/* ------------------------------------------------------------------ theme
+ * Mirror data-theme from the app wrapper onto <html>.
+ *
+ * Every theme's variables — including its two typefaces — are declared on
+ * [data-theme="..."], and that attribute lives on the .vg-app wrapper. Custom
+ * properties only inherit DOWNWARDS, so html and body sit above the theme and
+ * cannot see any of them: the document's base font fell back to the system
+ * sans on every theme, and so did anything rendered outside the wrapper.
+ *
+ * Copying the attribute up means [data-theme="..."] matches the root element
+ * too, and the same single declaration serves the whole document. The
+ * alternative was repeating all five themes' font stacks under a
+ * :root:has(...) selector, which would be two places to edit for every future
+ * theme change.
+ */
+(function () {
+  'use strict';
+  function sync() {
+    var app = document.querySelector('.vg-app[data-theme]');
+    if (!app) return;
+    var t = app.getAttribute('data-theme');
+    if (t && document.documentElement.getAttribute('data-theme') !== t) {
+      document.documentElement.setAttribute('data-theme', t);
+    }
+  }
+  sync();
+  document.addEventListener('DOMContentLoaded', sync, false);
+  /* The theme is server state, so it changes by re-render rather than by a
+     page load. Watching the attribute keeps the root in step. */
+  if (window.MutationObserver) {
+    new MutationObserver(sync).observe(document.body || document.documentElement,
+      { subtree: true, attributes: true, attributeFilter: ['data-theme'] });
+  }
+  setInterval(sync, 1000);
+})();

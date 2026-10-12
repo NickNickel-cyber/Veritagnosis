@@ -90,7 +90,16 @@ def send_verification_code(to_email: str, code: str, minutes: int = 15) -> bool:
 
     msg = EmailMessage()
     msg["Subject"] = f"{code} is your Veritagnosis code"
-    msg["From"] = f"{config.mail_from_name()} <{config.smtp_user()}>"
+    # The display name is always "Veritagnosis", whatever account is doing the
+    # sending. A student receiving a code should see the app's name, not
+    # whoever's mailbox it happens to be relayed through — and if
+    # VG_MAIL_FROM_NAME is ever left blank or misconfigured, falling back to a
+    # personal email address in the From line would be a small privacy leak
+    # rather than a cosmetic bug.
+    msg["From"] = f"{config.mail_from_name() or 'Veritagnosis'} <{config.smtp_user()}>"
+    # Replies go to the sending account rather than nowhere, so a confused
+    # student hitting reply reaches a human.
+    msg["Reply-To"] = config.smtp_user()
     msg["To"] = to_email
     msg.set_content(_plain(code, minutes))
     msg.add_alternative(_html(code, minutes), subtype="html")

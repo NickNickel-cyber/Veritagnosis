@@ -197,9 +197,7 @@ def _where_you_stand() -> rx.Component:
             lambda w: rx.box(w, class_name="fit-caveat",
                              style={"marginTop": "var(--s3)"}),
         ),
-        rx.box(ProfileState.coverage_note, class_name="fit-src",
-               style={"marginTop": "var(--s3)"}),
-        class_name="card", style={"marginBottom": "var(--s4)"},
+                class_name="card", style={"marginBottom": "var(--s4)"},
     )
 
 
@@ -249,6 +247,76 @@ def _steps() -> rx.Component:
             class_name="card", style={"marginBottom": "var(--s4)"},
         ),
         rx.fragment(),
+    )
+
+
+def _num_field(label: str, hint: str, value, problem, handler,
+               placeholder: str) -> rx.Component:
+    """One number the student types about themselves.
+
+    The problem line appears while they type rather than after they save,
+    because a GPA of 45 silently dropped by the parser is indistinguishable
+    from one that was never entered.
+    """
+    return rx.box(
+        rx.el.label(label),
+        rx.el.input(
+            class_name="input", placeholder=placeholder,
+            value=value, on_change=handler,
+            input_mode="decimal", auto_complete="off",
+        ),
+        rx.cond(
+            problem != "",
+            rx.box(problem, class_name="num-problem"),
+            rx.box(hint, class_name="num-hint"),
+        ),
+        class_name="field num-field",
+    )
+
+
+def _your_numbers() -> rx.Component:
+    """GPA and test scores.
+
+    These drive the fit bands and the readiness score, and have done since
+    that engine was written — student_stats() reads user.gpa and the TestScore
+    rows, and every comparison on this screen uses them. There was just nowhere
+    to type them, so the app told every student, permanently, that they had not
+    entered a score. This is that missing form.
+    """
+    return rx.box(
+        rx.box(
+            rx.heading("Your numbers", size="4"),
+            rx.box("Everything above is calculated from these. Leave a box "
+                   "empty if you do not have it yet — nothing is guessed.",
+                   class_name="faint"),
+            class_name="num-head",
+        ),
+        rx.box(
+            _num_field("GPA", "Unweighted, out of 4 — or weighted if that is "
+                              "what your school reports.",
+                       ProfileState.gpa_input, ProfileState.gpa_problem,
+                       ProfileState.set_gpa_input, "3.8"),
+            _num_field("SAT", "Total score, 400–1600.",
+                       ProfileState.sat_input, ProfileState.sat_problem,
+                       ProfileState.set_sat_input, "1380"),
+            _num_field("ACT", "Composite, 1–36.",
+                       ProfileState.act_input, ProfileState.act_problem,
+                       ProfileState.set_act_input, "31"),
+            class_name="num-grid",
+        ),
+        rx.box(
+            rx.el.button("Save my numbers", type="button",
+                         class_name="btn btn-primary",
+                         disabled=~ProfileState.scores_ok,
+                         on_click=ProfileState.save_scores),
+            rx.cond(
+                ProfileState.scores_msg != "",
+                rx.box(ProfileState.scores_msg, class_name="num-saved"),
+                rx.fragment(),
+            ),
+            class_name="num-actions",
+        ),
+        class_name="card your-numbers",
     )
 
 
@@ -392,6 +460,10 @@ def profile_page() -> rx.Component:
                        style={"marginBottom": "var(--s4)"}),
                 rx.fragment(),
             ),
+            # Before the readiness panel on purpose: every number in it is
+            # computed from this form, so a student who has not filled it in
+            # should meet the inputs first rather than a score of zero.
+            _your_numbers(),
             _readiness(),
             _where_you_stand(),
             _gaps(),

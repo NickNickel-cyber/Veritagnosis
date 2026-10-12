@@ -16,7 +16,21 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Where the app keeps its data and reads its .env.
+#
+# Normally this is the project folder — one level up from this module. It is
+# overridable, and that override is not a nicety: when the app is packaged as a
+# single executable, this module lives inside a temporary extraction directory
+# that the operating system deletes when the process exits. Resolving the
+# database path relative to __file__ there would put a student's account,
+# essays and progress in a folder that is thrown away the moment they close the
+# window, and the second launch would look like a brand-new install.
+#
+# launch.py sets VG_BASE_DIR to the directory the executable itself sits in, so
+# data persists beside it.
+_BASE_OVERRIDE = os.environ.get("VG_BASE_DIR", "").strip()
+BASE_DIR = (Path(_BASE_OVERRIDE).resolve() if _BASE_OVERRIDE
+            else Path(__file__).resolve().parent.parent)
 DATA_DIR = BASE_DIR / "data"
 ENV_FILE = BASE_DIR / ".env"
 
@@ -97,7 +111,12 @@ def smtp_password() -> str:
 
 
 def mail_from_name() -> str:
-    return os.environ.get("VG_MAIL_FROM_NAME", "Veritagnosis")
+    """The name a student sees in their inbox. Always the app, never a person.
+
+    An empty or whitespace value falls back rather than passing through, so a
+    blank line in .env cannot put a personal address in the From header.
+    """
+    return os.environ.get("VG_MAIL_FROM_NAME", "").strip() or "Veritagnosis"
 
 
 # --- app ------------------------------------------------------------------

@@ -23,6 +23,15 @@ reflex-components-lucide==1.0.4
 reflex-components-radix==0.9.8
 reflex-components-core==0.9.9
 
+# The ASGI server the packaged executable runs on.
+#
+# Reflex uses granian for `reflex run`, which is fine for development where it
+# launches the server itself. launch.py has to serve a Starlette app OBJECT it
+# has just mounted the frontend onto, in-process, and uvicorn takes an app
+# object directly where granian wants an import string — which does not resolve
+# the same way inside a PyInstaller bundle.
+uvicorn==0.54.0
+
 # --- security ---
 argon2-cffi==25.1.0        # Argon2id password hashing (OWASP first choice)
 cryptography==50.0.1       # AES-256-GCM field encryption

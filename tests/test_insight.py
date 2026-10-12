@@ -645,25 +645,57 @@ def test_a_pessimistic_label_is_not_flagged():
 
 
 # ------------------------------------------------- not blaming the student
-def test_missing_safeties_are_blamed_on_the_data_when_that_is_the_cause():
-    """If the dataset holds no college accessible enough to be a safety, the
-    app must say so rather than telling a student their list is wrong."""
+def test_the_warnings_are_short_and_actionable():
+    """What replaced the data-provenance paragraphs.
+
+    This block used to carry four of them, including one explaining at length
+    that a missing safety was "a gap in our data, not a verdict on your list",
+    and another reciting how many universities were loaded. Both were written
+    for a catalogue of two dozen colleges and both rendered inside a
+    statistics box. Every warning is now a single actionable sentence.
+    """
+    uid = _uid()
+    with db.get_session() as s:
+        s.add(School(user_id=uid, name="Harvard University", tier=Tier.reach))
+        s.commit()
+    r = fit.review(uid)
+    warnings = r["warnings"]
+
+    # None of the removed prose comes back.
+    blob = " ".join(warnings)
+    for gone in ("gap in our data", "verdict on your list", "well-known universities",
+                 "sharpens every one", "running on admit rates alone",
+                 "readiness score use it"):
+        assert gone not in blob, f"the old caveat text is back: {gone!r}"
+
+    # And the payload no longer carries a provenance paragraph at all.
+    assert "coverage_note" not in r
+
+    # Each remaining warning is one short sentence.
+    for w in warnings:
+        assert len(w) <= 110, f"too long for a stat box: {w!r}"
+        assert w.count(".") <= 1, f"more than one sentence: {w!r}"
+
+
+def test_a_student_with_no_scores_is_told_to_add_one_briefly():
+    uid = _uid()
+    with db.get_session() as s:
+        s.add(School(user_id=uid, name="Harvard University", tier=Tier.reach))
+        s.commit()
+    warnings = fit.review(uid)["warnings"]
+    assert any("SAT or ACT" in w for w in warnings)
+    assert any("GPA" in w for w in warnings)
+
+
+def test_entering_a_score_removes_its_nudge():
+    """Proves the nudge is driven by the student's data, not printed always."""
     uid = _uid()
     with db.get_session() as s:
         s.add(School(user_id=uid, name="Harvard University", tier=Tier.reach))
         s.add(TestScore(user_id=uid, kind="SAT", score="1500"))
         s.commit()
     warnings = " ".join(fit.review(uid)["warnings"])
-    has_safety_in_data = any((c.get("accept_rate") or 0) >= 50 for c in COLLEGES)
-    if has_safety_in_data:
-        # A real safety was reachable and the student has none: advise them.
-        assert "safety" in warnings
-        assert "gap in our data" not in warnings
-    else:
-        # The dataset could not produce one. Say so; do not blame the list.
-        assert "gap in our data" in warnings
-        assert "verdict on your list" in warnings
-        assert "Every college on your list" not in warnings
+    assert "SAT or ACT" not in warnings
 
 
 def test_review_runs_on_an_empty_list():
@@ -702,3 +734,110 @@ def test_every_fit_carries_its_source():
         s.commit()
     f = fit.review(uid)["fits"][0]
     assert f.source_url.startswith("http") and f.data_year
+
+
+# ------------------------------------------------- entering your own numbers
+#
+# The engine has read user.gpa and the TestScore rows since it was written.
+# There was nowhere in the app to type them, so student_stats() always
+# returned {gpa: None, sat: None, act: None} and every comparison ran on
+# admit rates alone. These cover the form that fixes that, and — more
+# importantly — that what is typed actually changes the answer.
+
+def _profile_state():
+    """A ProfileState standing on its own, for the handlers."""
+    import types
+    from veritagnosis.states.profile_state import ProfileState
+    return ProfileState, types.SimpleNamespace()
+
+
+def test_a_gpa_input_only_accepts_a_number():
+    from veritagnosis.states.profile_state import ProfileState
+    import types
+    f = types.SimpleNamespace(gpa_input="", scores_msg="x")
+    ProfileState.set_gpa_input.fn(f, "3.9abc")
+    assert f.gpa_input == "3.9"
+    ProfileState.set_gpa_input.fn(f, "3.9.4.1")
+    assert f.gpa_input.count(".") == 1
+
+
+def test_score_inputs_strip_anything_that_is_not_a_digit():
+    from veritagnosis.states.profile_state import ProfileState
+    import types
+    f = types.SimpleNamespace(sat_input="", act_input="", scores_msg="")
+    ProfileState.set_sat_input.fn(f, "1 4 8 0 pts")
+    assert f.sat_input == "1480"
+    ProfileState.set_act_input.fn(f, "33!")
+    assert f.act_input == "33"
+
+
+def test_out_of_range_numbers_are_reported_while_typing():
+    """A value the parser would drop must not look saved."""
+    from veritagnosis.states.profile_state import ProfileState
+    import types
+    for field, value, expect in [("gpa_input", "9.5", "between 0 and 5"),
+                                 ("sat_input", "200", "400 to 1600"),
+                                 ("act_input", "99", "1 to 36")]:
+        f = types.SimpleNamespace(gpa_input="", sat_input="", act_input="")
+        setattr(f, field, value)
+        var = {"gpa_input": "gpa_problem", "sat_input": "sat_problem",
+               "act_input": "act_problem"}[field]
+        msg = getattr(ProfileState, var).fget(f)
+        assert expect in msg, f"{field}={value} gave {msg!r}"
+
+
+def test_a_blank_box_is_not_a_problem():
+    from veritagnosis.states.profile_state import ProfileState
+    import types
+    f = types.SimpleNamespace(gpa_input="", sat_input="", act_input="")
+    assert ProfileState.gpa_problem.fget(f) == ""
+    assert ProfileState.sat_problem.fget(f) == ""
+    assert ProfileState.act_problem.fget(f) == ""
+
+
+def test_an_entered_sat_changes_the_comparison():
+    """The point of the whole form."""
+    uid = _uid()
+    with db.get_session() as s:
+        s.add(School(user_id=uid, name="Harvard University", tier=Tier.reach))
+        s.commit()
+
+    before = fit.student_stats(uid)
+    assert before["sat"] is None
+
+    with db.get_session() as s:
+        s.add(TestScore(user_id=uid, kind="SAT", score="1500"))
+        s.commit()
+
+    after = fit.student_stats(uid)
+    assert after["sat"] == 1500, "an entered score must reach the engine"
+
+    # and it reaches the comparison, not just the stats dict
+    r = fit.review(uid)
+    assert not any("SAT or ACT" in w for w in r["warnings"])
+
+
+def test_an_entered_gpa_changes_the_comparison():
+    uid = _uid()
+    with db.get_session() as s:
+        s.add(School(user_id=uid, name="Harvard University", tier=Tier.reach))
+        u = s.get(User, uid)
+        u.gpa = "3.91"
+        s.add(u)
+        s.commit()
+    assert fit.student_stats(uid)["gpa"] == 3.91
+    assert not any("GPA" in w for w in fit.review(uid)["warnings"])
+
+
+def test_a_nonsense_stored_score_is_dropped_not_guessed():
+    """Belt and braces: the form refuses these, and the engine must too."""
+    uid = _uid()
+    with db.get_session() as s:
+        s.add(TestScore(user_id=uid, kind="SAT", score="99999"))
+        s.add(TestScore(user_id=uid, kind="ACT", score="banana"))
+        u = s.get(User, uid)
+        u.gpa = "not a gpa"
+        s.add(u)
+        s.commit()
+    st = fit.student_stats(uid)
+    assert st["sat"] is None and st["act"] is None and st["gpa"] is None

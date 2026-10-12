@@ -22,7 +22,7 @@ from veritagnosis.models import (
     User,
     utcnow,
 )
-from veritagnosis.content.colleges import BY_NAME, COLLEGES, COVERAGE_NOTE
+from veritagnosis.content.colleges import BY_NAME, COLLEGES
 from veritagnosis.services import catalog
 from veritagnosis.models import School, TestScore, Tier, User
 import json
@@ -777,47 +777,30 @@ def review(uid: int) -> dict:
 
     warnings: list[str] = []
 
-    # Whether a safety is even reachable given what we have loaded. Without
-    # this check the app would tell every student their list has no safety
-    # school, when the real cause is that the dataset does not yet contain a
-    # college accessible enough to qualify as one. Blaming a student's list
-    # for a gap in our own data is the kind of wrong that erodes trust in
-    # everything else on the screen.
-    dataset_has_safeties = any(
-        (c.get("accept_rate") or 0) >= 50 for c in COLLEGES
-    )
-
-    if known and not dataset_has_safeties:
-        # Nothing loaded could qualify as a safety, so no statement about the
-        # student's safety coverage is possible. Checked before the all-reach
-        # branch below, which would otherwise blame the list for our gap.
-        warnings.append(
-            "We cannot tell you whether you have a safety school: every "
-            "college loaded here admits under half its applicants, so none "
-            "of them could qualify. This is a gap in our data, not a verdict "
-            "on your list."
-        )
-    elif known and by_tier["safety"] == 0 and by_tier["target"] == 0:
-        warnings.append(
-            "Every college on your list that we have data for is a reach. "
-            "That is not a reason to drop your ambitions — it is a reason to "
-            "add one or two where your numbers already clear the bar, so you "
-            "have somewhere to go in April."
-        )
+    # What this block used to be, and why it is short now.
+    #
+    # It carried four paragraphs. The longest explained, at length, that the
+    # app could not judge safety coverage "because every college loaded here
+    # admits under half its applicants — this is a gap in our data, not a
+    # verdict on your list", and another recited how many universities were
+    # loaded and what range of admit rates they spanned.
+    #
+    # Both were honest and both were written for a catalogue of two dozen
+    # colleges. With the Scorecard import there are thousands, including plenty
+    # of genuinely accessible ones, so the gap those paragraphs apologised for
+    # is gone — and a student reading a statistics box does not want a
+    # paragraph about the provenance of the dataset. What is left is only the
+    # lines that tell them to do something.
+    if known and by_tier["safety"] == 0 and by_tier["target"] == 0:
+        warnings.append("Everything on your list is a reach — worth adding one "
+                        "where your numbers already clear the bar.")
     elif known and by_tier["safety"] == 0:
-        warnings.append(
-            "Nothing on your list is a safety by the published data. Worth "
-            "adding one you would genuinely be happy to attend."
-        )
+        warnings.append("No safety on your list yet.")
 
     if not stats["sat"] and not stats["act"]:
-        warnings.append(
-            "You have not entered an SAT or ACT score, so these comparisons "
-            "are running on admit rates alone. Adding a score sharpens every "
-            "one of them."
-        )
+        warnings.append("Add an SAT or ACT score to sharpen these.")
     if stats["gpa"] is None:
-        warnings.append("Adding your GPA lets the readiness score use it.")
+        warnings.append("Add your GPA to include it.")
 
     return {
         "stats": stats,
@@ -826,7 +809,6 @@ def review(uid: int) -> dict:
         "disagreements": [f for f in fits if f.disagrees],
         "no_data": [f for f in fits if not f.has_data],
         "warnings": warnings,
-        "coverage_note": COVERAGE_NOTE,
     }
 
 

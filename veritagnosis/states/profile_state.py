@@ -16,9 +16,10 @@ from __future__ import annotations
 import json
 
 import reflex as rx
+from sqlmodel import select
 
 from veritagnosis import db
-from veritagnosis.models import User
+from veritagnosis.models import TestScore, User
 from veritagnosis.crypto import DecryptionError
 from veritagnosis.services import insight as fit_svc
 from veritagnosis.services import insight as readiness_svc
@@ -60,6 +61,22 @@ MAX_ACTIVITIES = 30
 class ProfileState(FeatureState, rx.State):
     """Student profile: background, interests, goals, timeline."""
 
+    # Your own numbers.
+    #
+    # The scoring engine has read these since it was written — student_stats()
+    # parses user.gpa and the TestScore rows, the fit bands compare them
+    # against each college's published percentiles, and the readiness score
+    # weights them. There was simply nowhere in the app to type them, so every
+    # student got the same answer: "you have not entered an SAT or ACT score".
+    #
+    # Held as strings because that is what a text input gives, and because a
+    # half-typed "14" must not be stored as a real score. Parsing and range
+    # checks happen on save.
+    gpa_input: str = ""
+    sat_input: str = ""
+    act_input: str = ""
+    scores_msg: str = ""
+
     career_interest: str = ""
     major_preference: str = ""
 
@@ -100,7 +117,6 @@ class ProfileState(FeatureState, rx.State):
     fits: list[dict[str, str]] = []
     disagreements: list[dict[str, str]] = []
     fit_warnings: list[str] = []
-    coverage_note: str = ""
     school_count: int = 0
     analysed: bool = False
 
@@ -239,6 +255,17 @@ class ProfileState(FeatureState, rx.State):
             )
             raw = None
 
+        # The GPA and the scores live in their own columns and rows, not in
+        # profile_data, so they are read separately and survive an unreadable
+        # blob. Guarded for the same reason the read above is: this screen must
+        # open even when one stored value cannot be read, because everything on
+        # it can simply be entered again.
+        try:
+            with db.get_session() as s:
+                self._load_scores(s, uid)
+        except Exception:                                      # noqa: BLE001
+            self.gpa_input = self.sat_input = self.act_input = ""
+
         if raw:
             try:
                 p = json.loads(raw)
@@ -310,7 +337,6 @@ class ProfileState(FeatureState, rx.State):
             self.fits = [self._flatten_fit(f) for f in rv["fits"]]
             self.disagreements = [self._flatten_fit(f) for f in rv["disagreements"]]
             self.fit_warnings = [str(w) for w in rv["warnings"]]
-            self.coverage_note = rv["coverage_note"]
             self.school_count = len(rv["fits"])
             self.analysed = True
         except Exception:
@@ -358,12 +384,133 @@ class ProfileState(FeatureState, rx.State):
             })
         return row
 
+    def _load_scores(self, session, uid: int) -> None:
+        """Fill the inputs from what is stored.
+
+        Without this the form is blank on every visit and a student retypes
+        their GPA each time — which also makes it impossible to tell "I have
+        not entered this" from "the form forgot".
+        """
+        user = session.get(User, uid)
+        try:
+            self.gpa_input = str(user.gpa or "") if user else ""
+        except DecryptionError:
+            # Same tolerance the rest of this screen has for an unreadable
+            # column: show it empty rather than failing the whole page.
+            self.gpa_input = ""
+        self.sat_input = ""
+        self.act_input = ""
+        for r in session.exec(
+                select(TestScore).where(TestScore.user_id == uid)).all():
+            kind = (r.kind or "").strip().upper()
+            if kind == "SAT":
+                self.sat_input = str(r.score or "")
+            elif kind == "ACT":
+                self.act_input = str(r.score or "")
+
     @rx.event
     async def refresh_analysis(self):
         """Recompute without a full page load, after the student edits."""
         uid = await self._user_id()
         if uid is None:
             return rx.redirect("/login")
+        self._analyse(uid)
+
+    @rx.event
+    def set_gpa_input(self, value: str):
+        # Digits and one dot only: a GPA is a number, and letting anything
+        # else through means storing something student_stats will silently drop.
+        cleaned = "".join(c for c in value if c.isdigit() or c == ".")
+        if cleaned.count(".") > 1:
+            head, _, tail = cleaned.partition(".")
+            cleaned = head + "." + tail.replace(".", "")
+        self.gpa_input = cleaned[:5]
+        self.scores_msg = ""
+
+    @rx.event
+    def set_sat_input(self, value: str):
+        self.sat_input = "".join(c for c in value if c.isdigit())[:4]
+        self.scores_msg = ""
+
+    @rx.event
+    def set_act_input(self, value: str):
+        self.act_input = "".join(c for c in value if c.isdigit())[:2]
+        self.scores_msg = ""
+
+    @rx.var(deps=["gpa_input"])
+    def gpa_problem(self) -> str:
+        """Said while they type, not after they save."""
+        if not self.gpa_input:
+            return ""
+        try:
+            g = float(self.gpa_input)
+        except ValueError:
+            return "That is not a number."
+        return "" if 0.0 <= g <= 5.0 else "A GPA is between 0 and 5."
+
+    @rx.var(deps=["sat_input"])
+    def sat_problem(self) -> str:
+        if not self.sat_input:
+            return ""
+        v = int(self.sat_input)
+        return "" if 400 <= v <= 1600 else "The SAT runs 400 to 1600."
+
+    @rx.var(deps=["act_input"])
+    def act_problem(self) -> str:
+        if not self.act_input:
+            return ""
+        v = int(self.act_input)
+        return "" if 1 <= v <= 36 else "The ACT runs 1 to 36."
+
+    @rx.var(deps=["gpa_problem", "sat_problem", "act_problem"])
+    def scores_ok(self) -> bool:
+        return not (self.gpa_problem or self.sat_problem or self.act_problem)
+
+    @rx.event
+    async def save_scores(self):
+        """Store the GPA and scores, then re-run the analysis immediately.
+
+        Out-of-range values are refused rather than stored, because the engine
+        drops what it cannot parse — so a typo would otherwise look saved and
+        change nothing, which is the worst of both.
+        """
+        uid = await self._user_id()
+        if uid is None:
+            return rx.redirect("/login")
+        if not self.scores_ok:
+            self.scores_msg = "Fix the highlighted number first."
+            return
+
+        with db.get_session() as s:
+            user = s.get(User, uid)
+            if user is None:
+                return rx.redirect("/login")
+            # Blank means "remove it", not "leave the old one".
+            user.gpa = self.gpa_input.strip() or None
+            s.add(user)
+
+            for kind, raw in (("SAT", self.sat_input), ("ACT", self.act_input)):
+                rows = list(s.exec(
+                    select(TestScore).where(TestScore.user_id == uid,
+                                            TestScore.kind == kind)).all())
+                if raw.strip():
+                    if rows:
+                        rows[0].score = raw.strip()
+                        s.add(rows[0])
+                        extra = rows[1:]
+                    else:
+                        s.add(TestScore(user_id=uid, kind=kind,
+                                        score=raw.strip()))
+                        extra = []
+                else:
+                    extra = rows
+                # One row per kind. student_stats keeps the best of each, so
+                # duplicates were harmless but made "clear my score" impossible.
+                for r in extra:
+                    s.delete(r)
+            s.commit()
+
+        self.scores_msg = "Saved — the numbers above now use these."
         self._analyse(uid)
 
     @rx.event

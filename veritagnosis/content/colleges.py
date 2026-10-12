@@ -197,8 +197,10 @@ BY_NAME = {c["name"].lower(): c for c in COLLEGES}
 # student whose list is mostly accessible schools will find few matches. That
 # is a gap in the data, not a judgement about their list, and the screen says
 # so rather than leaving them to infer it.
-COVERAGE_NOTE = (
-    "This covers 24 well-known universities, all with admit rates between "
-    "3.6% and 45%. If a school on your list is missing, that means we do not "
-    "have its published data yet — not that it is out of reach."
-)
+# COVERAGE_NOTE used to live here: a paragraph naming how many universities
+# were loaded and what range of admit rates they spanned, rendered under every
+# statistics box. It was written when this file was the whole catalogue. The
+# Scorecard import (scripts/import_colleges.py) means it no longer describes
+# the data, and a student reading their own numbers does not need a paragraph
+# about where the dataset came from — each entry already carries its own
+# source_url for anyone who wants to check a figure.

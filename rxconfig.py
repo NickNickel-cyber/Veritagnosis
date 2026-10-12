@@ -37,8 +37,17 @@ os.environ.setdefault("REFLEX_HOT_RELOAD_EXCLUDE_PATHS", "data")
 # in production should break the deploy loudly, not silently open it up.
 _origins = [o.strip() for o in os.environ.get("VG_ORIGIN", "").split(",") if o.strip()]
 CORS_ORIGINS = _origins or [
+    # Development: the Node dev server serves the page on 3000 and talks to
+    # this backend on 8000, so the browser's origin is 3000.
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    # Packaged (launch.py): one process serves BOTH the page and the backend on
+    # 8000, so the origin is 8000. Without these the page loads and every
+    # interaction fails — the websocket handshake comes back 403 and the app
+    # looks frozen rather than blocked, which is the worst way for this to go
+    # wrong. Still localhost-only, so this is not a loosening.
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 
 config = rx.Config(

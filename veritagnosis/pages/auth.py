@@ -212,8 +212,15 @@ def signup() -> rx.Component:
                         2,
                         rx.box(
                             rx.el.label("Age"),
+                            # No default. This box used to arrive pre-filled
+                            # with 17, so a student who skipped past it had an
+                            # age recorded that they never entered — and age is
+                            # one of the encrypted columns, stored because it
+                            # is personal. A placeholder shows the format
+                            # without asserting anything about them.
                             rx.el.input(class_name="input", name="age", type="number",
-                                        min=MIN_AGE, max=MAX_AGE, default_value="17"),
+                                        min=MIN_AGE, max=MAX_AGE,
+                                        placeholder="17"),
                             class_name="field",
                         ),
                         rx.box(

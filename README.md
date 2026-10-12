@@ -90,6 +90,45 @@ read from their own account row. One sending account serves everybody.
 
 ---
 
+## Giving it to someone else — one file, one click
+
+Your client needs no Python, no installs and no downloads. You build once:
+
+```
+python build_exe.py
+```
+
+That produces **`dist/Veritagnosis.exe`**. Send them that single file. They
+double-click it; it starts, creates its own database and keys beside itself,
+and opens their browser.
+
+Build it on the platform you are shipping to — PyInstaller bundles the
+interpreter it runs under and cannot cross-compile, so a Windows .exe has to be
+built on Windows. That is the only reason this is a build step at all.
+
+Two things to expect:
+
+- **The file is large** (150–250MB). It contains a whole Python interpreter,
+  the compiled web page and the college data.
+- **Windows SmartScreen will warn** the first time, because the exe is
+  unsigned: "Windows protected your PC" → **More info** → **Run anyway**. The
+  only way to remove that warning is a code-signing certificate.
+
+To include the full college catalogue in the exe, import it first and then
+freeze it:
+
+```
+python scripts/manage.py import-colleges path/to/Most-Recent-Cohorts-Institution.csv
+python scripts/manage.py seed-colleges
+python build_exe.py
+```
+
+`seed-colleges` writes a copy containing **only** the college table — it
+deletes every other table and refuses to write the file if any user row
+survives, so your own account and essays cannot be shipped by accident.
+
+---
+
 ## The college catalogue
 
 Out of the box the app knows about two dozen colleges, read by hand out of each
@@ -259,7 +298,7 @@ anything drops below WCAG AA.** Hand-picked hexes usually miss.
 
 See [SECURITY.md](SECURITY.md). Short version: Argon2id passwords, AES-256-GCM
 on sensitive columns, hashed session tokens with expiry and lockout, secrets
-from `.env` with a fail-fast config, mandatory two-factor sign-in, and 457
+from `.env` with a fail-fast config, mandatory two-factor sign-in, and 466
 tests including one that greps the raw database file for plaintext.
 
 ```
