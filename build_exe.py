@@ -1,45 +1,43 @@
 #!/usr/bin/env python3
 """
-Build Veritagnosis into a single file your client double-clicks.
+Build Veritagnosis into one file your client double-clicks.
 
     python build_exe.py
 
-You run this once, on Windows. It produces:
+Produces, depending on the machine you run it on:
 
-    dist/Veritagnosis.exe
+    Windows   dist/Veritagnosis.exe      one file, double-click it
+    macOS     dist/Veritagnosis.app      a normal Mac app, double-click it
+    Linux     dist/Veritagnosis          one file, run it
 
-That is the whole handover. Your client double-clicks it. No Python, no
-installing packages, no terminal, no downloads — the exe contains the
-interpreter, every dependency, the compiled web frontend and the college data.
-First launch creates their database and keys next to the exe and opens their
+The client needs nothing: no Python, no installing packages, no terminal. The
+result contains the interpreter, every dependency, the compiled web page and
+the college data. First launch creates their database and keys and opens their
 browser.
 
-Why this is a build step and not something the client runs
-----------------------------------------------------------
-PyInstaller bundles the interpreter it is run by, for the platform it is run
-on. It cannot cross-compile: a Windows .exe has to be built on Windows. So the
-one machine that has to run a build is yours, once per release.
+Why there is no single file for both Windows and macOS
+-----------------------------------------------------
+There cannot be. A Windows executable is PE format and a macOS executable is
+Mach-O; no file is both. PyInstaller also bundles the interpreter it is run by,
+for the platform it is run on, and cannot cross-compile — so each platform's
+build must happen on that platform.
 
-What it does, in order
-----------------------
-1. Makes sure the project's own environment exists and is complete (reuses
-   start.py, so there is one definition of that).
-2. Compiles the web frontend with `reflex export --frontend-only`. This is the
-   part that needs Node, and it happens HERE so the client never does.
-3. Runs PyInstaller over launch.py with the frontend, the assets and the
-   college catalogue added as data.
+You do not need a Mac for the Mac build. .github/workflows/build.yml runs this
+script on GitHub's own Windows and macOS runners and attaches both results to
+a release. Pushing a tag is the whole job.
 
 Caveats worth knowing
 ---------------------
-* The exe is large — 150-250MB. That is a whole Python interpreter plus the
-  built frontend, and there is no way around it.
-* Windows SmartScreen will warn on an unsigned exe the first time ("unknown
-  publisher"). Your client clicks "More info" then "Run anyway", or you buy a
-  code-signing certificate. Nothing in the build can avoid that; it is what
-  signing is for.
-* Antivirus occasionally flags PyInstaller output. If that happens, build with
-  `--onedir` instead (set ONEDIR below) — a folder with an exe in it, which is
-  less often misread than a single self-extracting file.
+* The result is large (40-250MB) — a whole Python interpreter plus the frontend.
+* **Windows** warns on an unsigned exe the first time ("unknown publisher"):
+  More info -> Run anyway.
+* **macOS is stricter.** An unsigned, un-notarised app downloaded from the
+  internet is refused by Gatekeeper, and on Apple Silicon the wording is
+  "damaged and can't be opened" — which sounds like a corrupt download rather
+  than a policy decision. The user right-clicks the app and chooses Open, once.
+  Only an Apple Developer certificate removes that; the README spells it out.
+* Antivirus occasionally flags PyInstaller output on Windows. Set ONEFILE to
+  False for a folder build, which is misread less often.
 """
 
 from __future__ import annotations
@@ -54,8 +52,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 NAME = "Veritagnosis"
 
-# A single self-contained file. Set to True if antivirus objects — see above.
-ONEDIR = False
+# Windows/Linux: one self-contained file. Set to False if antivirus objects.
+# Ignored on macOS, where an .app bundle is a directory by definition.
+ONEFILE = True
+
+MAC = platform.system() == "Darwin"
+WINDOWS = platform.system() == "Windows"
 
 
 def say(msg: str = "") -> None:
@@ -86,11 +88,11 @@ def main() -> int:
     say(f"  Building {NAME}")
     say()
 
-    if platform.system() != "Windows":
-        say("  Note: you are not on Windows, so this will produce an")
-        say(f"  executable for {platform.system()}, not a .exe. PyInstaller")
-        say("  cannot cross-compile — build the Windows version on Windows.")
-        say()
+    say(f"  Building for {platform.system()} on {platform.machine()}.")
+    say("  PyInstaller cannot cross-compile: this produces a build for THIS")
+    say("  platform only. For the other one, push a tag and let")
+    say("  .github/workflows/build.yml do it.")
+    say()
 
     # ---- 1. the environment ------------------------------------------
     say("  [1/4] environment")
@@ -134,11 +136,18 @@ def main() -> int:
     args = [
         str(py), "-m", "PyInstaller", "--noconfirm", "--clean",
         "--name", NAME,
-        "--onedir" if ONEDIR else "--onefile",
-        # A console window is kept on purpose. It is where the sign-in code
-        # appears if email is not configured, and where a startup error is
-        # readable instead of the window vanishing.
-        "--console",
+        # macOS gets an .app bundle, which is a directory by definition and
+        # must be --windowed to be a real double-clickable app rather than
+        # something that opens a Terminal. Windows and Linux get one file with
+        # a console, because that console is where a startup error is readable
+        # and where the sign-in code appears when no email is configured.
+        #
+        # launch.py writes everything it says to veritagnosis.log as well, so
+        # the windowed Mac build is not silent when something goes wrong.
+        *(["--onedir", "--windowed",
+           "--osx-bundle-identifier", "app.veritagnosis.desktop"]
+          if MAC else
+          [("--onefile" if ONEFILE else "--onedir"), "--console"]),
         # Laid out as <bundle>/web/build/client, which is what Reflex expects
         # under a web directory — launch.py points REFLEX_WEB_WORKDIR at it.
         f"--add-data={frontend}{sep}web/build/client",
@@ -179,8 +188,12 @@ def main() -> int:
     if run(args) != 0:
         die("PyInstaller failed — see its output above.")
 
-    out = ROOT / "dist" / (NAME if ONEDIR else
-                           (NAME + (".exe" if platform.system() == "Windows" else "")))
+    if MAC:
+        out = ROOT / "dist" / f"{NAME}.app"
+    elif WINDOWS:
+        out = ROOT / "dist" / f"{NAME}.exe"
+    else:
+        out = ROOT / "dist" / NAME
     say()
     say("  ----------------------------------------------------------")
     say(f"   Done:  {out}")
@@ -188,8 +201,17 @@ def main() -> int:
     say("   Give that to your client. They double-click it; nothing")
     say("   else is needed on their machine.")
     say()
-    say("   First run on an unsigned exe shows a Windows SmartScreen")
-    say("   warning — 'More info' then 'Run anyway'.")
+    if MAC:
+        say("   Zip it before sending (right-click -> Compress) so the")
+        say("   bundle survives the trip in one piece.")
+        say()
+        say("   It is not signed, so the first open is refused: they")
+        say("   right-click the app and choose Open, then Open again.")
+        say("   Double-clicking first gives a misleading \"damaged\"")
+        say("   message. Only an Apple Developer certificate avoids this.")
+    elif WINDOWS:
+        say("   It is not signed, so the first run shows SmartScreen:")
+        say("   'More info' then 'Run anyway'.")
     say("  ----------------------------------------------------------")
     say()
     return 0

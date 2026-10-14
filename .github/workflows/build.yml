@@ -1,0 +1,124 @@
+# Build the one-click app for Windows and macOS.
+#
+# This exists because PyInstaller cannot cross-compile: a Windows .exe has to
+# be built on Windows and a macOS .app on macOS. GitHub rents both, so nobody
+# needs to own both.
+#
+# How to cut a release
+# --------------------
+#     git tag v1.0.0
+#     git push origin v1.0.0
+#
+# That is it. A few minutes later the release page has Veritagnosis.exe and
+# Veritagnosis-macOS.zip attached, and anyone can download the one for their
+# computer and double-click it.
+#
+# Pushing to main, or clicking "Run workflow", builds both and attaches them
+# as workflow artifacts instead — useful for checking a change before tagging.
+
+name: Build the app
+
+on:
+  push:
+    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write        # needed to attach files to a release
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false   # a Windows failure should not hide the Mac result
+      matrix:
+        include:
+          - os: windows-latest
+            label: Windows
+            artifact: Veritagnosis.exe
+          - os: macos-latest
+            label: macOS
+            artifact: Veritagnosis-macOS.zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 3.12 rather than the newest: the pinned wheels in requirements.txt all
+      # have builds for it, which is the whole point of pinning them.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Reflex compiles the web page with Node. Both runners have it, but
+      # pinning the major version keeps a surprise upgrade from breaking a
+      # release build.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # build_exe.py creates its own .venv and installs the pinned
+      # requirements into it, so there is nothing to install here.
+      - name: Build
+        run: python build_exe.py
+        env:
+          REFLEX_USE_NPM: "1"
+          NPM_CONFIG_AUDIT: "false"
+          NODE_OPTIONS: ""
+
+      # A .app is a directory, and an artifact upload would flatten it and
+      # lose the execute bit on the inner binary. Zipping it on macOS keeps
+      # both the structure and the permissions.
+      - name: Zip the Mac app
+        if: runner.os == 'macOS'
+        run: |
+          cd dist
+          zip -ry Veritagnosis-macOS.zip Veritagnosis.app
+          ls -la
+
+      - name: Check something was actually produced
+        shell: bash
+        run: |
+          test -e "dist/${{ matrix.artifact }}" || {
+            echo "::error::dist/${{ matrix.artifact }} is missing"
+            ls -la dist || true
+            exit 1
+          }
+          echo "built $(du -h "dist/${{ matrix.artifact }}" | cut -f1)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: veritagnosis-${{ matrix.label }}
+          path: dist/${{ matrix.artifact }}
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/${{ matrix.artifact }}
+          # The body is written once, by whichever job gets there first.
+          body: |
+            Download the file for your computer, then double-click it.
+            Nothing else to install.
+
+            | Your computer | Download |
+            |---|---|
+            | Windows | `Veritagnosis.exe` |
+            | Mac | `Veritagnosis-macOS.zip` — unzip it first |
+
+            **The first open is refused, on both.** Neither build is
+            code-signed, so each system assumes the worst about an unknown
+            download:
+
+            - **Windows** — "Windows protected your PC" → **More info** →
+              **Run anyway**.
+            - **Mac** — do not double-click it. **Right-click the app →
+              Open**, then **Open** again. Double-clicking first shows
+              "damaged and can't be opened", which is Gatekeeper being
+              unhelpful rather than a broken file.
+
+            Your work is saved next to the app, or in your user folder if the
+            app is somewhere the system protects. Leave the window open while
+            you use it.

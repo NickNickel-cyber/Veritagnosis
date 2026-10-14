@@ -8,39 +8,134 @@ a real scoring engine, and an application tracker.
 
 ## Running it
 
-You need **Python 3.11 or newer** and nothing else. Then, from this folder:
+Extract everything from the zip, keeping the files together, then
+**double-click the one for your computer**:
 
-```
-python start.py
-```
-
-That is the whole install. On Windows you can also just double-click
-**`run.bat`**, which runs the same thing.
-
-The first run takes a few minutes: it builds a private environment in `.venv`,
-installs the pinned dependencies into it, generates your encryption keys,
-creates the database, and compiles the web frontend. Every run after that
-starts in seconds. Running the same command again is always safe — it is the
-normal way to start the app.
-
-When it is ready, open **<http://localhost:3000>**. Leave the window open;
-Ctrl+C stops it.
-
-### Other things `start.py` can do
-
-| command | what it does |
+| Your computer | Double-click |
 |---|---|
-| `python start.py` | Start the app. Use this. |
-| `python start.py --dev` | Hot reload, for editing the code. |
-| `python start.py --reset` | Rebuild the web frontend from scratch. Try this if the page acts strange. |
-| `python start.py --check` | Set everything up, verify it, and stop without starting. |
-| `python start.py --test` | Run the test suite. |
+| Windows | **`Veritagnosis.bat`** |
+| Mac | **`Veritagnosis.command`** |
+| Linux | **`Veritagnosis.command`** |
 
-### If Python is not installed
+That is the whole install. The first run takes a few minutes — it builds a
+private environment, installs the pinned dependencies, generates your
+encryption keys, creates the database and compiles the web page. Every run
+after that starts in seconds, and running it again is the normal way to start
+the app.
 
-Get it from <https://www.python.org/downloads/>. On Windows, tick
-**"Add python.exe to PATH"** in the installer — without it, the `python`
-command will not be found.
+When it is ready your browser opens at **<http://localhost:3000>**. Leave the
+window open; closing it stops the app.
+
+**This needs Python 3.11 or newer.** The launcher checks, and tells you where
+to get it if you do not have it. If you would rather hand someone a file that
+needs nothing at all, see *Handing it to someone else* below.
+
+### Mac: if double-clicking opens a text editor
+
+Then the file lost its execute permission in the zip — some zip tools drop it.
+One command fixes it for good:
+
+```
+chmod +x Veritagnosis.command
+```
+
+Right-click the folder → *New Terminal at Folder*, paste that, press Enter,
+then double-click as normal.
+
+### Other things the launcher can do
+
+Pass these after the file name (`Veritagnosis.bat test`, or
+`./Veritagnosis.command test`):
+
+| option | what it does |
+|---|---|
+| *(nothing)* | Start the app. Use this. |
+| `dev` | Hot reload, for editing the code. |
+| `reset` | Rebuild the web page from scratch. Try this if it looks wrong. |
+| `check` | Set everything up, verify it, and stop without starting. |
+| `test` | Run the test suite. |
+
+Under the hood all of these run `start.py`, which is where the actual logic
+lives — the two launchers are a handful of lines each so that Windows and Mac
+cannot drift apart.
+
+---
+
+## Handing it to someone else
+
+If the person receiving this should not have to install anything at all — not
+even Python — give them a built app instead of the source.
+
+### The easy way: let GitHub build both
+
+Push the repo to GitHub, then:
+
+```
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+`.github/workflows/build.yml` builds on GitHub's own Windows **and** macOS
+machines and attaches both results to the release page:
+
+| Your computer | Download |
+|---|---|
+| Windows | `Veritagnosis.exe` |
+| Mac | `Veritagnosis-macOS.zip` (unzip it first) |
+
+They download one file and double-click it. No Python, no installs, no
+terminal. **You do not need a Mac for the Mac build** — GitHub rents one.
+
+### The manual way
+
+On the machine whose platform you are building for:
+
+```
+python build_exe.py
+```
+
+Windows gives you `dist/Veritagnosis.exe`; macOS gives you
+`dist/Veritagnosis.app`; Linux gives you `dist/Veritagnosis`.
+
+**There is no single file that runs on both Windows and macOS.** A Windows
+executable is PE format and a Mac one is Mach-O — no file is both. PyInstaller
+also bundles the interpreter it is run by and cannot cross-compile, which is
+why each platform's build happens on that platform, and why the GitHub route
+above exists.
+
+### Warn them about the first open
+
+Neither build is code-signed, so both systems assume the worst about an
+unknown download. This is not optional and not a sign anything is wrong:
+
+- **Windows** — "Windows protected your PC" → **More info** → **Run anyway**.
+- **Mac** — **right-click the app → Open**, then **Open** again. Do *not*
+  double-click it first: that shows *"Veritagnosis is damaged and can't be
+  opened"*, which sounds like a corrupt download but is just Gatekeeper
+  refusing an unsigned app. Right-click → Open is the documented way past it.
+
+Only certificates remove those prompts — an Apple Developer certificate
+(US$99/year, plus notarisation) and a Windows code-signing certificate.
+
+### Where their work is saved
+
+Next to the app, in a `data` folder, with their keys in `.env` — so the whole
+thing stays portable and visible. If the app is somewhere the system protects
+(`/Applications`, `Program Files`, a read-only disk), it falls back to the
+normal per-user location instead:
+
+| | |
+|---|---|
+| Windows | `%LOCALAPPDATA%\Veritagnosis` |
+| Mac | `~/Library/Application Support/Veritagnosis` |
+| Linux | `~/.local/share/veritagnosis` |
+
+Everything the app says at startup is also written to `veritagnosis.log` beside
+the data, because a Mac app has no console window to print to.
+
+To include the full college catalogue in the build, import it first — see
+*The college catalogue* below — then `python scripts/manage.py seed-colleges`
+before building.
 
 ---
 
@@ -90,45 +185,6 @@ read from their own account row. One sending account serves everybody.
 
 ---
 
-## Giving it to someone else — one file, one click
-
-Your client needs no Python, no installs and no downloads. You build once:
-
-```
-python build_exe.py
-```
-
-That produces **`dist/Veritagnosis.exe`**. Send them that single file. They
-double-click it; it starts, creates its own database and keys beside itself,
-and opens their browser.
-
-Build it on the platform you are shipping to — PyInstaller bundles the
-interpreter it runs under and cannot cross-compile, so a Windows .exe has to be
-built on Windows. That is the only reason this is a build step at all.
-
-Two things to expect:
-
-- **The file is large** (150–250MB). It contains a whole Python interpreter,
-  the compiled web page and the college data.
-- **Windows SmartScreen will warn** the first time, because the exe is
-  unsigned: "Windows protected your PC" → **More info** → **Run anyway**. The
-  only way to remove that warning is a code-signing certificate.
-
-To include the full college catalogue in the exe, import it first and then
-freeze it:
-
-```
-python scripts/manage.py import-colleges path/to/Most-Recent-Cohorts-Institution.csv
-python scripts/manage.py seed-colleges
-python build_exe.py
-```
-
-`seed-colleges` writes a copy containing **only** the college table — it
-deletes every other table and refuses to write the file if any user row
-survives, so your own account and essays cannot be shipped by accident.
-
----
-
 ## The college catalogue
 
 Out of the box the app knows about two dozen colleges, read by hand out of each
@@ -171,12 +227,13 @@ This means the app was started with a Python that is not the one in `.venv`.
 Typing `reflex run` directly does that, because it uses whichever `reflex` is
 first on your PATH, and a system-wide Reflex install is often incomplete.
 
-Use `python start.py` instead. It always runs the app with the interpreter
-inside `.venv`, whatever Python you launch it with, and it verifies that
-environment can import Reflex before it tries to start.
+Use the launcher instead — `Veritagnosis.bat` on Windows,
+`Veritagnosis.command` on Mac. Both run `start.py`, which always starts the app
+with the interpreter inside `.venv` whatever Python launched it, and verifies
+that environment can import Reflex before trying.
 
-**Anything else environment-shaped** — delete `.venv` and run `python start.py`
-again. It rebuilds from the pinned versions in `requirements.txt`.
+**Anything else environment-shaped** — delete `.venv` and double-click the
+launcher again. It rebuilds from the pinned versions in `requirements.txt`.
 
 ```
 Windows:  rmdir /s /q .venv
@@ -185,7 +242,8 @@ macOS:    rm -rf .venv
 
 **The frontend will not build.** Reflex compiles the web page with its own
 bundled toolchain. If that fails, install Node.js LTS from
-<https://nodejs.org>, then run `python start.py --reset`.
+<https://nodejs.org>, then run the launcher with `reset`
+(`Veritagnosis.bat reset`, or `./Veritagnosis.command reset`).
 
 ---
 
@@ -302,7 +360,7 @@ from `.env` with a fail-fast config, mandatory two-factor sign-in, and 466
 tests including one that greps the raw database file for plaintext.
 
 ```
-python start.py --test
+./Veritagnosis.command test
 python scripts/manage.py check
 ```
 

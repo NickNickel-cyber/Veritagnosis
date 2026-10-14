@@ -35,6 +35,7 @@ has to do four things the development launcher does not:
 from __future__ import annotations
 
 import os
+import platform
 import shutil
 import socket
 import sys
@@ -55,11 +56,59 @@ def bundle_dir() -> Path:
     return Path(__file__).resolve().parent
 
 
+def _beside_the_app() -> Path:
+    """The folder the user sees the program in.
+
+    On Windows that is simply the folder holding the .exe. On macOS the
+    executable lives at Veritagnosis.app/Contents/MacOS/Veritagnosis, so the
+    folder the user actually sees is three levels up — writing "beside the
+    executable" there would put the student's database INSIDE the application
+    bundle, where it is lost the moment the app is replaced and may not be
+    writable at all.
+    """
+    exe = Path(sys.executable).resolve()
+    if not frozen():
+        return Path(__file__).resolve().parent
+    parts = exe.parts
+    if ".app" in " ".join(parts) and len(parts) >= 4:
+        for i in range(len(parts) - 1, 1, -1):
+            if parts[i].endswith(".app"):
+                return Path(*parts[:i])
+    return exe.parent
+
+
+def _user_data_dir() -> Path:
+    """The per-user location each platform expects an app to write to."""
+    if platform.system() == "Windows":
+        base = os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local")
+        return Path(base) / "Veritagnosis"
+    if platform.system() == "Darwin":
+        return Path.home() / "Library" / "Application Support" / "Veritagnosis"
+    return Path(os.environ.get("XDG_DATA_HOME",
+                               Path.home() / ".local" / "share")) / "veritagnosis"
+
+
 def home_dir() -> Path:
-    """Where this install keeps its data. Beside the executable."""
-    if frozen():
-        return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent
+    """Where this install keeps its data.
+
+    Beside the program when that folder can be written to — it keeps the whole
+    thing portable and visible, which is what someone who was handed a single
+    file expects. When it cannot be (an app in /Applications, an exe in
+    Program Files, a read-only disk image, a USB stick mounted read-only) it
+    falls back to the per-user location the platform expects, because the
+    alternative is an app that will not start and cannot say why.
+    """
+    beside = _beside_the_app()
+    try:
+        beside.mkdir(parents=True, exist_ok=True)
+        probe = beside / ".vg-write-test"
+        probe.write_text("", encoding="utf-8")
+        probe.unlink()
+        return beside
+    except OSError:
+        fallback = _user_data_dir()
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
 
 
 # ---------------------------------------------------------------------------
@@ -77,8 +126,53 @@ os.environ.setdefault("VG_BASE_DIR", str(HOME))
 PORT = 8000
 
 
+# A macOS .app built with --windowed has no console: stdout goes nowhere and
+# sys.stdout may even be None. Everything said here is also appended to a log
+# file so that a failure is recoverable rather than invisible, and so the
+# sign-in code is retrievable when there is no email configured and no window
+# to print it in.
+_LOG: Path | None = None
+
+
+def _log_path() -> "Path | None":
+    global _LOG
+    if _LOG is None:
+        try:
+            _LOG = HOME / "veritagnosis.log"
+            _LOG.write_text("", encoding="utf-8")
+        except OSError:
+            _LOG = Path(os.devnull)
+    return _LOG
+
+
 def say(msg: str = "") -> None:
-    print(msg, flush=True)
+    try:
+        print(msg, flush=True)
+    except Exception:                                   # noqa: BLE001
+        pass            # no console (a windowed .app); the log still has it
+    try:
+        with _log_path().open("a", encoding="utf-8") as fh:
+            fh.write(msg + "\n")
+    except OSError:
+        pass
+
+
+def has_console() -> bool:
+    """False in a windowed macOS .app, where input() would raise."""
+    try:
+        return sys.stdin is not None and sys.stdin.isatty()
+    except Exception:                                   # noqa: BLE001
+        return False
+
+
+def pause(prompt: str = "  Press Enter to close. ") -> None:
+    """Hold the window open — but only when there is a window."""
+    if not has_console():
+        return
+    try:
+        input(prompt)
+    except (EOFError, KeyboardInterrupt):
+        pass
 
 
 def port_free(port: int) -> bool:
@@ -158,7 +252,7 @@ def main() -> int:
         say(f"  running — try opening {url} first.")
         say("  Otherwise close whatever is using it and run this again.")
         say()
-        input("  Press Enter to close. ")
+        pause()
         return 1
 
     ensure_env()
@@ -176,7 +270,7 @@ def main() -> int:
         else:
             say(f"  No compiled frontend found at {web}.")
             say("  Run:  python build_exe.py   (or reflex export --frontend-only)")
-            input("  Press Enter to close. ")
+            pause()
             return 1
     else:
         # In the bundle the files sit at <bundle>/web/build/client, matching

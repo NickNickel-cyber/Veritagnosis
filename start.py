@@ -12,9 +12,12 @@ the app every day.
 
     python start.py            start the app
     python start.py --dev      start with hot reload (for editing the code)
-    python start.py --reset     rebuild the web frontend from scratch
-    python start.py --check     set everything up, verify it, and stop
-    python start.py --test      run the test suite
+    python start.py --reset    rebuild the web frontend from scratch
+    python start.py --check    set everything up, verify it, and stop
+    python start.py --test     run the test suite
+
+Most people never type this. Double-clicking Veritagnosis.bat on Windows or
+Veritagnosis.command on macOS runs exactly the same thing.
 
 Why this file exists
 --------------------
@@ -87,6 +90,28 @@ def venv_python() -> Path:
     if platform.system() == "Windows":
         return VENV / "Scripts" / "python.exe"
     return VENV / "bin" / "python"
+
+
+def ensure_launcher_executable() -> None:
+    """Keep Veritagnosis.command double-clickable on macOS and Linux.
+
+    macOS runs a .command file when it is double-clicked only if the execute
+    bit is set; without it, Finder opens the file in TextEdit instead, which
+    looks like the app is broken. Git records the bit, so a clone is fine — but
+    a zip made on Windows, or one unpacked by a tool that drops permissions,
+    arrives without it.
+
+    Repairing it here means that once the app has started by any route, the
+    double-click works from then on.
+    """
+    if platform.system() == "Windows":
+        return
+    launcher = ROOT / "Veritagnosis.command"
+    try:
+        if launcher.exists() and not os.access(launcher, os.X_OK):
+            launcher.chmod(launcher.stat().st_mode | 0o111)
+    except OSError:
+        pass        # not worth failing a start over
 
 
 def ensure_python_version() -> None:
@@ -271,6 +296,7 @@ def main() -> int:
     total = 4
     step(1, total, "checking Python")
     ensure_python_version()
+    ensure_launcher_executable()
 
     step(2, total, "preparing the environment")
     ensure_venv()
