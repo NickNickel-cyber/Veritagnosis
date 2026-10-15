@@ -7,6 +7,7 @@ Merged from: home, achievements, avatar.
 from __future__ import annotations
 
 import reflex as rx
+
 from veritagnosis.states.auth_state import AuthState
 from veritagnosis.ui.theme import btn, shell, theme_picker
 from veritagnosis.states.play_state import AchievementsState
@@ -19,14 +20,15 @@ from veritagnosis.ui.avatar import CATEGORIES
 # home
 # ====================================================================
 
+# (icon, name, subtitle, route).
 TILES = [
-    ("🧑‍🎨", "Avatar", "Customize your look", "/avatar"),
-    ("🧭", "Profile", "Interests, activities, timeline", "/profile"),
-    ("✍️", "Essays", "Write with a guide", "/essays"),
-    ("🎓", "Applications", "Progress by school", "/applications"),
-    ("💬", "Recommendations", "Teachers and guidance", "/recommendations"),
-    ("💷", "Paying for it", "Aid, costs, scholarships", "/aid"),
-    ("🧘", "Meditation", "Breathe and reset", "/meditation"),
+    ("🧑‍🎨", "My avatar", "Customize your look", "/avatar"),
+    ("🧭", "My profile", "Interests, activities, timeline", "/profile"),
+    ("✍️", "Essay Lab", "Write with a guide", "/essays"),
+    ("🎓", "My colleges", "Progress by school", "/applications"),
+    ("💬", "Recommenders", "Teachers and guidance", "/recommendations"),
+    ("💷", "Financial aid", "Aid, costs, scholarships", "/aid"),
+    ("🧘", "Take a breath", "Breathe and reset", "/meditation"),
     ("🛸", "Graze", "Fly close. 15 or 20 min", "/graze"),
     ("⚙️", "Settings", "Account and theme", "/settings"),
 ]
@@ -55,9 +57,16 @@ def home() -> rx.Component:
                 class_name="home-greet",
             ),
 
-            # 2 — avatar beside level and XP
+            # 2 — the avatar, and under it level and XP
+            #
+            # The biggest thing on the screen, and a link. It is the part of
+            # the app a student makes their own, so it leads the home screen
+            # rather than sitting beside the numbers as a thumbnail — and
+            # tapping the thing you built should take you to where you build
+            # it, which is what everyone tries first.
             rx.box(
-                rx.box(rx.html(AuthState.avatar_svg), class_name="who"),
+                rx.link(rx.html(AuthState.avatar_svg), href="/avatar",
+                        class_name="who", aria_label="Your avatar — change it"),
                 rx.box(
                     # data-pulse: motion.js watches the text and beats it once
                     # when it changes, so levelling up is something you see
@@ -88,7 +97,7 @@ def home() -> rx.Component:
                     rx.box(AuthState.task_meta, class_name="tb-meta"),
                     class_name="tb-text",
                 ),
-                rx.link(btn("Let's go!", type="button"), href=AuthState.task_route),
+                rx.link(btn("Let's go", type="button"), href=AuthState.task_route),
                 class_name="task-box",
             ),
 

@@ -1057,12 +1057,19 @@ class EssayState(FeatureState, rx.State):
             f"{self.words_needed} more words before a score means anything.")
 
     @rx.event
-    def set_body(self, value: str):
+    async def set_body(self, value: str):
         """The browser sends what you typed; nothing is sent back.
 
         Re-reading the whole essay on every keystroke would be wasteful, so the
         analysis refreshes once the draft has moved by a sentence's worth of
         typing — often enough to feel alive, rarely enough to stay cheap.
+
+        And the same beat writes it to the database. Leaving the box used to
+        be the only thing that saved: close the lid, lose the tab, let the
+        laptop sleep, and an hour of writing was gone — the one kind of bug a
+        student never forgives. A row update of a few kilobytes every
+        sentence or so costs nothing next to that, so the draft is never more
+        than a sentence away from being on disk.
         """
         self.body = value
         self.flash = ""
@@ -1070,6 +1077,10 @@ class EssayState(FeatureState, rx.State):
         self.dirty = True
         if abs(len(value) - self.analysed_len) >= 40:
             self._analyse()
+            # A failure here is a sign-out mid-draft. Say nothing and leave
+            # dirty set: the blur handler and the Save button both try again,
+            # and the text is still in the box either way.
+            await self._persist()
 
     # ---------------------------------------------------------------- fixes
     @rx.event

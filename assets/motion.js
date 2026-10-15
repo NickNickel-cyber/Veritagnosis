@@ -278,3 +278,64 @@
   }
   setInterval(sync, 1000);
 })();
+
+/* --------------------------------------------------------------- password
+ * Tick the password rules off as they are met.
+ *
+ * Deliberately here and not in Python. A Reflex state var holding the typed
+ * password would travel to the server on every keystroke AND be serialised
+ * back into the page as state — a password in two more places than it needs
+ * to be. This listener never sends anything anywhere: it reads the field,
+ * toggles five classes, and forgets.
+ *
+ * The rules are the same five that veritagnosis/crypto.py enforces, in the
+ * same order. The server is what actually decides; this only tells the
+ * student what the server is going to say, before they press the button.
+ */
+(function () {
+  'use strict';
+  if (window.__vgPwRules) return;
+  window.__vgPwRules = true;
+
+  var SYMBOLS = /[!-\/:-@\[-`{-~]/;   /* printable, not a letter/digit/space */
+
+  function met(rule, value) {
+    switch (rule) {
+      case 'len':    return value.length >= 8;
+      case 'upper':  return /[A-Z]/.test(value);
+      case 'lower':  return /[a-z]/.test(value);
+      case 'digit':  return /[0-9]/.test(value);
+      case 'symbol': return SYMBOLS.test(value);
+      default:       return false;
+    }
+  }
+
+  function paint(input) {
+    var form = input.form || input.closest('form') || document;
+    var list = form.querySelector('[data-pw-rules]');
+    if (!list) return;
+    var value = input.value || '';
+    /* Blank field: show the rules plainly rather than as five failures. The
+       student has not got anything wrong yet. */
+    list.classList.toggle('typing', value.length > 0);
+    var items = list.querySelectorAll('[data-rule]');
+    for (var i = 0; i < items.length; i++) {
+      var ok = value.length > 0 && met(items[i].getAttribute('data-rule'), value);
+      items[i].classList.toggle('ok', ok);
+      items[i].setAttribute('aria-checked', ok ? 'true' : 'false');
+    }
+  }
+
+  function handle(e) {
+    var el = e.target;
+    if (!el || el.tagName !== 'INPUT' || el.type !== 'password') return;
+    if (el.name !== 'password') return;      /* not the "current password" box */
+    paint(el);
+  }
+
+  /* Delegated, and on the document, because Reflex replaces these nodes on
+     every re-render — a listener bound to the input itself would be thrown
+     away with it. */
+  document.addEventListener('input', handle, true);
+  document.addEventListener('focusin', handle, true);
+})();

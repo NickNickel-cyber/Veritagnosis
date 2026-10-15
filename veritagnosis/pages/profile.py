@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import reflex as rx
 
+
 from veritagnosis.states.profile_state import (
     CAREER_OPTIONS,
     INTENSITIES,
@@ -448,7 +449,7 @@ def profile_page() -> rx.Component:
                 rx.link("← Home", href="/home", class_name="btn btn-ghost"),
                 class_name="screen-head",
             ),
-            rx.heading("Your profile", size="5"),
+            rx.heading("My profile", size="5"),
             rx.box(
                 "Where you stand, what you have not looked at, and what to do "
                 "next.",

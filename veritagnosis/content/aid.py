@@ -345,18 +345,6 @@ def as_js_data() -> dict:
     }
 
 
-def password_problems(pw: str) -> list[str]:
-    """Plain-language rules. Shown as you type, phrased as what's still missing."""
-    out = []
-    if len(pw) < 10:
-        out.append(f"at least 10 characters ({len(pw)} so far)")
-    if pw.isalpha():
-        out.append("a number or symbol")
-    if pw and pw.lower() in {"password", "veritagnosis", "12345678910", "qwertyuiop"}:
-        out.append("something less guessable")
-    return out
-
-
 if __name__ == "__main__":
     for a in (15, 17, 18):
         print(f"\nage {a}: {len(age_notes(a))} notes")

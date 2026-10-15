@@ -1117,3 +1117,72 @@ def test_the_task_is_stable_and_never_raises_on_odd_data(db):
     assert isinstance(t.title, str) and t.title
 
 
+
+
+# ====================================================================
+# the draft is saved as it is typed
+# ====================================================================
+#
+# Before this, the only things that wrote a draft to the database were the
+# Save button, stepping the guide, and the editor losing focus. A student who
+# typed for half an hour and then shut the laptop lost all of it — and the
+# app had shown a running word count and a score the whole time, which made
+# it look like the work was being kept.
+
+def _typing_double():
+    """A stand-in for EssayState with the three fields set_body touches."""
+    import types
+
+    saves = []
+
+    class _Fake:
+        body = ""
+        flash = "stale"
+        last_applied = "stale"
+        dirty = False
+        analysed_len = 0
+
+        def _analyse(self):
+            self.analysed_len = len(self.body)
+
+        async def _persist(self):
+            saves.append(self.body)
+            self.dirty = False
+            return True
+
+    return _Fake(), saves
+
+
+def test_typing_a_sentence_writes_the_draft_to_the_database():
+    import asyncio
+    from veritagnosis.states.apply_state import EssayState
+
+    fake, saves = _typing_double()
+    asyncio.run(EssayState.set_body.fn(fake, "x" * 80))
+    assert saves == ["x" * 80], "a sentence's worth of typing was not saved"
+
+
+def test_a_few_keystrokes_do_not_hit_the_database():
+    """The write is on the same beat as the analysis — about a sentence —
+    rather than on every keystroke, which would be a row update per letter."""
+    import asyncio
+    from veritagnosis.states.apply_state import EssayState
+
+    fake, saves = _typing_double()
+    asyncio.run(EssayState.set_body.fn(fake, "hello"))
+    assert saves == []
+    assert fake.body == "hello", "the text still has to reach the state"
+    assert fake.dirty is True, "and still count as unsaved"
+
+
+def test_a_long_draft_keeps_being_saved_as_it_grows():
+    import asyncio
+    from veritagnosis.states.apply_state import EssayState
+
+    fake, saves = _typing_double()
+    text = ""
+    for _ in range(10):
+        text += "The toaster was not broken when I took it apart. "
+        asyncio.run(EssayState.set_body.fn(fake, text))
+    assert len(saves) >= 5, f"only {len(saves)} saves while writing 10 sentences"
+    assert saves[-1] == text

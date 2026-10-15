@@ -59,7 +59,7 @@ def db(tmp_path):
 
 
 
-def _register_verified(db, username="sri", password="correct-horse-42", **kw):
+def _register_verified(db, username="sri", password="Correct-horse-42", **kw):
     """Register an account that is able to sign in.
 
     Every account needs an address now, because every sign-in mails a code to
@@ -71,7 +71,7 @@ def _register_verified(db, username="sri", password="correct-horse-42", **kw):
     return user
 
 
-def _sign_in(db, username="sri", password="correct-horse-42"):
+def _sign_in(db, username="sri", password="Correct-horse-42"):
     """Complete BOTH factors and return (token, user).
 
     Also pins the rule that makes the rest of this suite meaningful: login()
@@ -87,16 +87,16 @@ def _sign_in(db, username="sri", password="correct-horse-42"):
 
 # ------------------------------------------------------------------ passwords
 def test_hash_is_argon2id_and_salted():
-    a = passwords.hash_password("correct-horse-42")
-    b = passwords.hash_password("correct-horse-42")
+    a = passwords.hash_password("Correct-horse-42")
+    b = passwords.hash_password("Correct-horse-42")
     assert a.startswith("$argon2id$")
     assert a != b, "identical passwords must not produce identical hashes"
 
 
 def test_verify_accepts_right_rejects_wrong():
-    h = passwords.hash_password("correct-horse-42")
-    assert passwords.verify_password(h, "correct-horse-42")[0] is True
-    assert passwords.verify_password(h, "correct-horse-43")[0] is False
+    h = passwords.hash_password("Correct-horse-42")
+    assert passwords.verify_password(h, "Correct-horse-42")[0] is True
+    assert passwords.verify_password(h, "Correct-horse-43")[0] is False
 
 
 def test_verify_never_raises_on_garbage():
@@ -115,8 +115,41 @@ def test_password_length_is_bounded():
 def test_weak_passwords_are_rejected():
     assert passwords.problems("short") != []
     assert passwords.problems("password") != []
-    assert passwords.problems("alphabetsonly") == ["a number or symbol"]
-    assert passwords.problems("correct-horse-42") == []
+    assert passwords.problems("Correct-horse-42") == []
+
+
+def test_every_character_class_is_required():
+    # One rule per class, each tested by a password that satisfies all the
+    # others. A regression that drops a class shows up as exactly one failure.
+    assert passwords.problems("Sh0rt!") == [
+        "at least 8 characters (6 so far)"]
+    assert passwords.problems("lowercase1!") == ["a capital letter"]
+    assert passwords.problems("UPPERCASE1!") == ["a lowercase letter"]
+    assert passwords.problems("NoDigitsHere!") == ["a number"]
+    assert passwords.problems("NoSymbols123") == ["a symbol, like ! or ?"]
+    assert passwords.problems("Veritagnosis1!") == []
+
+
+def test_the_message_lists_the_rules_readably():
+    """Five rules joined by "and" five times reads like a machine."""
+    from veritagnosis.security import _and_list
+    assert _and_list([]) == ""
+    assert _and_list(["a number"]) == "a number"
+    assert _and_list(["a capital letter", "a number", "a symbol"]) == (
+        "a capital letter, a number and a symbol")
+
+
+def test_a_space_is_not_a_symbol():
+    # isalnum() would call a space a symbol and let a trailing one satisfy the
+    # rule. The class is spelled out precisely so it cannot.
+    assert "a symbol, like ! or ?" in passwords.problems("Padded 123")
+
+
+def test_the_whole_policy_is_enforced_at_registration(db):
+    with pytest.raises(auth.RegistrationError) as got:
+        auth.register(db, "newname", "nosymbols123", email="a@b.com")
+    message = str(got.value)
+    assert "a capital letter" in message and "a symbol" in message
 
 
 # ----------------------------------------------------------------- encryption
@@ -154,7 +187,7 @@ def test_sensitive_values_are_not_readable_in_the_db_file(tmp_path):
     engine = create_engine(f"sqlite:///{path}", connect_args={"check_same_thread": False})
     SQLModel.metadata.create_all(engine)
     with Session(engine) as s:
-        auth.register(s, "leaktest", "correct-horse-42",
+        auth.register(s, "leaktest", "Correct-horse-42",
                       email="secret@example.com", age="17", gender="nonbinary")
         u = s.exec(select(User)).first()
         u.gpa = "3.92"
@@ -162,7 +195,7 @@ def test_sensitive_values_are_not_readable_in_the_db_file(tmp_path):
 
     engine.dispose()
     raw = path.read_bytes()
-    for secret in (b"secret@example.com", b"nonbinary", b"3.92", b"correct-horse-42"):
+    for secret in (b"secret@example.com", b"nonbinary", b"3.92", b"Correct-horse-42"):
         assert secret not in raw, f"{secret!r} is readable in the database file"
     assert b"leaktest" in raw, "username is intentionally plaintext; test is wired up"
 
@@ -170,24 +203,46 @@ def test_sensitive_values_are_not_readable_in_the_db_file(tmp_path):
 # ---------------------------------------------------------------- registration
 def test_registration_rejects_bad_input(db):
     with pytest.raises(auth.RegistrationError):
-        auth.register(db, "ab", "correct-horse-42")            # too short
+        auth.register(db, "ab", "Correct-horse-42")            # too short
     with pytest.raises(auth.RegistrationError):
-        auth.register(db, "has space", "correct-horse-42")     # invalid chars
+        auth.register(db, "has space", "Correct-horse-42")     # invalid chars
     with pytest.raises(auth.RegistrationError):
         auth.register(db, "okname", "short")                   # weak password
+
+
+def test_one_address_can_hold_several_accounts(db):
+    """Two accounts, one inbox. A counsellor, a parent, a shared family
+    address: the account is identified by its username, and the sign-in code
+    is addressed to one specific user's row, so nothing downstream needs the
+    address to be unique."""
+    a = auth.register(db, "sri", "Correct-horse-42", email="same@example.com")
+    b = auth.register(db, "sri2", "Correct-horse-43", email="same@example.com")
+    assert a.id != b.id
+    assert a.email == b.email == "same@example.com"
+
+
+def test_a_code_goes_to_the_account_it_was_asked_for(db):
+    """With the address shared, the challenge must still name one account."""
+    auth.register(db, "sri", "Correct-horse-42", email="same@example.com")
+    second = auth.register(db, "sri2", "Correct-horse-43",
+                           email="same@example.com")
+    with pytest.raises(auth.SecondFactorRequired) as got:
+        auth.login(db, "sri2", "Correct-horse-43")
+    assert got.value.user_id == second.id
+    assert got.value.email == "same@example.com"
 
 
 def test_duplicate_username_rejected(db):
     _register_verified(db)
     with pytest.raises(auth.RegistrationError):
         # A different address, so it is the username that collides.
-        auth.register(db, "sri", "another-good-one-1", email="other@example.com")
+        auth.register(db, "sri", "Another-good-one-1", email="other@example.com")
 
 
 def test_password_is_never_stored(db):
-    auth.register(db, "sri", "correct-horse-42", email="a@b.com")
+    auth.register(db, "sri", "Correct-horse-42", email="a@b.com")
     u = db.exec(select(User)).first()
-    assert "correct-horse-42" not in u.password_hash
+    assert "Correct-horse-42" not in u.password_hash
     assert u.password_hash.startswith("$argon2id$")
 
 
@@ -203,7 +258,7 @@ def test_login_success_and_failure(db):
 def test_unknown_user_and_wrong_password_give_the_same_message(db):
     _register_verified(db)
     with pytest.raises(PermissionError) as no_user:
-        auth.login(db, "nobody", "correct-horse-42")
+        auth.login(db, "nobody", "Correct-horse-42")
     with pytest.raises(PermissionError) as bad_pw:
         auth.login(db, "sri", "wrong-password-1")
     assert str(no_user.value) == str(bad_pw.value) == auth.GENERIC_LOGIN_ERROR
@@ -212,7 +267,7 @@ def test_unknown_user_and_wrong_password_give_the_same_message(db):
 def test_unknown_user_takes_comparable_time(db):
     """Guards the dummy_verify() call. Without it a missing user returns in
     microseconds and a real one takes ~50ms, which enumerates accounts."""
-    auth.register(db, "sri", "correct-horse-42", email="a@b.com")
+    auth.register(db, "sri", "Correct-horse-42", email="a@b.com")
 
     def timed(name):
         t = time.perf_counter()
@@ -234,7 +289,7 @@ def test_lockout_after_repeated_failures(db):
             auth.login(db, "sri", "wrong-password-1")
     # Correct password now also refused, and the message says so.
     with pytest.raises(PermissionError) as e:
-        auth.login(db, "sri", "correct-horse-42")
+        auth.login(db, "sri", "Correct-horse-42")
     assert "Try again in" in str(e.value)
 
 
@@ -275,7 +330,7 @@ def test_idle_session_rejected(db):
 def test_password_change_kills_other_sessions(db):
     user = _register_verified(db)
     stolen, _ = _sign_in(db)
-    auth.change_password(db, user, "correct-horse-42", "brand-new-secret-9")
+    auth.change_password(db, user, "Correct-horse-42", "Brand-new-secret-9")
     assert auth.session_user(db, stolen) is None
 
 
@@ -287,7 +342,7 @@ def test_bad_token_is_rejected(db):
 
 # ------------------------------------------------------------ email verification
 def test_email_code_single_use_and_attempt_capped(db):
-    user = auth.register(db, "sri", "correct-horse-42", email="a@b.com")
+    user = auth.register(db, "sri", "Correct-horse-42", email="a@b.com")
     code = auth.issue_email_code(db, user.id)
     assert len(code) == 6 and code.isdigit()
     for _ in range(auth.MAX_CODE_ATTEMPTS):
@@ -297,7 +352,7 @@ def test_email_code_single_use_and_attempt_capped(db):
 
 
 def test_email_code_cannot_be_replayed(db):
-    user = auth.register(db, "sri", "correct-horse-42", email="a@b.com")
+    user = auth.register(db, "sri", "Correct-horse-42", email="a@b.com")
     code = auth.issue_email_code(db, user.id)
     assert auth.check_email_code(db, user.id, code) is True
     assert auth.check_email_code(db, user.id, code) is False
@@ -314,7 +369,7 @@ def test_audit_log_holds_no_secrets(db):
     rows = db.exec(select(AuditLog)).all()
     assert len(rows) >= 3
     blob = " ".join(f"{r.action} {r.detail or ''}" for r in rows)
-    for secret in ("correct-horse-42", "wrong-password-1", token, "a@b.com", "17"):
+    for secret in ("Correct-horse-42", "wrong-password-1", token, "a@b.com", "17"):
         assert secret not in blob, f"audit log leaked {secret!r}"
     assert any(r.action == "login" and not r.ok for r in rows), "failures must be logged"
 
@@ -339,7 +394,7 @@ def test_a_correct_password_creates_no_session(db):
     """The invariant. Everything else here is a detail of it."""
     _register_verified(db)
     with pytest.raises(auth.SecondFactorRequired):
-        auth.login(db, "sri", "correct-horse-42")
+        auth.login(db, "sri", "Correct-horse-42")
     assert db.exec(select(AuthSession)).all() == [], (
         "a correct password minted a session without the second factor")
 
@@ -356,7 +411,7 @@ def test_a_verified_account_still_needs_the_second_factor(db):
     db.add(user); db.commit()
 
     with pytest.raises(auth.SecondFactorRequired):
-        auth.login(db, "sri", "correct-horse-42")
+        auth.login(db, "sri", "Correct-horse-42")
     assert db.exec(select(AuthSession)).all() == []
 
 
@@ -371,7 +426,7 @@ def test_the_code_completes_the_login(db):
 def test_a_wrong_code_is_refused(db):
     _register_verified(db)
     with pytest.raises(auth.SecondFactorRequired) as e:
-        auth.login(db, "sri", "correct-horse-42")
+        auth.login(db, "sri", "Correct-horse-42")
     with pytest.raises(PermissionError):
         auth.complete_login(db, e.value.challenge, "000000")
     assert db.exec(select(AuthSession)).all() == []
@@ -380,7 +435,7 @@ def test_a_wrong_code_is_refused(db):
 def test_the_code_cannot_be_replayed(db):
     _register_verified(db)
     with pytest.raises(auth.SecondFactorRequired) as e:
-        auth.login(db, "sri", "correct-horse-42")
+        auth.login(db, "sri", "Correct-horse-42")
     auth.complete_login(db, e.value.challenge, e.value.code)
     with pytest.raises(PermissionError):
         auth.complete_login(db, e.value.challenge, e.value.code)
@@ -390,7 +445,7 @@ def test_the_attempt_cap_blocks_even_the_right_code(db):
     """Six digits is a million guesses. Uncapped, that is an afternoon."""
     _register_verified(db)
     with pytest.raises(auth.SecondFactorRequired) as e:
-        auth.login(db, "sri", "correct-horse-42")
+        auth.login(db, "sri", "Correct-horse-42")
     for _ in range(auth.MAX_CODE_ATTEMPTS):
         with pytest.raises(PermissionError):
             auth.complete_login(db, e.value.challenge, "000000")
@@ -401,7 +456,7 @@ def test_the_attempt_cap_blocks_even_the_right_code(db):
 def test_an_expired_challenge_is_refused(db):
     _register_verified(db)
     with pytest.raises(auth.SecondFactorRequired) as e:
-        auth.login(db, "sri", "correct-horse-42")
+        auth.login(db, "sri", "Correct-horse-42")
     row = db.exec(select(LoginChallenge)).first()
     row.expires_at = utcnow() - timedelta(seconds=1)
     db.add(row); db.commit()
@@ -415,9 +470,9 @@ def test_a_code_is_bound_to_its_own_challenge(db):
     _register_verified(db, "amara")
     _register_verified(db, "boris")
     with pytest.raises(auth.SecondFactorRequired) as a:
-        auth.login(db, "amara", "correct-horse-42")
+        auth.login(db, "amara", "Correct-horse-42")
     with pytest.raises(auth.SecondFactorRequired) as b:
-        auth.login(db, "boris", "correct-horse-42")
+        auth.login(db, "boris", "Correct-horse-42")
     with pytest.raises(PermissionError):
         auth.complete_login(db, a.value.challenge, b.value.code)
     with pytest.raises(PermissionError):
@@ -428,7 +483,7 @@ def test_resending_retires_the_old_handle_and_its_attempts(db):
     """Otherwise 'send a new code' is a button that resets your five guesses."""
     _register_verified(db)
     with pytest.raises(auth.SecondFactorRequired) as e:
-        auth.login(db, "sri", "correct-horse-42")
+        auth.login(db, "sri", "Correct-horse-42")
     old_handle, old_code = e.value.challenge, e.value.code
     for _ in range(auth.MAX_CODE_ATTEMPTS):
         with pytest.raises(PermissionError):
@@ -453,9 +508,9 @@ def test_registration_requires_an_email(db):
     """A code needs somewhere to go. An account without one could be created
     and then never entered."""
     with pytest.raises(auth.RegistrationError):
-        auth.register(db, "sri", "correct-horse-42")
+        auth.register(db, "sri", "Correct-horse-42")
     with pytest.raises(auth.RegistrationError):
-        auth.register(db, "sri", "correct-horse-42", email="not-an-address")
+        auth.register(db, "sri", "Correct-horse-42", email="not-an-address")
 
 
 def test_the_code_is_not_recoverable_from_the_database(db):
@@ -467,7 +522,7 @@ def test_the_code_is_not_recoverable_from_the_database(db):
     import hashlib
     _register_verified(db)
     with pytest.raises(auth.SecondFactorRequired) as e:
-        auth.login(db, "sri", "correct-horse-42")
+        auth.login(db, "sri", "Correct-horse-42")
     row = db.exec(select(LoginChallenge)).first()
     code = e.value.code
     assert code not in row.code_hash
@@ -481,9 +536,9 @@ def test_the_browser_handle_says_nothing_about_the_account(db):
     """It replaced a user id and a full email address in local storage."""
     _register_verified(db, "amara")
     with pytest.raises(auth.SecondFactorRequired) as first:
-        auth.login(db, "amara", "correct-horse-42")
+        auth.login(db, "amara", "Correct-horse-42")
     with pytest.raises(auth.SecondFactorRequired) as second:
-        auth.login(db, "amara", "correct-horse-42")
+        auth.login(db, "amara", "Correct-horse-42")
 
     handle = first.value.challenge
     assert "amara" not in handle
@@ -505,7 +560,7 @@ def test_both_halves_of_a_sign_in_are_recorded(db):
     looks like, and it is invisible if only successes are logged."""
     _register_verified(db)
     with pytest.raises(auth.SecondFactorRequired) as e:
-        auth.login(db, "sri", "correct-horse-42")
+        auth.login(db, "sri", "Correct-horse-42")
     with pytest.raises(PermissionError):
         auth.complete_login(db, e.value.challenge, "000000")
 
@@ -924,13 +979,13 @@ def test_signup_and_login_work_after_repair(stale_db):
     db.ensure_schema(engine)
 
     with Session(engine) as s:
-        user = auth.register(s, "sri", "correct-horse-42", email="a@b.com", age="17")
+        user = auth.register(s, "sri", "Correct-horse-42", email="a@b.com", age="17")
         assert user.id is not None
         # Two-factor is required, so sign in the way the app does: password
         # first, then the code. This also proves the repaired schema carries
         # the login_challenge table.
         try:
-            auth.login(s, "sri", "correct-horse-42")
+            auth.login(s, "sri", "Correct-horse-42")
             raise AssertionError("login() must not return a session on its own")
         except auth.SecondFactorRequired as e:
             token, _ = auth.complete_login(s, e.challenge, e.code)

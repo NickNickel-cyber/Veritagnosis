@@ -214,8 +214,14 @@ _hasher = PasswordHasher(
 # argon2-cffi salts every hash, so identical passwords produce different
 # strings. Nothing else in the codebase should ever touch a raw password.
 
-MIN_LENGTH = 10
+MIN_LENGTH = 8
 MAX_LENGTH = 128  # bound the input: hashing an unbounded string is a DoS vector
+
+# What counts as a symbol: everything printable that is not a letter, a digit
+# or a space. Spelling it out beats `not c.isalnum()`, which would count a
+# space, an accented letter or an emoji as a symbol and let "my password "
+# through on a technicality.
+_SYMBOLS = frozenset("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")
 
 # Deliberately tiny. A real deployment should check against a breached-password
 # corpus (e.g. the Pwned Passwords k-anonymity API) instead of a hardcoded list.
@@ -269,12 +275,28 @@ _DUMMY_HASH = _hasher.hash("dummy-password-for-constant-time-login")
 
 
 def problems(password: str) -> list[str]:
-    """Plain-language list of what is still missing. Empty list means acceptable."""
+    """Plain-language list of what is still missing. Empty list means acceptable.
+
+    Five rules, checked in the order someone would fix them: length first,
+    then the four character classes, then the blocklist. Each item completes
+    the sentence "Password needs ...", so the screen can print the list back
+    without rewording it.
+
+    This is the only password policy in the program. Both the signup screen and
+    the change-password screen call it, so a rule added here is enforced in
+    both places and cannot drift between them.
+    """
     out: list[str] = []
     if len(password) < MIN_LENGTH:
         out.append(f"at least {MIN_LENGTH} characters ({len(password)} so far)")
-    if password and password.isalpha():
-        out.append("a number or symbol")
+    if not any(c.isupper() for c in password):
+        out.append("a capital letter")
+    if not any(c.islower() for c in password):
+        out.append("a lowercase letter")
+    if not any(c.isdigit() for c in password):
+        out.append("a number")
+    if not any(c in _SYMBOLS for c in password):
+        out.append("a symbol, like ! or ?")
     if password.lower() in _OBVIOUS:
         out.append("something less guessable")
     if len(password) > MAX_LENGTH:

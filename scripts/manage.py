@@ -95,7 +95,13 @@ def seed_quotes():
 def demo_user():
     from veritagnosis import db
     from veritagnosis import security as auth
-    pw = secrets.token_urlsafe(12)
+    # token_urlsafe draws from letters, digits, - and _, so a given one may
+    # happen to miss a class the policy requires. Draw until one passes rather
+    # than hand-building a password that is weaker than the rule it satisfies.
+    from veritagnosis import crypto as passwords
+    pw = ""
+    while not pw or passwords.problems(pw):
+        pw = secrets.token_urlsafe(12) + secrets.choice("!?@#$%&*")
     with db.get_session() as s:
         try:
             user = auth.register(s, "demo", pw, email="demo@example.com",

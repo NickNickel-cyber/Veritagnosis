@@ -7,6 +7,7 @@ Merged from: applications, essays, recommendations.
 from __future__ import annotations
 
 import reflex as rx
+
 from veritagnosis.states.apply_state import SchoolsState
 from veritagnosis.ui.theme import error_box, shell
 from veritagnosis.states.auth_state import AuthState

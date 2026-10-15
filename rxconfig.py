@@ -24,6 +24,28 @@ from reflex_base.plugins.sitemap import SitemapPlugin
 Path(__file__).parent.joinpath("data").mkdir(exist_ok=True)
 os.environ.setdefault("REFLEX_HOT_RELOAD_EXCLUDE_PATHS", "data")
 
+# Where the database file actually is.
+#
+# This used to read "sqlite:///data/veritagnosis.db". SQLAlchemy resolves a
+# relative SQLite path against the PROCESS WORKING DIRECTORY, not against this
+# file — so the app did not have one database, it had one per folder it was
+# ever started from. Double-clicking the executable, running it from a
+# shortcut and running it from a terminal could each open a different file,
+# and every one of them looked like a brand-new install: no account, no
+# essays, no checkpoints. Nothing was lost; the app was simply looking
+# somewhere else.
+#
+# Anchored instead to VG_BASE_DIR when it is set — launch.py sets it to the
+# folder the executable sits in, because inside a one-file bundle this module
+# lives in a temporary directory the operating system deletes on exit — and
+# otherwise to this file's own folder. Absolute either way, so the working
+# directory stops mattering.
+_BASE = Path(os.environ.get("VG_BASE_DIR", "").strip() or Path(__file__).parent).resolve()
+_BASE.joinpath("data").mkdir(parents=True, exist_ok=True)
+# as_posix(), so a Windows path becomes sqlite:///C:/Users/... — backslashes
+# in a URL are escape characters, not separators.
+_DB_URL = f"sqlite:///{(_BASE / 'data' / 'veritagnosis.db').as_posix()}"
+
 # Which origins may talk to the backend.
 #
 # Reflex defaults this to ("*",), which is fine on a laptop and wrong the
@@ -52,7 +74,7 @@ CORS_ORIGINS = _origins or [
 
 config = rx.Config(
     app_name="veritagnosis",
-    db_url=os.environ.get("VG_DB_URL", "sqlite:///data/veritagnosis.db"),
+    db_url=os.environ.get("VG_DB_URL", _DB_URL),
     cors_allowed_origins=CORS_ORIGINS,
     # Declared explicitly: implicit Radix enablement is deprecated in 0.9 and
     # removed in 1.0. rx.heading / rx.hstack / rx.link are Radix components.

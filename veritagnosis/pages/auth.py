@@ -7,6 +7,7 @@ Merged from: splash, login, signup, verify, settings.
 from __future__ import annotations
 
 import reflex as rx
+
 from veritagnosis.states.base import ThemeState
 from veritagnosis.ui.theme import btn, shell, theme_picker
 from veritagnosis.states.auth_state import AuthState
@@ -194,9 +195,27 @@ def signup() -> rx.Component:
                               required=True, min_length=3, max_length=32),
                         field("Password", "password",
                               "a phrase is easier to remember than a word",
-                              type_="password", required=True, min_length=10),
-                        rx.text("At least 10 characters, with a number or symbol.",
-                                class_name="faint"),
+                              type_="password", required=True, min_length=8),
+                        # Ticked off live by motion.js as they are met. The
+                        # rules are listed rather than discovered by failing:
+                        # a student should not have to press the button to
+                        # learn what the button wants. The server checks the
+                        # same five rules again — this is the preview, not the
+                        # gate.
+                        rx.el.ul(
+                            rx.el.li("8 characters or more",
+                                     custom_attrs={"data-rule": "len"}),
+                            rx.el.li("a capital letter",
+                                     custom_attrs={"data-rule": "upper"}),
+                            rx.el.li("a lowercase letter",
+                                     custom_attrs={"data-rule": "lower"}),
+                            rx.el.li("a number",
+                                     custom_attrs={"data-rule": "digit"}),
+                            rx.el.li("a symbol, like ! or ?",
+                                     custom_attrs={"data-rule": "symbol"}),
+                            class_name="pw-rules",
+                            custom_attrs={"data-pw-rules": "signup"},
+                        ),
                     ),
 
                     _panel(

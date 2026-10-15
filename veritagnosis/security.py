@@ -48,6 +48,15 @@ class RegistrationError(Exception):
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(?:\.[^@\s.]+)+$")
 
 
+def _and_list(items: list[str]) -> str:
+    """"a, b and c". Joining five rules with "and" five times reads like a
+    machine; a student skimming an error message should be able to take it
+    in at a glance."""
+    if len(items) <= 1:
+        return "".join(items)
+    return ", ".join(items[:-1]) + " and " + items[-1]
+
+
 def register(session: Session, username: str, password: str, *,
              email: str | None = None, age: str | None = None,
              gender: str | None = None) -> User:
@@ -59,7 +68,7 @@ def register(session: Session, username: str, password: str, *,
 
     problems = passwords.problems(password)
     if problems:
-        raise RegistrationError("Password needs " + " and ".join(problems) + ".")
+        raise RegistrationError("Password needs " + _and_list(problems) + ".")
 
     # Signing in always needs a code, and a code needs somewhere to go. An
     # account without an address could be created and then never entered, so
@@ -71,13 +80,11 @@ def register(session: Session, username: str, password: str, *,
     if len(email) > 254 or not _EMAIL_RE.match(email):
         raise RegistrationError("That email address doesn't look right.")
 
-    if session.exec(select(User).where(
-            User.email_bidx == blind_index(email.lower(), "user.email"))).first():
-        # Deliberately not "that address is registered": the blind index makes
-        # this check possible without decrypting, and the wording keeps it from
-        # becoming a way to ask whether a given person has an account.
-        raise RegistrationError(
-            "That email address can't be used for a new account.")
+    # One address, as many accounts as it likes. A counsellor setting up
+    # accounts for a family, or a student with a school login and a personal
+    # one, both end up at the same inbox; the account is identified by its
+    # username, never by its address. Nothing downstream needs the address to
+    # be unique: a sign-in code is addressed to one specific user's row.
 
     if session.exec(select(User).where(User.username == username)).first():
         # Signup is the one place enumeration cannot be avoided — the user has
@@ -417,7 +424,7 @@ def change_password(session: Session, user: User, old: str, new: str) -> None:
         raise PermissionError("Current password is incorrect.")
     problems = passwords.problems(new)
     if problems:
-        raise ValueError("New password needs " + " and ".join(problems) + ".")
+        raise ValueError("New password needs " + _and_list(problems) + ".")
     user.password_hash = passwords.hash_password(new)
     session.add(user)
     record(session, "password_change", user_id=user.id)

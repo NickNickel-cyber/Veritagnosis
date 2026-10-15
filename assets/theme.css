@@ -620,12 +620,35 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .home-greet{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s5)}
 .home-greet h1{font-family:var(--font-display);font-size:var(--fs-xl);margin:0;
   flex:1;min-width:0}
-.home-id{display:flex;align-items:center;gap:var(--s5);margin-bottom:var(--s5)}
-.home-id .who{flex:none;width:112px;height:112px;border-radius:var(--r-lg);
+/* The avatar leads the screen: a column, centred, with the numbers beneath
+   it rather than beside it. Sized in vw as well as px so it stays the
+   largest thing on the page at any window width without ever growing past
+   what the layout can hold. */
+.home-id{display:flex;flex-direction:column;align-items:center;
+  gap:var(--s4);margin-bottom:var(--s6);text-align:center}
+.home-id .who{flex:none;
+  width:clamp(180px,42vw,260px);height:clamp(180px,42vw,260px);
+  border-radius:var(--r-lg);
   overflow:hidden;background:color-mix(in srgb,var(--surface-2) 70%,transparent);
-  border:1px solid var(--border);display:grid;place-items:center}
-.home-id .who svg{width:100%;height:100%}
-.home-id .lvl-block{flex:1;min-width:0;display:grid;gap:var(--s2)}
+  border:1px solid var(--border);display:grid;place-items:center;
+  /* A little air, so the figure sits inside the frame rather than growing
+     out of its bottom edge. */
+  padding:var(--s4);box-shadow:var(--shadow)}
+/* rx.html() wraps the avatar in a div of its own, so the SVG is a grandchild
+   and sizing only the <svg> left the figure at its natural size, marooned in
+   the middle of a much bigger frame. Both levels are sized here. */
+.home-id .who > *{display:block;width:100%;height:100%}
+.home-id .who svg{display:block;width:100%;height:100%}
+/* It is a link now, so it has to answer to a finger and to a keyboard. */
+.home-id .who:hover{border-color:var(--accent)}
+.home-id .who:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media (prefers-reduced-motion: no-preference){
+  .home-id .who{transition:transform .2s ease,border-color .2s ease}
+  .home-id .who:hover{transform:translateY(-2px) scale(1.02)}
+}
+.home-id .lvl-block{width:100%;max-width:420px;min-width:0;display:grid;
+  gap:var(--s2);justify-items:center}
+.home-id .xp-track{width:100%}
 .home-id .lvl-num{font-family:var(--font-display);font-size:var(--fs-xl);font-weight:700}
 .home-id .xp-note{font-size:var(--fs-sm);color:var(--text-dim)}
 
@@ -815,7 +838,7 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .dot{width:16px;height:16px}
 
 .home-greet h1{font-size:var(--fs-2xl)}
-.home-id .who{width:120px;height:120px}
+.home-id .who{width:clamp(220px,26vw,300px);height:clamp(220px,26vw,300px)}
 .av-preview{min-height:330px}
 .av-preview svg{max-width:300px}
 .coach-figure{width:84px;height:84px;font-size:38px}
@@ -835,7 +858,7 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   .item-grid{grid-template-columns:repeat(3,1fr)}
   .board{grid-template-columns:1fr}
   .quote-strip{grid-template-columns:1fr}
-  .home-id .who{width:88px;height:88px}
+  .home-id .who{width:min(62vw,220px);height:min(62vw,220px)}
 }
 
 .reactions button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);
@@ -2479,14 +2502,30 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 .nbe[data-kind="done"] .nbe-tag{color:var(--success-ink)}
 
 /* ---- tabs ------------------------------------------------------------ */
-.ct-row{display:flex;gap:2px;padding:3px;border-radius:var(--r-md);
-  background:var(--surface-3);overflow-x:auto;scrollbar-width:none}
-.ct-row::-webkit-scrollbar{display:none}
-.ct{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;
+/* Five tabs that have to fit a column whose width is not ours to choose.
+   This was a flex row that scrolled sideways with the scrollbar hidden, so
+   on anything narrower than about 420px the last tabs were simply gone —
+   off the right edge, with nothing on screen to say they were there or that
+   the strip could be dragged.
+
+   A wrapping flex row instead, in two tidy rows: three tabs, then two. The
+   basis is a share of the width rather than a pixel count, so the split is
+   the same at every width the coach column is ever given — a pixel basis
+   re-flowed into 4 + 1, which put one tab alone on a row stretched across
+   the whole strip and looked like a mistake. Both rows fill the width,
+   nothing is hidden, and nothing has to be scrolled to be found. */
+.ct-row{display:flex;flex-wrap:wrap;gap:2px;padding:3px;
+  border-radius:var(--r-md);background:var(--surface-3)}
+.ct{display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  padding:8px 6px;min-width:0;flex:1 1 30%;
   border:none;border-radius:var(--r-sm);background:transparent;cursor:pointer;
   font-family:inherit;font-size:var(--fs-xs);font-weight:700;
   color:var(--text-dim);white-space:nowrap;
   transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
+/* The label gives way before the count does: a tab reading "Fix… 3" still
+   tells you both things, where one reading "Fixes" with the number clipped
+   off tells you half. */
+.ct-lbl{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .ct:hover{color:var(--text)}
 .ct[aria-pressed="true"]{background:var(--surface);color:var(--text);
   box-shadow:var(--shadow)}
@@ -2771,3 +2810,19 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 .num-actions{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;
   margin-top:var(--s5)}
 .num-saved{font-size:var(--fs-sm);font-weight:700;color:var(--success-ink)}
+
+/* ---- the password rules, ticked off as they are met --------------------
+   Five rules, shown before the student types rather than after they fail.
+   motion.js adds .ok to each item it is satisfied by; nothing here depends
+   on JavaScript having run, so with scripts off the list still reads as the
+   plain statement of the rule it is. */
+.pw-rules{list-style:none;margin:var(--s3) 0 0;padding:0;
+  display:grid;gap:4px;font-size:var(--fs-xs);color:var(--text-faint)}
+.pw-rules li{display:flex;align-items:center;gap:var(--s2);line-height:1.4}
+.pw-rules li::before{content:"○";font-size:11px;line-height:1;width:12px;
+  flex:0 0 12px;text-align:center;color:var(--text-faint)}
+.pw-rules li.ok{color:var(--success-ink);font-weight:700}
+.pw-rules li.ok::before{content:"✓";color:var(--success)}
+@media (prefers-reduced-motion: no-preference){
+  .pw-rules li{transition:color .18s ease}
+}

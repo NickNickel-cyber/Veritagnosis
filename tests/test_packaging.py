@@ -157,3 +157,49 @@ def test_the_build_workflow_covers_both_platforms():
     text = wf.read_text(encoding="utf-8")
     assert "windows-latest" in text
     assert "macos-latest" in text
+
+
+# ------------------------------------------------------- where the data lives
+
+def _db_url_from(cwd, env=None):
+    """Load rxconfig.py in a child process with that working directory."""
+    import subprocess, textwrap
+    code = textwrap.dedent(f"""
+        import sys
+        sys.path.insert(0, {str(ROOT)!r})
+        import rxconfig
+        print(rxconfig.config.db_url)
+    """)
+    e = dict(os.environ)
+    e.pop("VG_DB_URL", None)
+    e.pop("VG_BASE_DIR", None)
+    e.update(env or {})
+    out = subprocess.run([sys.executable, "-c", code], cwd=str(cwd),
+                         capture_output=True, text=True, env=e)
+    assert out.returncode == 0, out.stderr
+    return out.stdout.strip()
+
+
+def test_the_database_path_does_not_depend_on_where_the_app_was_started(tmp_path):
+    """The bug this prevents: a relative sqlite path is resolved against the
+    PROCESS WORKING DIRECTORY, so the app had one database per folder it was
+    ever launched from. Every one of them looked like a brand-new install —
+    no account, no essays, no checkpoints — and nothing was ever actually
+    lost, which made it that much harder to recognise."""
+    from_project = _db_url_from(ROOT)
+    from_elsewhere = _db_url_from(tmp_path)
+    assert from_project == from_elsewhere, (
+        "the database moves with the working directory: "
+        f"{from_project} vs {from_elsewhere}")
+    assert from_project.startswith("sqlite:////") or ":" in from_project[10:], \
+        f"not an absolute path: {from_project}"
+    assert str(ROOT) in from_project or ROOT.as_posix() in from_project
+
+
+def test_a_packaged_app_keeps_its_data_beside_the_executable(tmp_path):
+    """launch.py sets VG_BASE_DIR to the folder the executable sits in,
+    because inside a one-file bundle the code lives in a temporary directory
+    the operating system deletes on exit. The database has to follow it."""
+    url = _db_url_from(tmp_path, env={"VG_BASE_DIR": str(tmp_path)})
+    assert tmp_path.as_posix() in url, url
+    assert (tmp_path / "data").is_dir(), "the data folder should be created"
