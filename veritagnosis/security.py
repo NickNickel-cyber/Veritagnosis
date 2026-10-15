@@ -13,6 +13,7 @@ import re
 import secrets
 from datetime import timedelta
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 from starlette.datastructures import MutableHeaders
 
@@ -60,7 +61,7 @@ def _and_list(items: list[str]) -> str:
 def register(session: Session, username: str, password: str, *,
              email: str | None = None, age: str | None = None,
              gender: str | None = None) -> User:
-    username = username.strip()
+    username = (username or "").strip()
     if not 3 <= len(username) <= 32:
         raise RegistrationError("Username must be between 3 and 32 characters.")
     if not username.replace("_", "").replace("-", "").isalnum():
@@ -86,7 +87,13 @@ def register(session: Session, username: str, password: str, *,
     # username, never by its address. Nothing downstream needs the address to
     # be unique: a sign-in code is addressed to one specific user's row.
 
-    if session.exec(select(User).where(User.username == username)).first():
+    if session.exec(select(User).where(
+            func.lower(User.username) == username.lower())).first():
+        # Case-insensitively, because "Sri" and "sri" are the same name to
+        # everybody except a database. Two accounts a letter's capitalisation
+        # apart are two accounts a student will mix up, sign in to the wrong
+        # one, and reasonably report as the app losing their work.
+        #
         # Signup is the one place enumeration cannot be avoided — the user has
         # to be told the name is taken. Login stays generic to compensate.
         raise RegistrationError("That username is taken.")
@@ -185,7 +192,12 @@ def login(session: Session, username: str, password: str, *,
     to the verify step. Every other failure raises PermissionError with the
     same generic message, so nothing here reveals which usernames exist.
     """
-    user = session.exec(select(User).where(User.username == username.strip())).first()
+    # Matched without regard to case, the same way the name was checked for
+    # uniqueness when the account was made. Someone whose phone capitalises
+    # the first letter of every field should not be told their password is
+    # wrong.
+    user = session.exec(select(User).where(
+        func.lower(User.username) == username.strip().lower())).first()
 
     if user is None:
         # Same work as a real verification, so response time does not reveal
@@ -431,6 +443,53 @@ def change_password(session: Session, user: User, old: str, new: str) -> None:
     session.commit()
     # Anyone who stole a session no longer has one.
     logout_everywhere(session, user.id)
+
+
+def delete_account(session: Session, user: User, password: str) -> None:
+    """Delete the account and everything that belongs to it. No undo.
+
+    The password is required. A signed-in laptop left open on a library desk
+    is the ordinary case this guards against: closing the account is the one
+    action in the app that cannot be taken back, so it asks for the one thing
+    a passer-by does not have.
+
+    What gets deleted is worked out from the schema rather than from a list
+    kept here. Every table carrying a user_id is cleared for this user, in
+    child-before-parent order, so a feature added later — a new kind of log,
+    a new kind of plan — is covered the day it is added rather than the day
+    someone remembers to update this function. A list would be wrong exactly
+    once, silently, and would leave a deleted student's work in the file.
+
+    The audit trail is the one deliberate exception, and it is emptied too:
+    those rows say when this person signed in and from what, which is the
+    last thing a deleted account should leave behind. A single row survives,
+    recording that an account was deleted and belonging to nobody — the
+    event, without the person.
+    """
+    ok, _ = passwords.verify_password(user.password_hash, password)
+    if not ok:
+        record(session, "account_delete", user_id=user.id, ok=False)
+        session.commit()
+        raise PermissionError("That password is not right.")
+
+    from sqlalchemy import delete as sql_delete
+    from sqlmodel import SQLModel
+
+    from veritagnosis import models  # noqa: F401  (registers every table)
+
+    uid = user.id
+    # sorted_tables is parents-first, so children are deleted first in
+    # reverse. With PRAGMA foreign_keys=ON that order is not a nicety — the
+    # delete of the user row fails outright while anything still points at it.
+    for table in reversed(SQLModel.metadata.sorted_tables):
+        if table.name == "user" or "user_id" not in table.c:
+            continue
+        session.execute(sql_delete(table).where(table.c.user_id == uid))
+
+    session.delete(user)
+    record(session, "account_delete", user_id=None,
+           detail="account and all of its rows deleted")
+    session.commit()
 
 
 # ====================================================================

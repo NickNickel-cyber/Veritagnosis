@@ -432,6 +432,59 @@ def settings_page() -> rx.Component:
                 ),
                 class_name="card",
             ),
+
+            # Closing the account. Last on the screen and in its own card,
+            # because the one thing that must never happen here is a student
+            # reaching for "Sign out" and finding this instead.
+            rx.box(
+                rx.text("Delete my account", class_name="step-label"),
+                rx.cond(
+                    ~AuthState.confirm_delete,
+                    rx.box(
+                        rx.text(
+                            "Everything goes: your essays and their history, "
+                            "your colleges, your recommenders, your checkpoints "
+                            "and your profile. It cannot be undone and there is "
+                            "no copy.",
+                            class_name="faint",
+                        ),
+                        rx.el.button("Delete my account",
+                                     class_name="btn btn-danger",
+                                     type="button",
+                                     on_click=AuthState.start_delete),
+                        class_name="danger-zone",
+                    ),
+                    rx.form(
+                        error_box(AuthState.delete_error),
+                        rx.text(
+                            "This is permanent. Type your password to confirm "
+                            "that it is you, and the account is gone.",
+                            class_name="faint",
+                        ),
+                        rx.el.input(
+                            type="password", name="password",
+                            placeholder="Your password",
+                            class_name="input",
+                            auto_complete="current-password",
+                        ),
+                        rx.box(
+                            rx.el.button("Yes, delete it",
+                                         class_name="btn btn-danger",
+                                         type="submit"),
+                            rx.el.button("Keep my account",
+                                         class_name="btn btn-secondary",
+                                         type="button",
+                                         on_click=AuthState.cancel_delete),
+                            class_name="danger-actions",
+                        ),
+                        on_submit=AuthState.delete_account,
+                        reset_on_submit=True,
+                        class_name="danger-zone",
+                    ),
+                ),
+                class_name="card",
+                style={"marginTop": "var(--s4)"},
+            ),
             class_name="screen-wrap",
         ),
     )

@@ -494,6 +494,28 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .nav-tile .tn{font-weight:700;font-size:var(--fs-sm)}
 .nav-tile .td{font-size:var(--fs-xs);color:var(--text-faint)}
 
+/* The one tile that is not like the others.
+   It grows into the gap instead of spanning a second column: the nine tiles
+   stay a tidy 3 x 3 and the 8px it takes on each side leaves 4 of the 12px
+   gutter, so it is visibly bigger without touching a neighbour.
+
+   Negative margins rather than transform:scale(), which is what this was
+   first. The tile already carries three hover transforms from three
+   different rules — the base lift, the ambient pass, and a per-theme one —
+   and a static scale that has to be repeated in every one of them loses to
+   whichever fires last. A margin is laid out, not composited: nothing can
+   animate it away, and the number is the same in every theme and at every
+   motion setting.
+
+   The accent border, the larger icon and the accent-coloured name do the
+   rest — a few extra pixels on their own read as a rendering slip rather
+   than as emphasis. */
+.nav-tile.featured{margin:-8px;z-index:1;
+  border-color:var(--accent);border-width:2px;
+  box-shadow:var(--glow),var(--shadow)}
+.nav-tile.featured .ti{font-size:38px}
+.nav-tile.featured .tn{font-size:var(--fs-base);color:var(--accent-ink,var(--accent))}
+
 
 /* ============================================================
    THE SCENE — you are inside the place.
@@ -617,38 +639,19 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .screen-head .back{margin-left:auto}
 
 /* ---------- HOME: greeting | avatar+xp | task box | tile grid ---------- */
-.home-greet{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s5)}
+/* wrap, so a long username does not get squeezed into a two-letter column
+   by the theme chips sitting next to it — on a phone the chips drop to
+   their own line instead. */
+.home-greet{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s5);
+  flex-wrap:wrap}
 .home-greet h1{font-family:var(--font-display);font-size:var(--fs-xl);margin:0;
-  flex:1;min-width:0}
-/* The avatar leads the screen: a column, centred, with the numbers beneath
-   it rather than beside it. Sized in vw as well as px so it stays the
-   largest thing on the page at any window width without ever growing past
-   what the layout can hold. */
-.home-id{display:flex;flex-direction:column;align-items:center;
-  gap:var(--s4);margin-bottom:var(--s6);text-align:center}
-.home-id .who{flex:none;
-  width:clamp(180px,42vw,260px);height:clamp(180px,42vw,260px);
-  border-radius:var(--r-lg);
+  flex:1 1 220px;min-width:0;overflow-wrap:anywhere}
+.home-id{display:flex;align-items:center;gap:var(--s5);margin-bottom:var(--s5)}
+.home-id .who{flex:none;width:112px;height:112px;border-radius:var(--r-lg);
   overflow:hidden;background:color-mix(in srgb,var(--surface-2) 70%,transparent);
-  border:1px solid var(--border);display:grid;place-items:center;
-  /* A little air, so the figure sits inside the frame rather than growing
-     out of its bottom edge. */
-  padding:var(--s4);box-shadow:var(--shadow)}
-/* rx.html() wraps the avatar in a div of its own, so the SVG is a grandchild
-   and sizing only the <svg> left the figure at its natural size, marooned in
-   the middle of a much bigger frame. Both levels are sized here. */
-.home-id .who > *{display:block;width:100%;height:100%}
-.home-id .who svg{display:block;width:100%;height:100%}
-/* It is a link now, so it has to answer to a finger and to a keyboard. */
-.home-id .who:hover{border-color:var(--accent)}
-.home-id .who:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-@media (prefers-reduced-motion: no-preference){
-  .home-id .who{transition:transform .2s ease,border-color .2s ease}
-  .home-id .who:hover{transform:translateY(-2px) scale(1.02)}
-}
-.home-id .lvl-block{width:100%;max-width:420px;min-width:0;display:grid;
-  gap:var(--s2);justify-items:center}
-.home-id .xp-track{width:100%}
+  border:1px solid var(--border);display:grid;place-items:center}
+.home-id .who svg{width:100%;height:100%}
+.home-id .lvl-block{flex:1;min-width:0;display:grid;gap:var(--s2)}
 .home-id .lvl-num{font-family:var(--font-display);font-size:var(--fs-xl);font-weight:700}
 .home-id .xp-note{font-size:var(--fs-sm);color:var(--text-dim)}
 
@@ -838,7 +841,7 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .dot{width:16px;height:16px}
 
 .home-greet h1{font-size:var(--fs-2xl)}
-.home-id .who{width:clamp(220px,26vw,300px);height:clamp(220px,26vw,300px)}
+.home-id .who{width:120px;height:120px}
 .av-preview{min-height:330px}
 .av-preview svg{max-width:300px}
 .coach-figure{width:84px;height:84px;font-size:38px}
@@ -858,7 +861,7 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   .item-grid{grid-template-columns:repeat(3,1fr)}
   .board{grid-template-columns:1fr}
   .quote-strip{grid-template-columns:1fr}
-  .home-id .who{width:min(62vw,220px);height:min(62vw,220px)}
+  .home-id .who{width:88px;height:88px}
 }
 
 .reactions button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);
@@ -2826,3 +2829,11 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 @media (prefers-reduced-motion: no-preference){
   .pw-rules li{transition:color .18s ease}
 }
+
+/* ---- closing the account ----------------------------------------------
+   Plain and unhurried on purpose. A red panel with a warning triangle
+   makes the step feel like an alarm to be dismissed; what it needs is to
+   be read. The only red is on the button that does it. */
+.danger-zone{display:grid;gap:var(--s3);margin-top:var(--s3)}
+.danger-zone .input{max-width:320px}
+.danger-actions{display:flex;gap:var(--s3);flex-wrap:wrap;margin-top:var(--s2)}

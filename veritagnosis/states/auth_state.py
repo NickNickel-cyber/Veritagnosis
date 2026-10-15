@@ -471,9 +471,8 @@ class AuthState(rx.State):
                 return rx.redirect("/login")
             self._load_user(user)
 
-    @rx.event
-    async def sign_out(self):
-        """End the session and leave nothing behind.
+    async def _forget_everything(self) -> None:
+        """Empty this state and every screen's state. Not an event.
 
         Clearing the token is not enough on its own. Every screen keeps its own
         state object — the draft essay, the school board, the meditation
@@ -482,10 +481,10 @@ class AuthState(rx.State):
         holding this student's data when the next person signs in on the same
         computer, which is exactly the "it forgets whose account is whose"
         problem. So every one of them is emptied here, explicitly.
-        """
-        with db.get_session() as s:
-            auth.logout(s, self.token)
 
+        Signing out and deleting the account both need this and event handlers
+        cannot call one another, so it lives here and both await it.
+        """
         self.token = ""
         self.pending_challenge = ""
         self.masked_email = ""
@@ -508,6 +507,57 @@ class AuthState(rx.State):
                     SchoolsState):
             (await self.get_state(cls)).reset()
 
+    @rx.event
+    async def sign_out(self):
+        """End the session and leave nothing behind."""
+        with db.get_session() as s:
+            auth.logout(s, self.token)
+        await self._forget_everything()
+        return rx.redirect("/")
+
+    # ------------------------------------------------- closing the account
+    #
+    # Behind a confirmation step rather than a button on its own, because the
+    # row below it on the settings screen is "Sign out" and a misread tap
+    # there would be unrecoverable.
+    confirm_delete: bool = False
+    delete_error: str = ""
+
+    @rx.event
+    def start_delete(self):
+        self.confirm_delete = True
+        self.delete_error = ""
+
+    @rx.event
+    def cancel_delete(self):
+        self.confirm_delete = False
+        self.delete_error = ""
+
+    @rx.event
+    async def delete_account(self, form: dict):
+        """Check the password, then delete the account and everything in it."""
+        self.delete_error = ""
+        password = form.get("password", "")
+        if not password:
+            self.delete_error = "Type your password to confirm."
+            return
+        with db.get_session() as s:
+            user = auth.session_user(s, self.token)
+            if user is None:
+                self.delete_error = ""
+                return rx.redirect("/login")
+            try:
+                auth.delete_account(s, user, password)
+            except PermissionError as e:
+                self.delete_error = str(e)
+                return
+            except Exception as e:                      # noqa: BLE001
+                self.delete_error = ("The account could not be deleted. "
+                                     "Nothing has been changed.")
+                print(f"\n[veritagnosis] delete failed: {type(e).__name__}: {e}\n")
+                return
+        self.confirm_delete = False
+        await self._forget_everything()
         return rx.redirect("/")
 
     def _clear_profile(self) -> None:

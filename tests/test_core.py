@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import timedelta
+from datetime import date, datetime, timedelta, timezone
 import pytest
 from sqlmodel import Session, SQLModel, create_engine, select
 import ast
@@ -41,8 +41,8 @@ os.environ.setdefault("VG_FIELD_KEY", "test-field-key-aaaaaaaaaaaaaaaaaaaaaaaa")
 os.environ.setdefault("VG_INDEX_KEY", "test-index-key-bbbbbbbbbbbbbbbbbbbbbbbb")
 
 from veritagnosis import config  # noqa: E402
-from veritagnosis.models import (AuditLog, AuthSession, LoginChallenge,  # noqa: E402
-                                 User, utcnow)
+from veritagnosis.models import (AuditLog, AuthSession, Essay,  # noqa: E402
+                                 LoginChallenge, User, utcnow)
 from veritagnosis import security as auth, crypto as passwords  # noqa: E402
 from veritagnosis.crypto import (  # noqa: E402
     DecryptionError, blind_index, decrypt, encrypt,
@@ -237,6 +237,35 @@ def test_duplicate_username_rejected(db):
     with pytest.raises(auth.RegistrationError):
         # A different address, so it is the username that collides.
         auth.register(db, "sri", "Another-good-one-1", email="other@example.com")
+
+
+# ------------------------------------------------------------- one name each
+
+def test_the_same_name_in_different_case_is_the_same_name(db):
+    """"Sri" and "sri" are one person everywhere except a database. Two
+    accounts a capital letter apart are two accounts a student mixes up,
+    signs in to the wrong one, and reports as the app losing their work."""
+    auth.register(db, "sri", "Correct-horse-42", email="a@b.com")
+    with pytest.raises(auth.RegistrationError):
+        auth.register(db, "SRI", "Correct-horse-43", email="c@d.com")
+    with pytest.raises(auth.RegistrationError):
+        auth.register(db, "Sri", "Correct-horse-43", email="c@d.com")
+
+
+def test_surrounding_spaces_do_not_make_a_new_name(db):
+    auth.register(db, "sri", "Correct-horse-42", email="a@b.com")
+    with pytest.raises(auth.RegistrationError):
+        auth.register(db, "  sri  ", "Correct-horse-43", email="c@d.com")
+
+
+def test_signing_in_does_not_care_how_the_name_was_typed(db):
+    """A phone that capitalises the first letter of every field must not
+    produce "that password is wrong"."""
+    auth.register(db, "sri", "Correct-horse-42", email="a@b.com")
+    with pytest.raises(auth.SecondFactorRequired):
+        auth.login(db, "SRI", "Correct-horse-42")
+    with pytest.raises(auth.SecondFactorRequired):
+        auth.login(db, " Sri ", "Correct-horse-42")
 
 
 def test_password_is_never_stored(db):
@@ -1070,19 +1099,139 @@ def test_the_stamp_is_not_inherited_from_a_parent_state(cls):
     assert "owner_id" in cls.vars
 
 
+# ------------------------------------------------------- deleting an account
+
+def _populate(db, uid):
+    """One row in every table that belongs to a user, so the delete has
+    something to miss."""
+    from sqlalchemy import types as sa_types
+    from sqlmodel import SQLModel
+
+    from veritagnosis.models import UTCDateTime
+
+    written = []
+    for table in SQLModel.metadata.sorted_tables:
+        if table.name == "user" or "user_id" not in table.c:
+            continue
+        values = {"user_id": uid}
+        for col in table.columns:
+            if col.name in values or col.primary_key:
+                continue
+            if not col.nullable and col.default is None and col.server_default is None:
+                # A column that must have something in it: give it the
+                # emptiest legal value of its own type. Some column types
+                # (the encrypted ones) have no python_type at all, and a
+                # string is right for those.
+                # A datetime column goes through the UTCDateTime decorator,
+                # whose process_bind_param reads .tzinfo — so "x" there does
+                # not merely store something wrong, it raises, and the test
+                # fails in its own fixture rather than on what it is testing.
+                if isinstance(col.type, (sa_types.DateTime, UTCDateTime)):
+                    values[col.name] = datetime.now(timezone.utc)
+                    continue
+                try:
+                    kind = col.type.python_type
+                except NotImplementedError:
+                    kind = str
+                values[col.name] = {
+                    int: 0, float: 0.0, bool: False,
+                    date: datetime.now(timezone.utc).date(),
+                }.get(kind, "x")
+        db.execute(table.insert().values(**values))
+        written.append(table.name)
+    db.commit()
+    return written
+
+
+def test_deleting_an_account_leaves_nothing_behind(db):
+    """Every table carrying a user_id, not a list someone has to remember to
+    update. A row left behind here is a deleted student's work still sitting
+    in the file."""
+    from sqlmodel import SQLModel
+
+    user = _register_verified(db, "sri")
+    uid = user.id
+    tables = _populate(db, uid)
+    assert len(tables) >= 10, "the fixture is not covering the schema"
+
+    auth.delete_account(db, user, "Correct-horse-42")
+
+    assert db.get(User, uid) is None, "the account row survived"
+    for table in SQLModel.metadata.sorted_tables:
+        if table.name == "user" or "user_id" not in table.c:
+            continue
+        left = db.execute(
+            table.select().where(table.c.user_id == uid)).fetchall()
+        assert not left, f"{table.name} still holds {len(left)} row(s)"
+
+
+def test_deleting_needs_the_password(db):
+    """A signed-in laptop left open on a library desk is the ordinary case:
+    the one thing a passer-by does not have is the password."""
+    user = _register_verified(db, "sri")
+    uid = user.id
+    with pytest.raises(PermissionError):
+        auth.delete_account(db, user, "not-the-password")
+    assert db.get(User, uid) is not None, "the account was deleted anyway"
+
+
+def test_deleting_one_account_does_not_touch_another(db):
+    second = _register_verified(db, "mohammed")
+    victim = _register_verified(db, "sri")
+    _populate(db, second.id)
+    kept = len(db.execute(
+        Essay.__table__.select().where(
+            Essay.__table__.c.user_id == second.id)).fetchall())
+    auth.delete_account(db, victim, "Correct-horse-42")
+    assert db.get(User, second.id) is not None
+    still = len(db.execute(
+        Essay.__table__.select().where(
+            Essay.__table__.c.user_id == second.id)).fetchall())
+    assert still == kept, "deleting one account took another's rows with it"
+
+
+def test_the_deletion_is_recorded_without_naming_anybody(db):
+    """The audit rows say when this person signed in and from what, which is
+    the last thing a deleted account should leave behind. The event survives;
+    the person does not."""
+    from veritagnosis.models import AuditLog
+
+    user = _register_verified(db, "sri")
+    uid = user.id
+    auth.delete_account(db, user, "Correct-horse-42")
+
+    rows = db.exec(select(AuditLog)).all()
+    assert not [r for r in rows if r.user_id == uid], "audit rows still name them"
+    assert [r for r in rows if r.action == "account_delete" and r.user_id is None], \
+        "nothing records that an account was deleted"
+
+
 # --------------------------------------------------- 2. sign-out clears everything
-def test_sign_out_clears_every_screen_state():
-    """The sign-out handler must name every screen. A screen added later and
-    forgotten here would keep its data across the switch, so this reads the
-    source and checks the list is complete."""
+def test_leaving_clears_every_screen_state():
+    """The handler that empties the screens must name every one of them. A
+    screen added later and forgotten here would keep its data across the
+    switch, so this reads the source and checks the list is complete."""
+    import inspect
+
+    src = inspect.getsource(AuthState._forget_everything)
+    for cls in SCREENS:
+        assert cls.__name__ in src, (
+            f"{cls.__name__} is not cleared when an account is left — a new "
+            f"screen was added without updating _forget_everything")
+
+
+def test_both_ways_out_of_an_account_clear_it():
+    """Signing out and deleting the account both have to forget the student.
+    Deleting used to be the easy one to miss: the rows are gone from the
+    database, so nobody notices that the screens still hold them until the
+    next person signs in on the same computer and sees someone else's essay."""
     import inspect
 
     # .fn: Reflex wraps handlers in an EventHandler object
-    src = inspect.getsource(AuthState.sign_out.fn)
-    for cls in SCREENS:
-        assert cls.__name__ in src, (
-            f"{cls.__name__} is not cleared on sign out — a new screen was "
-            f"added without updating AuthState.sign_out")
+    for handler in (AuthState.sign_out, AuthState.delete_account):
+        src = inspect.getsource(handler.fn)
+        assert "_forget_everything" in src, (
+            f"{handler.fn.__name__} leaves the screens holding the account")
 
 
 def test_auth_state_clears_its_own_display_fields():

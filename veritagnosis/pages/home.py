@@ -20,10 +20,15 @@ from veritagnosis.ui.avatar import CATEGORIES
 # home
 # ====================================================================
 
-# (icon, name, subtitle, route).
+# (icon, name, subtitle, route, and optionally "this is the main one").
+#
+# My profile is the tile the whole app is built around — the interests, the
+# activities and the timeline are what every other screen reads — so it is
+# drawn slightly larger than its neighbours rather than being one of nine
+# identical squares a student has to read their way through.
 TILES = [
     ("🧑‍🎨", "My avatar", "Customize your look", "/avatar"),
-    ("🧭", "My profile", "Interests, activities, timeline", "/profile"),
+    ("🧭", "My profile", "Interests, activities, timeline", "/profile", True),
     ("✍️", "Essay Lab", "Write with a guide", "/essays"),
     ("🎓", "My colleges", "Progress by school", "/applications"),
     ("💬", "Recommenders", "Teachers and guidance", "/recommendations"),
@@ -34,12 +39,14 @@ TILES = [
 ]
 
 
-def _tile(icon: str, name: str, detail: str, route: str) -> rx.Component:
+def _tile(icon: str, name: str, detail: str, route: str,
+          featured: bool = False) -> rx.Component:
     return rx.link(
         rx.box(icon, class_name="ti"),
         rx.box(name, class_name="tn"),
         rx.box(detail, class_name="td"),
-        href=route, class_name="nav-tile",
+        href=route,
+        class_name="nav-tile featured" if featured else "nav-tile",
     )
 
 
@@ -57,16 +64,9 @@ def home() -> rx.Component:
                 class_name="home-greet",
             ),
 
-            # 2 — the avatar, and under it level and XP
-            #
-            # The biggest thing on the screen, and a link. It is the part of
-            # the app a student makes their own, so it leads the home screen
-            # rather than sitting beside the numbers as a thumbnail — and
-            # tapping the thing you built should take you to where you build
-            # it, which is what everyone tries first.
+            # 2 — avatar beside level and XP
             rx.box(
-                rx.link(rx.html(AuthState.avatar_svg), href="/avatar",
-                        class_name="who", aria_label="Your avatar — change it"),
+                rx.box(rx.html(AuthState.avatar_svg), class_name="who"),
                 rx.box(
                     # data-pulse: motion.js watches the text and beats it once
                     # when it changes, so levelling up is something you see
