@@ -41,6 +41,14 @@ from veritagnosis.ui.theme import FONTS
 db.init_db()
 
 app = rx.App(stylesheets=["/theme.css", *FONTS],
+             # The crest in the browser tab and on a phone home screen.
+             # 64px is the largest size anything actually asks for; the
+             # 512 is what the splash screen draws, and pointing the tab
+             # at it would download half a megabyte to paint 16 pixels.
+             head_components=[
+                 rx.el.link(rel="icon", type="image/png", href="/favicon.png"),
+                 rx.el.link(rel="apple-touch-icon", href="/logo.png"),
+             ],
              api_transformer=security_headers)
 
 app.add_page(splash, route="/", title="Veritagnosis")

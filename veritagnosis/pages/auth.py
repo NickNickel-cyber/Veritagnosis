@@ -25,7 +25,11 @@ def splash() -> rx.Component:
     return shell(
         rx.box(
             rx.box(
-                rx.box("V", class_name="emblem"),
+                # The crest, not a letter. alt is empty on purpose: the
+                # wordmark underneath already says Veritagnosis, and a
+                # screen reader announcing the name twice in a row is
+                # noise rather than information.
+                rx.image(src="/logo.png", alt="", class_name="emblem"),
                 rx.heading("Veritagnosis", class_name="wordmark"),
                 rx.text("College applications, one quest at a time.",
                         class_name="auth-sub", style={"maxWidth": "34ch"}),

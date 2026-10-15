@@ -169,9 +169,15 @@ def main() -> int:
         "--hidden-import", "argon2",
         "--hidden-import", "cryptography",
     ]
-    icon = ROOT / "assets" / "icon.ico"
+    # PyInstaller wants .icns on macOS and .ico on Windows; handed the wrong
+    # one it stops with an error rather than carrying on without an icon, so
+    # the platform picks and a missing file is simply skipped.
+    icon = ROOT / "assets" / ("icon.icns" if platform.system() == "Darwin"
+                              else "icon.ico")
     if icon.exists():
         args.append(f"--icon={icon}")
+    else:
+        say(f"      no {icon.name} — the app will carry PyInstaller's own icon")
 
     # The curated catalogue is Python and comes along automatically; an
     # imported Scorecard database does not, so it is bundled when present.

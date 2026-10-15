@@ -203,3 +203,50 @@ def test_a_packaged_app_keeps_its_data_beside_the_executable(tmp_path):
     url = _db_url_from(tmp_path, env={"VG_BASE_DIR": str(tmp_path)})
     assert tmp_path.as_posix() in url, url
     assert (tmp_path / "data").is_dir(), "the data folder should be created"
+
+
+# --------------------------------------------------------------------- brand
+
+def test_the_logo_ships_in_every_form_the_app_needs():
+    """Four files, four jobs: the splash crest, the browser tab, the Windows
+    executable's own icon and the Mac app's. A missing one is not an error
+    anywhere — the page shows a broken image, the tab shows a blank page icon
+    and the app carries PyInstaller's logo — so it is checked here."""
+    assets = ROOT / "assets"
+    for name, floor in (("logo.png", 20_000), ("favicon.png", 500),
+                        ("icon.ico", 10_000), ("icon.icns", 10_000)):
+        f = assets / name
+        assert f.exists(), f"{name} is missing"
+        assert f.stat().st_size > floor, f"{name} is too small to be the artwork"
+
+
+def test_the_icns_is_a_real_icns():
+    """Written by hand rather than by iconutil, which only exists on a Mac.
+    If the header is wrong PyInstaller fails the Mac build, and that failure
+    happens on a CI runner nobody is watching."""
+    import struct
+    data = (ROOT / "assets" / "icon.icns").read_bytes()
+    assert data[:4] == b"icns"
+    assert struct.unpack(">I", data[4:8])[0] == len(data), "length field is wrong"
+    seen, off = [], 8
+    while off < len(data):
+        code = data[off:off + 4]
+        size = struct.unpack(">I", data[off + 4:off + 8])[0]
+        assert size >= 8 and off + size <= len(data), f"bad chunk at {off}"
+        seen.append(code)
+        off += size
+    assert b"ic08" in seen, "no 256px icon, which is the one Finder shows"
+
+
+def test_the_splash_shows_the_logo_and_not_a_letter():
+    page = (ROOT / "veritagnosis" / "pages" / "auth.py").read_text(encoding="utf-8")
+    assert '"/logo.png"' in page, "the splash is not pointing at the logo"
+    assert 'rx.box("V", class_name="emblem")' not in page, "the painted V is back"
+
+
+def test_the_executable_icon_matches_the_platform():
+    """PyInstaller stops with an error when handed an .ico on macOS, so this
+    is a build failure rather than a cosmetic slip."""
+    build = (ROOT / "build_exe.py").read_text(encoding="utf-8")
+    assert "icon.icns" in build and "icon.ico" in build
+    assert 'platform.system() == "Darwin"' in build
