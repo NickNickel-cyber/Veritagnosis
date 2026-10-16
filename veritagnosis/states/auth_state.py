@@ -46,7 +46,7 @@ class AuthState(rx.State):
     # real schools and essays. Held as plain vars rather than computed, because
     # working it out reads several tables and that belongs in one deliberate
     # call on load, not in a @rx.var that re-runs on every render.
-    task_title_v: str = "Loading your list"
+    task_title_v: str = 'Loading…'
     task_meta_v: str = ""
     task_route_v: str = "/home"
 
@@ -222,8 +222,8 @@ class AuthState(rx.State):
             # Anything unexpected (a storage problem, a bad key) must not throw
             # a stack trace at someone trying to make an account.
             self.busy = False
-            self.error = ("Something went wrong saving your account. Close the "
-                          "app, run it again, and try once more.")
+            self.error = (('Something went wrong creating your account. Restart the app and try '
+                           'again.'))
             print(f"\n[veritagnosis] signup failed: {type(e).__name__}: {e}\n")
             return
 
@@ -251,7 +251,7 @@ class AuthState(rx.State):
             # success path, refuse to proceed rather than silently skipping the
             # second factor.
             self.busy = False
-            self.error = "Sign-in could not be completed. Please try again."
+            self.error = "We couldn't sign you in. Please try again."
             return
         except auth.SecondFactorRequired as e:
             self.pending_challenge = e.challenge
@@ -263,8 +263,7 @@ class AuthState(rx.State):
             return
         except Exception as e:                      # noqa: BLE001
             self.busy = False
-            self.error = ("Something went wrong signing you in. Close the app, "
-                          "run it again, and try once more.")
+            self.error = ('Something went wrong signing you in. Restart the app and try again.')
             print(f"\n[veritagnosis] login failed: {type(e).__name__}: {e}\n")
             return
         self.busy = False
@@ -331,8 +330,7 @@ class AuthState(rx.State):
             self.masked_email = _mask(email)
         else:
             self.pending_challenge = ""
-            self.error = ("That sign-in request has expired. "
-                          "Sign in again and we'll send a fresh code.")
+            self.error = ("That code has expired. Sign in again and we'll send you a new one.")
 
     @rx.event
     def handle_verify(self):
@@ -341,8 +339,7 @@ class AuthState(rx.State):
             self.error = "Enter all six digits."
             return
         if not self.pending_challenge:
-            self.error = ("We lost track of this sign-in. "
-                          "Sign in again and we'll send a fresh code.")
+            self.error = ("This sign-in timed out. Sign in again and we'll send you a new code.")
             return
         try:
             with db.get_session() as s:
@@ -356,8 +353,7 @@ class AuthState(rx.State):
             return
         except Exception as e:                      # noqa: BLE001
             self.code = ""
-            self.error = ("Something went wrong finishing your sign-in. "
-                          "Try once more.")
+            self.error = ('Something went wrong finishing your sign-in. Please try again.')
             print(f"\n[veritagnosis] verify failed: {type(e).__name__}: {e}\n")
             return
         self.code = ""
@@ -375,15 +371,14 @@ class AuthState(rx.State):
         turn "resend" into a way to reset your five guesses.
         """
         if not self.pending_challenge:
-            self.error = "Sign in again and we'll send a fresh code."
+            self.error = "Sign in again and we'll send you a new code."
             return
         with db.get_session() as s:
             fresh = auth.resend_code(s, self.pending_challenge)
         if fresh is None:
             self.pending_challenge = ""
             self.masked_email = ""
-            self.error = ("That sign-in request has expired. "
-                          "Sign in again and we'll send a fresh code.")
+            self.error = ("That code has expired. Sign in again and we'll send you a new one.")
             return
         handle, code, email = fresh
         self.pending_challenge = handle
@@ -407,8 +402,42 @@ class AuthState(rx.State):
         if self.ach_total == 0:
             return ""
         if self.ach_reached == 0:
-            return "No checkpoints yet — the first few are one click away."
+            return 'No checkpoints yet. The first few take about a minute.'
         return f"{self.ach_reached} of {self.ach_total} checkpoints reached"
+
+    # ------------------------------------------------------------ greeting
+    #
+    # The hour comes from the student's own browser, not the server. On a
+    # laptop they are the same clock; once the app is hosted somewhere else
+    # they are not, and "Good morning" at 9pm is exactly the kind of thing
+    # that makes an app feel like it is not paying attention.
+    hour: int = -1
+
+    @rx.event
+    def read_clock(self):
+        return rx.call_script("new Date().getHours()", callback=AuthState.set_hour)
+
+    @rx.event
+    def set_hour(self, value):
+        try:
+            h = int(value)
+        except (TypeError, ValueError):
+            return
+        if 0 <= h <= 23:
+            self.hour = h
+
+    @rx.var(deps=["hour"])
+    def greeting(self) -> str:
+        return greeting_for(self.hour)
+
+    @rx.var(deps=["display_name"])
+    def greet_name(self) -> str:
+        """The name as it is said out loud. "nick" becomes "Nick"; anything
+        with digits or punctuation ("sri_2027") is left exactly as chosen."""
+        n = (self.display_name or "").strip()
+        if n.isalpha() and n[:1].islower():
+            return n[:1].upper() + n[1:]
+        return n
 
     @rx.event
     def load_home(self):
@@ -552,8 +581,7 @@ class AuthState(rx.State):
                 self.delete_error = str(e)
                 return
             except Exception as e:                      # noqa: BLE001
-                self.delete_error = ("The account could not be deleted. "
-                                     "Nothing has been changed.")
+                self.delete_error = ("We couldn't delete your account. Nothing was changed.")
                 print(f"\n[veritagnosis] delete failed: {type(e).__name__}: {e}\n")
                 return
         self.confirm_delete = False
@@ -602,6 +630,19 @@ class AuthState(rx.State):
             return json.loads(self.avatar_json)
         except (ValueError, TypeError):
             return {}
+
+
+def greeting_for(hour: int) -> str:
+    """Morning until noon, afternoon until five, evening after that. The small
+    hours count as evening: "Good morning" at 2am reads like a joke. Before the
+    browser has reported its clock, a plain hello."""
+    if not 0 <= hour <= 23:
+        return "Hello"
+    if 5 <= hour < 12:
+        return "Good morning"
+    if 12 <= hour < 17:
+        return "Good afternoon"
+    return "Good evening"
 
 
 def _mask(email: str) -> str:

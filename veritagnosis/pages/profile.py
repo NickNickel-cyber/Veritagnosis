@@ -179,7 +179,7 @@ def _mismatch(f) -> rx.Component:
         rx.box("You have " + f["name"] + " down as a " + f["student_tier"] + ".",
                class_name="mismatch-h"),
         rx.box(
-            "Its published data makes it a " + f["data_tier"] + ". " +
+            "Based on its published data, it's a " + f["data_tier"] + ". " +
             f["sentence"],
         ),
         class_name="mismatch",
@@ -188,7 +188,7 @@ def _mismatch(f) -> rx.Component:
 
 def _where_you_stand() -> rx.Component:
     return rx.box(
-        rx.heading("Where you actually stand", size="4",
+        rx.heading('Where you stand', size="4",
                    style={"marginBottom": "var(--s3)"}),
 
         rx.foreach(ProfileState.disagreements, _mismatch),
@@ -231,7 +231,7 @@ def _gaps() -> rx.Component:
     return rx.cond(
         ProfileState.blind_spots.length() > 0,
         rx.box(
-            rx.heading("What you have not looked at yet", size="4",
+            rx.heading("What you haven't looked at yet", size="4",
                        style={"marginBottom": "var(--s3)"}),
             rx.foreach(ProfileState.blind_spots, _spot),
             class_name="card", style={"marginBottom": "var(--s4)"},
@@ -299,8 +299,7 @@ def _your_numbers() -> rx.Component:
             class_name="num-head",
         ),
         rx.box(
-            _num_field("GPA", "Unweighted, out of 4 — or weighted if that is "
-                              "what your school reports.",
+            _num_field("GPA", "Unweighted out of 4, or weighted if that's what your school uses.",
                        ProfileState.gpa_input, ProfileState.gpa_problem,
                        ProfileState.set_gpa_input, "3.8"),
             _num_field("SAT", "Total score, 400–1600.",
@@ -404,7 +403,7 @@ def _details() -> rx.Component:
 
         rx.box(
             rx.box(
-                rx.el.label("Earliest deadline you are working towards"),
+                rx.el.label('Your earliest deadline'),
                 rx.el.input(class_name="input", type="date",
                             default_value=ProfileState.app_deadline,
                             key="dl-" + ProfileState.form_epoch.to_string(),
@@ -412,7 +411,7 @@ def _details() -> rx.Component:
                 class_name="field",
             ),
             rx.box(
-                rx.el.label("How many schools are you aiming for?"),
+                rx.el.label('How many schools are you applying to?'),
                 rx.el.input(class_name="input", type="number", min="1", max="20",
                             default_value=ProfileState.target_schools_count.to_string(),
                             on_change=ProfileState.set_target_schools_count),
@@ -423,7 +422,7 @@ def _details() -> rx.Component:
         ),
 
         rx.box(
-            rx.el.label("How are you playing this?"),
+            rx.el.label("What kind of list are you going for?"),
             rx.box(
                 _pick("reach", ProfileState.priority, ProfileState.set_priority),
                 _pick("balanced", ProfileState.priority, ProfileState.set_priority),

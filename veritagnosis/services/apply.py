@@ -100,46 +100,45 @@ def milestones(session: Session, user_id: int, school: School) -> list[Milestone
 
         Milestone("deadline", "Deadline set", school.deadline is not None,
                   WEIGHTS["deadline"],
-                  "Add the deadline so this can warn you before it arrives.",
+                  "Add the deadline so you get a heads-up before it hits.",
                   "/applications"),
 
         Milestone("why", "Why this college", len(notes) >= 80, WEIGHTS["why"],
-                  "Write a few lines on why you actually want to go here. "
-                  "You will need them later, and it is much easier now.",
+                  ("Write a few lines on why you want to go here. You'll need them "
+                   "later, and it's easier now while it's fresh."),
                   "/applications",
                   f"{len(notes)} characters" if notes else ""),
 
         Milestone("draft", "Essay drafted", best_words >= DRAFT_FRACTION * 100,
                   WEIGHTS["draft"],
-                  "Get a draft down. It does not have to be good yet.",
+                  "Get a draft down. It doesn't have to be good yet.",
                   "/essays",
                   f"{min(100, best_words)}% of the word target"),
 
         Milestone("polish", "Essay polished", best_score >= POLISH_SCORE,
                   WEIGHTS["polish"],
-                  f"The coach scores your draft {best_score}. Clear the red "
-                  f"items to get it past {POLISH_SCORE}.",
+                  f"Your draft scores {best_score}. Fix the red items to get "
+                  f"it past {POLISH_SCORE}.",
                   "/essays",
                   f"scores {best_score}" if best_score else ""),
 
         Milestone("recs", "Letters secured",
                   need_recs == 0 or secured >= need_recs, WEIGHTS["recs"],
-                  "Ask your teachers. The earlier you ask, the better the "
-                  "letter — they are writing dozens of these in December.",
+                  "Ask your teachers early. By December they're swamped with requests.",
                   "/recommendations",
                   f"{secured} of {need_recs} agreed" if need_recs else "none needed"),
 
         Milestone("scores", "Test scores recorded", bool(scores),
                   WEIGHTS["scores"],
-                  "Record your SAT, ACT or AP results so you are not digging "
-                  "them out the night before.",
+                  ("Add your SAT, ACT or AP scores now so you're not hunting for them "
+                   "the night before."),
                   "/settings"),
 
         Milestone("submit", "Submitted",
                   school.status in (AppStatus.submitted, AppStatus.accepted,
                                     AppStatus.rejected, AppStatus.waitlisted),
                   WEIGHTS["submit"],
-                  "Mark it submitted once it is actually sent.",
+                  "Mark it submitted once you've actually sent it.",
                   "/applications"),
     ]
 
@@ -285,7 +284,7 @@ def school_add(session: Session, user_id: int, name: str, tier: str = "target",
         deadline: datetime | None = None) -> School:
     name = name.strip()[:120]
     if not name:
-        raise ValueError("Give the school a name.")
+        raise ValueError("Type the college's name.")
     school = School(user_id=user_id, name=name,
                     tier=Tier(tier if tier in Tier._value2member_map_ else "target"),
                     deadline=deadline)
@@ -344,22 +343,23 @@ def next_deadline(session: Session, user_id: int) -> School | None:
 
 COACH_STEPS = [
     ("Start with a moment, not a summary.",
-     "Drop me into one specific scene. Where were you, what were you doing? "
-     "Two sentences is plenty."),
-    ("Next, a hook to attract the reader.",
+     ("Put the reader in one specific scene. Where were you and what were "
+      "you doing? Two sentences is enough.")),
+    ("Now make the opening grab them.",
      "Look at your first line. Would a stranger read the second one? If not, "
      "cut everything before the interesting part."),
-    ("Now tell me what changed.",
-     "Something has to be different by the end — what you believed, what you "
-     "noticed, what you decided. Name it plainly."),
+    ("Now show what changed.",
+     ("Something should be different by the end: what you believed, noticed "
+      "or decided. Say it plainly.")),
     ("Show it instead of claiming it.",
-     "Find one sentence that tells me you're hardworking or curious. Replace it "
-     "with the thing you actually did."),
-    ("Cut a quarter of the words.",
-     "Almost every draft is 25% too long. Delete adverbs, throat-clearing, and "
-     "anything the reader already worked out."),
+     ("Find a sentence that says you're hardworking or curious, and replace "
+      "it with something you actually did.")),
+    ("Trim it down.",
+     ("First drafts usually run long. Cut extra adverbs, slow warm-up "
+      "sentences, and anything the reader has already figured out.")),
     ("Read it aloud, then finish.",
-     "If you stumble reading a sentence, so will they. Fix those, and you're done."),
+     ("If you trip over a sentence, so will they. Fix those and you're "
+      "done.")),
 ]
 
 
@@ -477,7 +477,7 @@ def next_task(session: Session, user_id: int) -> Task:
     # 1. Nothing to work on yet.
     if not schools:
         return Task("Add your first college",
-                    "Takes a minute — everything else builds on this",
+                    "Takes a minute, and everything else builds on it",
                     "/applications")
 
     live = [s for s in schools
@@ -492,7 +492,7 @@ def next_task(session: Session, user_id: int) -> Task:
         when = "due today" if d == 0 else "due tomorrow" if d == 1 else f"{d} days left"
         step = next_step(milestones(session, user_id, s))
         return Task(f"{s.name} is {when}",
-                    step.hint if step else f"{s.progress}% done — check what is left",
+                    step.hint if step else f"{s.progress}% done. See what's left",
                     step.route if step else "/applications")
 
     # 3. An essay that has not been started.
@@ -507,7 +507,7 @@ def next_task(session: Session, user_id: int) -> Task:
         s = blank[0]
         due = deadline_phrase(s)
         return Task(f"Start your {s.name} essay",
-                    "Blank page — write it badly first"
+                    "Blank page. Just get something down"
                     + (f" · {due}" if s.deadline else ""),
                     "/essays")
 
@@ -525,7 +525,7 @@ def next_task(session: Session, user_id: int) -> Task:
         short.sort()
         left, s, n, target = short[0]
         return Task(f"Keep going on your {s.name} essay",
-                    f"{n} of {target} words — {left} to go", "/essays")
+                    f"{n} of {target} words, {left} to go", "/essays")
 
     # 5. Letters, which nobody asks for until it is too late.
     for s in sorted(live, key=lambda x: (days_left(x) is None, days_left(x) or 9999)):
@@ -545,10 +545,10 @@ def next_task(session: Session, user_id: int) -> Task:
     done = sum(1 for s in schools if s.status not in
                (AppStatus.not_started, AppStatus.in_progress))
     if done and done == len(schools):
-        return Task("Every application is in",
-                    "Nothing to do but wait. That is allowed.", "/applications")
+        return Task("All your applications are in",
+                    "Now you wait. Go do something fun.", "/applications")
     return Task("Take a breath before you start",
-                "Two minutes — the list will still be there", "/meditation")
+                "Two minutes. Your list will still be here.", "/meditation")
 
 
 def rec_list_for(session: Session, user_id: int, role: str | None = None) -> list[Recommender]:

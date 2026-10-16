@@ -145,17 +145,18 @@ def _sim_inputs() -> rx.Component:
         rx.box("Your household", class_name="note-tag"),
         _dial("Household income before tax", "sim_income", AidState.sim_income,
               0, 400000, 1000, AidState.sim_income_label,
-              "Everything the people who support you earn in a year."),
+              "What the people who support you earn in a year, combined."),
         _dial("People in the household", "sim_household", AidState.sim_household,
               2, 10, 1, AidState.sim_household.to_string()),
         _dial("People in college at once", "sim_in_college", AidState.sim_in_college,
               1, 5, 1, AidState.sim_in_college.to_string(),
-              "Including you. This used to cut the contribution. It no longer does."),
+              ("Count yourself. This used to lower what you're expected to pay, but "
+               "it doesn't anymore.")),
         _dial("Parents' savings and investments", "sim_parent_savings",
               AidState.sim_parent_savings, 0, 300000, 1000,
               AidState.sim_parent_savings_label,
-              "Not the house you live in, and not any retirement account. "
-              "FAFSA never asks about either."),
+              ("Don't include your home or retirement accounts. FAFSA doesn't ask "
+               "about either.")),
         _dial("What you earn yourself", "sim_student_income",
               AidState.sim_student_income, 0, 40000, 500,
               AidState.sim_student_income_label),
@@ -191,7 +192,7 @@ def _sim_result() -> rx.Component:
             rx.box(
                 rx.box("FEDERAL PELL GRANT", class_name="rp-lbl"),
                 rx.box(AidState.sim["pell"], class_name="sim-big sim-big-good"),
-                rx.box("A grant. Not a loan — nothing to pay back.",
+                rx.box("It's a grant, so there's nothing to pay back.",
                        class_name="sim-under"),
                 class_name="sim-figure",
             ),
@@ -206,8 +207,8 @@ def _sim_parts() -> rx.Component:
     return rx.box(
         rx.heading("Where that number comes from", size="4",
                    style={"marginTop": "var(--s6)"}),
-        rx.text("Four things are added together. Watch which one actually "
-                "moves when you change the dials.", class_name="rp-line"),
+        rx.text(("It's four amounts added together. Change the inputs above and watch "
+                 "which one moves."), class_name="rp-line"),
         rx.foreach(
             AidState.sim_parts,
             lambda p: rx.box(
@@ -229,7 +230,7 @@ def _sim_parts() -> rx.Component:
 
 def _sim_pay() -> rx.Component:
     return rx.box(
-        rx.heading("What four kinds of college would actually cost you",
+        rx.heading("What four kinds of colleges would cost you",
                    size="4", style={"marginTop": "var(--s6)"}),
         rx.box(rx.text(AidState.sim_headline, class_name="rp-line"),
                class_name="card report"),
@@ -276,9 +277,9 @@ def _sim_pay() -> rx.Component:
 
 def _sim_experiments() -> rx.Component:
     return rx.box(
-        rx.heading("Try something", size="4", style={"marginTop": "var(--s6)"}),
-        rx.text("Each of these is a thing families believe. Press one and "
-                "watch what it really does.", class_name="rp-line"),
+        rx.heading("Try it", size="4", style={"marginTop": "var(--s6)"}),
+        rx.text(("These are common beliefs about aid. Tap one to see what it actually "
+                 "does."), class_name="rp-line"),
         rx.foreach(
             AidState.sim_experiments,
             lambda x: rx.box(
@@ -306,17 +307,16 @@ def _my_colleges() -> rx.Component:
     on a guessed generosity is exactly the wrong thing to hand a family
     working out whether they can afford this."""
     return rx.box(
-        rx.heading("And what YOUR list would cost you", size="4",
+        rx.heading("What your list would cost you", size="4",
                    style={"marginTop": "var(--s6)"}),
         rx.cond(
             AidState.my_colleges_count > 0,
             rx.box(
                 rx.box(
-                    "Sticker prices below are the real published ones. What "
-                    "you would actually pay depends on how much of your need "
-                    "each college chooses to meet, which varies enormously "
-                    "and which we do not have for these colleges — so you get "
-                    "a range, not a single number.",
+                    ("The sticker prices below are the published ones. What you'd actually "
+                     "pay depends on how much of your need each college covers. That "
+                     "varies a lot and we don't have it for these schools, so you get a "
+                     "range instead of one number."),
                     class_name="lr-sub",
                     style={"marginBottom": "var(--s3)"},
                 ),
@@ -358,8 +358,7 @@ def _my_colleges() -> rx.Component:
                         ),
                         rx.box(
                             rx.box(e.name, class_name="s-name"),
-                            rx.box("We do not have a published cost for this "
-                                   "one yet, so it is not priced here.",
+                            rx.box("We don't have a published cost for this one yet.",
                                    class_name="lr-sub"),
                             class_name="card",
                             style={"marginBottom": "var(--s3)"},
@@ -369,8 +368,8 @@ def _my_colleges() -> rx.Component:
                 rx.box(AidState.net_price_note, class_name="fit-caveat"),
             ),
             rx.box(
-                rx.box("Add colleges to your list and this will price every "
-                       "one of them against the numbers above."),
+                rx.box(("Add colleges to your list to see what each one would cost with the "
+                        "numbers above.")),
                 rx.link(btn("Add schools", "secondary", type="button"),
                         href="/applications"),
                 class_name="card",
@@ -403,14 +402,11 @@ def _simulator() -> rx.Component:
         rx.box(
             rx.box("Read this first", class_name="note-tag"),
             rx.text(
-                "These are teaching numbers, not your numbers. The Pell "
-                "figures and the poverty thresholds are the real published "
-                "ones for " + fafsa.AWARD_YEAR + ", but the formula behind "
-                "the Student Aid Index is simplified, so treat the answer as "
-                "the right shape rather than the right total. For a real "
-                "figure, run the net price calculator on each college's own "
-                "site — every US college is required to publish one — and "
-                "talk to their aid office."),
+                ("These numbers are for learning, not a quote. The Pell amounts and "
+                 "poverty guidelines are the official ones for ") + fafsa.AWARD_YEAR + (", but the Student Aid Index formula here is simplified, so treat the "
+                                                  "result as a ballpark. For a real number, use the net price "
+                                                  "calculator on each college's website (every US college has to have "
+                                                  "one) and talk to their financial aid office.")),
             class_name="card note",
         ),
         _sim_inputs(),
@@ -510,7 +506,7 @@ def _cost(c) -> rx.Component:
                     rx.box(
                         rx.el.label("Needs a CSS Profile"),
                         rx.el.button(
-                            rx.cond(c.needs_css, "Yes — it does", "No / not checked"),
+                            rx.cond(c.needs_css, "Yes, it does", "No / not checked"),
                             type="button", class_name="btn btn-secondary",
                             on_click=AidState.toggle_css(c.id)),
                         class_name="field",
@@ -603,9 +599,8 @@ def _scholarship(s) -> rx.Component:
 def _scholarships() -> rx.Component:
     return rx.box(
         rx.box(
-            rx.text("Local awards have a fraction of the applicants that "
-                    "national ones do, for the same amount of work. Five local "
-                    "applications beat one famous one.", class_name="rp-line"),
+            rx.text(("Local scholarships get far fewer applicants than national ones, so "
+                     "your odds are much better for the same work."), class_name="rp-line"),
             rx.box(
                 rx.box(rx.box(AidState.won, class_name="rp-num"),
                        rx.box("won", class_name="rp-lbl"), class_name="rp-stat"),
@@ -620,9 +615,9 @@ def _scholarships() -> rx.Component:
             AidState.scholarships.length() > 0,
             rx.box(rx.foreach(AidState.scholarships, _scholarship),
                    style={"marginTop": "var(--s4)"}),
-            rx.box(rx.text("Nothing tracked yet. Ask your counsellor, your "
-                           "library, and any employer your parents work for — "
-                           "that is where the winnable ones are.",
+            rx.box(rx.text(("Nothing tracked yet. Ask your counselor, your local library, and "
+                            "your parents' employers. That's where a lot of the winnable ones "
+                            "are."),
                            class_name="faint"),
                    class_name="card", style={"marginTop": "var(--s4)"}),
         ),
@@ -655,8 +650,8 @@ def _scholarships() -> rx.Component:
 def _learn() -> rx.Component:
     return rx.box(
         rx.box(
-            rx.text("The vocabulary is half the difficulty. None of it is "
-                    "complicated once somebody says it plainly.",
+            rx.text(("A lot of this is just jargon. Here's what the words mean in plain "
+                     "English."),
                     class_name="rp-line"),
             class_name="card report",
         ),

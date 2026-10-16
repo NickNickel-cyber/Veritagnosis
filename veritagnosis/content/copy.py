@@ -21,8 +21,8 @@ QUOTES = {
     ("Almost everything will work again if you unplug it for a few minutes, including you.", "Anne Lamott"),
     ("You are allowed to be both a work in progress and a masterpiece.", "Sophia Bush"),
     ("The best time to plant a tree was twenty years ago. The second best time is now.", "Proverb"),
-    ("One essay. One evening. That is the whole job tonight.", None),
-    ("You do not have to finish the application today. You have to start it.", None),
+    ("One essay tonight. That's plenty.", None),
+    ("You don't have to finish the application today. Just start it.", None),
 ],
 "superhero": [
     ("Courage is not the absence of fear, but the triumph over it.", "Nelson Mandela"),
@@ -37,8 +37,8 @@ QUOTES = {
     ("Start where you are. Use what you have. Do what you can.", "Arthur Ashe"),
     ("A journey of a thousand miles begins with a single step.", "Lao Tzu"),
     ("It always seems impossible until it is done.", "Nelson Mandela"),
-    ("Order something warm. Open the doc. That is the whole ritual.", None),
-    ("Two hundred words and a refill. That is a good night's work.", None),
+    ('Get something warm to drink and open the doc.', None),
+    ('Two hundred words and a refill is a good night.', None),
 ],
 "astronomy": [
     ("Somewhere, something incredible is waiting to be known.", "Carl Sagan"),
@@ -46,8 +46,8 @@ QUOTES = {
     ("We are made of star-stuff.", "Carl Sagan"),
     ("Equipped with his five senses, man explores the universe around him "
      "and calls the adventure Science.", "Edwin Hubble"),
-    ("Every school on your list is a planet you have not visited yet.", None),
-    ("You are not behind. You are in transit.", None),
+    ("Every school on your list is a planet you haven't visited yet.", None),
+    ("You're not behind. You're on your way.", None),
 ],
 "terminal": [
     ("Talk is cheap. Show me the code.", "Linus Torvalds"),
@@ -90,9 +90,9 @@ COMMON_APP = [
      "text": "Some students have a background, identity, interest, or talent "
              "so meaningful they believe their application would be incomplete "
              "without it. If this sounds like you, share your story.",
-     "note": "The most open one, which makes it the easiest to waste. Pick one "
-             "narrow thing you could talk about for an hour, not the whole of "
-             "who you are.",
+     "note": ("This is the most open prompt, so it's the easiest one to waste. Pick "
+              "one narrow thing you could talk about for an hour. You don't have to "
+              'cover everything about yourself.'),
      "words": 650},
 
     {"key": "obstacle",
@@ -100,9 +100,9 @@ COMMON_APP = [
              "fundamental to later success. Recount a time when you faced a "
              "challenge, setback, or failure. How did it affect you, and what "
              "did you learn?",
-     "note": "Most of the essay should be what you did afterwards, not how bad "
-             "it was. And the failure can be small — a genuinely small one, "
-             "honestly told, beats a large one told carefully.",
+     "note": ('Spend most of the essay on what you did afterward, not on how bad it '
+              'was. The setback can be small. A small one told honestly works '
+              'better than a big one told carefully.'),
      "words": 650},
 
     {"key": "questioned",
@@ -116,41 +116,40 @@ COMMON_APP = [
      "text": "Reflect on something that someone has done for you that has made "
              "you happy or thankful in a surprising way. How has this "
              "gratitude affected or motivated you?",
-     "note": "Watch out: this one is about you, not about them. The person is "
-             "the setting; the change in you is the subject.",
+     "note": ('Careful: this essay is about you, not them. Keep the focus on how '
+              'you changed.'),
      "words": 650},
 
     {"key": "growth",
      "text": "Discuss an accomplishment, event, or realization that sparked a "
              "period of personal growth and a new understanding of yourself or "
              "others.",
-     "note": "'A period of growth' means show the before and the after. If the "
-             "reader cannot tell what changed, the essay has not answered it.",
+     "note": ("Show who you were before and who you were after. If the reader can't "
+              "tell what changed, the essay hasn't answered the question."),
      "words": 650},
 
     {"key": "engaging",
      "text": "Describe a topic, idea, or concept you find so engaging that it "
              "makes you lose all track of time. Why does it captivate you? "
              "What or who do you turn to when you want to learn more?",
-     "note": "The best answers here are specific to the point of being odd. "
-             "Enthusiasm is only convincing when it is detailed.",
+     "note": ('The best answers get oddly specific. Details are what make '
+              'enthusiasm believable.'),
      "words": 650},
 
     {"key": "free",
      "text": "Share an essay on any topic of your choice. It can be one you've "
              "already written, one that responds to a different prompt, or one "
              "of your own design.",
-     "note": "Freedom is harder, not easier. Only take this one if you already "
-             "know exactly what you are writing.",
+     "note": ('This one is harder than it looks. Pick it only if you already know '
+              'exactly what you want to write.'),
      "words": 650},
 ]
 
 # The supplemental questions almost every college asks in some form.
 SUPPLEMENTAL = [
     {"key": "why_us", "text": "Why do you want to attend this college?",
-     "note": "Name things that could only be said about this one place. If the "
-             "paragraph would survive a find-and-replace of the college name, "
-             "it is not finished.",
+     "note": ('Name things that are only true of this college. If you could swap in '
+              "another school's name and the paragraph still works, keep going."),
      "words": 250},
 
     {"key": "why_major", "text": "Why do you want to study this subject?",
@@ -159,14 +158,14 @@ SUPPLEMENTAL = [
      "words": 250},
 
     {"key": "community", "text": "How will you contribute to our community?",
-     "note": "Describe something you have already done for a group you already "
-             "belong to. Promises are worthless here; evidence is not.",
+     "note": ("Talk about something you've already done for a group you're part of. "
+              "What you've done counts for more than what you promise."),
      "words": 250},
 
     {"key": "activity", "text": "Elaborate on one of your extracurricular "
                                 "activities or work experiences.",
-     "note": "Very short. Cut every word that is not the specific thing you did "
-             "and the specific difference it made.",
+     "note": ('This one is short. Keep only what you did and what difference it '
+              'made.'),
      "words": 150},
 ]
 
@@ -191,29 +190,30 @@ def find(text: str) -> dict | None:
 # ====================================================================
 
 STEPS = [
-    {"say": "Before anything else — who is reading this, and what do you want "
-            "them to remember about you afterwards? Write that in one line.",
+    {"say": ("First: who's reading this, and what do you want them to remember "
+             'about you? Write it in one line.'),
      "hint": "One sentence. It's for you, not them."},
-    {"say": "Next, you need a hook to attract the reader. Start in the middle of "
-            "something happening, not with a summary.",
+    {"say": ('Now the opening. Start in the middle of something happening instead '
+             'of with a summary.'),
      "hint": "Try opening on a specific moment: a room, a sound, a thing you said."},
-    {"say": "Good. Now widen out — why did that moment matter to you? This is "
-            "where most essays go generic. Stay specific.",
-     "hint": "Avoid 'I learned that hard work pays off'. What did YOU learn?"},
-    {"say": "Give me the turn. What changed in how you think or act? Show it, "
-            "don't announce it.",
+    {"say": ('Now zoom out a little. Why did that moment matter to you? This is '
+             'where a lot of essays get vague, so stay specific.'),
+     "hint": ("Skip 'I learned that hard work pays off.' What did you actually "
+              'learn?')},
+    {"say": ('What changed in how you think or act? Show it happening instead of '
+             'announcing it.'),
      "hint": "A small concrete change beats a big abstract one."},
-    {"say": "Land it. End somewhere slightly forward-looking, but don't promise "
-            "to change the world.",
-     "hint": "The last line should feel inevitable, not tacked on."},
-    {"say": "Now read it out loud. Every sentence you stumble on is a sentence "
-            "to rewrite. That's the whole editing trick.",
-     "hint": "Out loud. Genuinely."},
+    {"say": ("Time to wrap up. Look a little ahead, but you don't need to promise "
+             'to change the world.'),
+     "hint": 'The last line should feel like it belongs there, not like an add-on.'},
+    {"say": ('Now read it out loud. Any sentence you trip over needs rewriting. '
+             "That's most of editing right there."),
+     "hint": 'Really out loud, not in your head.'},
 ]
 
-DONE = {"say": "That's a draft. Leave it overnight before you touch it again — "
-               "you'll see it much more clearly tomorrow.",
-        "hint": "Drafts are supposed to be bad. That's what makes them drafts."}
+DONE = {"say": ("That's a draft. Leave it alone overnight. You'll see it more clearly "
+                'tomorrow.'),
+        "hint": "First drafts are supposed to be rough. That's normal."}
 
 
 # ====================================================================
@@ -223,37 +223,36 @@ DONE = {"say": "That's a draft. Leave it overnight before you touch it again —
 TEMPLATES = {
     "teacher": {
         "title": "Asking a teacher",
-        "when": "Ask at least a month before your first deadline. Teachers "
-                "write dozens of these and the good ones fill up early.",
-        "how": "In person if you possibly can, then follow up by email so they "
-               "have the details in writing. Asking face to face is the whole "
-               "difference between a warm letter and a generic one.",
+        "when": ('Ask at least a month before your first deadline. Popular teachers '
+                 'get a lot of requests and fill up early.'),
+        "how": ('Ask in person if you can, then send an email so they have the '
+                'details in writing. Teachers tend to write warmer letters for '
+                'students who asked them face to face.'),
         "body": (
             "Hi {teacher},\n\n"
             "I'm applying to college this year and I was hoping you might be "
             "willing to write me a letter of recommendation.\n\n"
             "I asked you because {reason}. If you're able to, my first deadline "
             "is {deadline}.\n\n"
-            "I can send you anything that would help — a list of where I'm "
-            "applying, my draft essay, or a reminder of what I worked on in "
-            "your class.\n\n"
-            "Completely understand if you're already writing too many.\n\n"
+            "I can send you anything that would help, like a list of where "
+            "I'm applying, my draft essay, or a reminder of what I worked on "
+            "in your class.\n\n"
+            "I completely understand if you already have too many to write.\n\n"
             "Thank you,\n{name}"
         ),
-        "reason_hint": "…your class was the one where I actually changed how I "
-                       "think about the subject — say the real reason, and be "
-                       "specific about a moment they will remember.",
+        "reason_hint": ('…for example, your class changed how I think about the subject. Give '
+                        "the real reason and mention a moment they'll remember."),
     },
     "guidance": {
-        "title": "Asking your counsellor",
-        "when": "Early in the autumn term. Counsellors write for the whole year "
-                "group, so the ones who ask first get the most attention.",
-        "how": "Book a slot rather than catching them in a corridor. Bring your "
-               "list of colleges — it makes the meeting useful for both of you.",
+        "title": 'Asking your counselor',
+        "when": ('Early in the fall. Counselors write for your whole grade, so '
+                 'students who ask early get more of their time.'),
+        "how": ('Set up a meeting instead of catching them in the hallway, and bring '
+                'your college list so you can go through it together.'),
         "body": (
             "Hi {teacher},\n\n"
             "Could I book a short meeting about my college applications? I'd "
-            "like to go through my list and ask about the counsellor "
+            "like to go through my list and ask about the counselor "
             "recommendation.\n\n"
             "Where I'm at so far: {reason}\n\n"
             "My earliest deadline is {deadline}.\n\n"
@@ -267,22 +266,22 @@ TEMPLATES = {
 # Shown next to the status of someone who has been asked but has not replied.
 NUDGE_DAYS = 14
 NUDGE = (
-    "It has been {days} days. A short, friendly follow-up is completely normal "
-    "and teachers expect it — they are not ignoring you, they have forty of "
-    "these. One line is enough: “Just checking you still have room to write "
-    "for me — happy to send anything that helps.”"
+    ("It's been {days} days. A short, friendly follow-up is normal, and "
+     "teachers expect it. They're busy, not ignoring you. One line is "
+     'enough: “Just checking in on the recommendation. Happy to send '
+     'anything that would help.”')
 )
 
 # What each status means and what to do next.
 STATUS_HELP = {
-    "not_asked": "Nothing has happened yet. Pick a moment and ask them in "
-                 "person — it takes about thirty seconds and it is the single "
-                 "highest-value thing on this screen.",
-    "asked": "You have asked. Give them a week or two before you follow up.",
-    "agreed": "They said yes. Send them your essay draft and your college list "
-              "so the letter can be specific rather than generic.",
-    "submitted": "The letter is in. Send a thank-you note — it costs nothing "
-                 "and these are the people who will write for you again.",
+    "not_asked": ("You haven't asked yet. Catch them after class and ask in person. It "
+                  'takes thirty seconds, and it matters more than anything else on this '
+                  'page.'),
+    "asked": "You've asked. Give them a week or two before you follow up.",
+    "agreed": ('They said yes! Send them your essay draft and college list so they '
+               'can write something specific.'),
+    "submitted": ('The letter is in. Send them a thank-you note. You may need them to '
+                  'write for you again.'),
 }
 
 
@@ -308,7 +307,7 @@ ROADMAP = [
      "requires": {"sessions": 1}, "icon": "🌱", "xp": 20},
 
     {"key": "three_sittings", "title": "Three sittings",
-     "blurb": "Three finished sessions. This is where it starts to feel normal.",
+     "blurb": 'Finish three sessions. Around here it starts to feel normal.',
      "requires": {"sessions": 3}, "icon": "🍃", "xp": 30},
 
     {"key": "all_three", "title": "All three techniques",
@@ -316,11 +315,11 @@ ROADMAP = [
      "requires": {"patterns": 3}, "icon": "🧭", "xp": 50},
 
     {"key": "ten_minutes", "title": "Ten minutes total",
-     "blurb": "Ten minutes of sitting, added up however you like.",
+     "blurb": 'Ten minutes total, spread out however you like.',
      "requires": {"minutes": 10}, "icon": "⏳", "xp": 40},
 
     {"key": "three_day", "title": "Three days running",
-     "blurb": "Sit three days in a row. Short counts.",
+     "blurb": 'Three days in a row. Short sessions count.',
      "requires": {"streak": 3}, "icon": "🔥", "xp": 60},
 
     {"key": "long_sit", "title": "A long one",
@@ -328,11 +327,11 @@ ROADMAP = [
      "requires": {"minutes": 10, "sessions": 4}, "icon": "🕊️", "xp": 70},
 
     {"key": "thirty_total", "title": "Half an hour",
-     "blurb": "Thirty minutes of sitting in total.",
+     "blurb": 'Thirty minutes total.',
      "requires": {"minutes": 30}, "icon": "🌊", "xp": 80},
 
     {"key": "week_streak", "title": "A full week",
-     "blurb": "Seven days in a row. This is the one that changes things.",
+     "blurb": 'Seven days in a row. This is where it turns into a habit.',
      "requires": {"streak": 7}, "icon": "👑", "xp": 150},
 ]
 

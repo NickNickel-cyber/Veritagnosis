@@ -19,24 +19,24 @@ PATTERNS = [
         "name": "Box breathing",
         "phases": [4, 4, 4, 4],
         "figure": "box",
-        "blurb": "Equal counts on all four sides. Used by people who need to steady "
-                 "themselves fast — good right before you open a hard essay prompt.",
+        "blurb": ('Four equal counts: in, hold, out, hold. It calms you down fast, so '
+                  "it's good right before a hard essay prompt."),
     },
     {
         "key": "478",
         "name": "4-7-8",
         "phases": [4, 7, 8, 0],
         "figure": "expand",
-        "blurb": "Long hold, longer exhale. Slows you down more than box breathing, "
-                 "so it suits winding down at the end of a session.",
+        "blurb": ('A long hold and an even longer exhale. It slows you down more than '
+                  "box breathing, so it's good for winding down at night."),
     },
     {
         "key": "468",
         "name": "4-6-8",
         "phases": [4, 6, 8, 0],
         "figure": "fill",
-        "blurb": "Gentler than 4-7-8 with the same long exhale. A good starting "
-                 "point if holding for seven counts feels like too much.",
+        "blurb": ('Like 4-7-8, but gentler. Start here if holding your breath for seven '
+                  'counts feels like a lot.'),
     },
 ]
 
@@ -326,11 +326,11 @@ UPGRADES = [
 # What the screen says instead of "game over". Nothing here is a failure — the
 # session is the thing, and the session is still running.
 RESPAWN_LINES = [
-    "Back in. The clock is still yours.",
-    "That run ended. Nothing else did.",
-    "Reset. Take the next one slower.",
-    "Fine. Breathe out, go again.",
-    "Nothing lost. Off you go.",
+    'Back in. Your timer kept running.',
+    'Hit! Starting a new run.',
+    'Try the next one a little slower.',
+    'Breathe out and go again.',
+    'No harm done. Go again.',
 ]
 
 

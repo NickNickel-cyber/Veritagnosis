@@ -67,15 +67,15 @@ CATEGORIES = [
 ACHIEVEMENTS = [
     # ---- getting going ---------------------------------------------------
     {"key": "a_avatar", "cat": "start", "title": "Made yourself",
-     "blurb": "Customise your character and save the look.",
+     "blurb": "Customize your avatar and save it.",
      "requires": {"avatar": 1}, "icon": "🧑‍🎨", "xp": 20},
 
     {"key": "a_first_school", "cat": "start", "title": "First college",
-     "blurb": "Put one college on your list. Any one. You can change it later.",
+     "blurb": "Add any college to your list. You can change it later.",
      "requires": {"schools": 1}, "icon": "🎓", "xp": 20},
 
     {"key": "a_first_words", "cat": "start", "title": "Blank page beaten",
-     "blurb": "Write your first hundred words. The hardest hundred there are.",
+     "blurb": "Write your first 100 words. They're the hardest ones.",
      "requires": {"essay_words": 100}, "icon": "✍️", "xp": 30},
 
     {"key": "a_level3", "cat": "start", "title": "Level three",
@@ -88,7 +88,7 @@ ACHIEVEMENTS = [
      "requires": {"essay_words": 300}, "icon": "📝", "xp": 60},
 
     {"key": "a_full_length", "cat": "writing", "title": "Full length",
-     "blurb": "Write 650 words — the length of a Common App personal statement.",
+     "blurb": "Write 650 words, the Common App personal statement limit.",
      "requires": {"essay_words": 650}, "icon": "📄", "xp": 90},
 
     {"key": "a_decent", "cat": "writing", "title": "Cleaned up",
@@ -96,7 +96,7 @@ ACHIEVEMENTS = [
      "requires": {"essay_best": 70}, "icon": "🧹", "xp": 80},
 
     {"key": "a_sharp", "cat": "writing", "title": "Sharp",
-     "blurb": "Get a draft to a coach score of 85. This is genuinely hard.",
+     "blurb": "Get a draft to a coach score of 85. This one's tough.",
      "requires": {"essay_best": 85}, "icon": "💎", "xp": 150},
 
     {"key": "a_two_polished", "cat": "writing", "title": "Two clean drafts",
@@ -108,15 +108,15 @@ ACHIEVEMENTS = [
      "requires": {"essay_finished": 1}, "icon": "🏁", "xp": 100},
 
     {"key": "a_marathon", "cat": "writing", "title": "Two thousand words",
-     "blurb": "Two thousand words written across everything you are working on.",
+     "blurb": "Write 2,000 words across all your essays.",
      "requires": {"essay_words": 2000}, "icon": "🖋️", "xp": 140},
 
     # ---- applying --------------------------------------------------------
     {"key": "a_balanced", "cat": "applying", "title": "A balanced list",
-     "blurb": "Four colleges on your list, so you have real choices.",
+     "blurb": "Add four colleges to your list so you have options.",
      "requires": {"schools": 4}, "icon": "⚖️", "xp": 50},
 
-    {"key": "a_dates", "cat": "applying", "title": "Dates in the diary",
+    {"key": "a_dates", "cat": "applying", "title": "Dates on the calendar",
      "blurb": "Record the deadline for three colleges.",
      "requires": {"deadlines": 3}, "icon": "📅", "xp": 60},
 
@@ -142,11 +142,11 @@ ACHIEVEMENTS = [
      "requires": {"recs_agreed": 1}, "icon": "🤝", "xp": 90},
 
     {"key": "a_two_yes", "cat": "people", "title": "Two in your corner",
-     "blurb": "Two teachers have agreed. Most colleges want two.",
+     "blurb": "Get two teachers to agree. Many colleges ask for two.",
      "requires": {"recs_agreed": 2}, "icon": "👥", "xp": 130},
 
     {"key": "a_letters_in", "cat": "people", "title": "Letters in",
-     "blurb": "Two letters actually sent.",
+     "blurb": "Get two letters submitted.",
      "requires": {"recs_submitted": 2}, "icon": "📮", "xp": 160},
 
     # ---- keeping steady --------------------------------------------------
@@ -159,35 +159,33 @@ ACHIEVEMENTS = [
      "requires": {"med_streak": 3}, "icon": "🔥", "xp": 70},
 
     {"key": "a_calm_hour", "cat": "calm", "title": "An hour of quiet",
-     "blurb": "Sixty minutes of breathing, added up however you like.",
+     "blurb": "Sixty minutes of breathing, spread out however you like.",
      "requires": {"med_minutes": 60}, "icon": "🕊️", "xp": 140},
 
     {"key": "a_first_break", "cat": "calm", "title": "You stopped",
-     "blurb": "Finish one session on Graze. Stopping on purpose is a "
-              "skill, and it is the one nobody teaches.",
+     "blurb": "Finish one Graze session. Knowing when to stop is a skill too.",
      "requires": {"break_sessions": 1}, "icon": "🫧", "xp": 30},
 
     {"key": "a_break_hour", "cat": "calm", "title": "An hour off",
-     "blurb": "Sixty minutes on Graze, added up however you like.",
+     "blurb": "Sixty minutes on Graze in total.",
      "requires": {"break_minutes": 60}, "icon": "🛸", "xp": 120},
 
     # ---- paying for it ---------------------------------------------------
     {"key": "a_aid_start", "cat": "money", "title": "Opened the envelope",
-     "blurb": "Tick your first step on the financial aid checklist.",
+     "blurb": "Check off your first step on the financial aid checklist.",
      "requires": {"aid_steps": 1}, "icon": "📬", "xp": 30},
 
     {"key": "a_npc", "cat": "money", "title": "Knew the real price",
-     "blurb": "Record what three colleges would actually cost you. The "
-              "sticker price is almost never the number.",
+     "blurb": ("Add what three colleges would actually cost you. It's often not the "
+               "sticker price."),
      "requires": {"priced": 3}, "icon": "🔍", "xp": 90},
 
     {"key": "a_forms", "cat": "money", "title": "Paperwork done",
-     "blurb": "Half the financial aid checklist ticked off.",
+     "blurb": "Check off half the financial aid checklist.",
      "requires": {"aid_steps": 5}, "icon": "🗂️", "xp": 130},
 
     {"key": "a_scholar_five", "cat": "money", "title": "Five in the net",
-     "blurb": "Track five scholarships. Local ones have a fraction of the "
-              "applicants for the same work.",
+     "blurb": "Track five scholarships. Local ones usually have fewer applicants.",
      "requires": {"scholarships": 5}, "icon": "🎣", "xp": 110},
 
     {"key": "a_scholar_sent", "cat": "money", "title": "Actually applied",
@@ -196,8 +194,8 @@ ACHIEVEMENTS = [
 
     # ---- the one that needs everything ----------------------------------
     {"key": "a_whole_thing", "cat": "applying", "title": "The whole thing",
-     "blurb": "An essay past 650 words, two teachers who said yes, and an "
-              "application sent. That is the entire process, done.",
+     "blurb": ("An essay past 650 words, two teachers who said yes, and an "
+               "application sent. You did it."),
      "requires": {"essay_words": 650, "recs_agreed": 2, "schools_submitted": 1},
      "icon": "👑", "xp": 400},
 ]

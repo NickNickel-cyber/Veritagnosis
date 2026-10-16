@@ -214,27 +214,26 @@ OPTIONS = [
 TYPES = [
     ("Breath focus", "Count the breath and nothing else. The one to use when your "
                      "head is racing before a deadline."),
-    ("Body scan", "Move attention slowly from your feet to your head. Best for "
-                  "when you cannot sleep."),
-    ("Walking", "Attention on your feet, eyes open, outdoors. For when sitting "
-                "still makes it worse."),
+    ("Body scan", ("Move your attention slowly from your feet to your head. Good for "
+                   "when you can't sleep.")),
+    ("Walking", ("Walk slowly outside with your eyes open and pay attention to each "
+                 "step. Good when sitting still makes it worse.")),
     ("Loving-kindness", "Wish someone well on purpose, including yourself. Helps "
                         "after a rejection or a bad comparison spiral."),
 ]
 
 READINGS = [
     ("You are not behind",
-     "Application timelines are made up. Every deadline in front of you is a date "
-     "someone chose, not a measure of you. The only useful question tonight is "
-     "which single thing you can move forward before you sleep."),
+     ("Application timelines are made up. Every deadline is just a date "
+      "somebody picked, and it says nothing about you. Tonight, pick one "
+      "thing you can move forward before bed.")),
     ("On comparing lists",
-     "Someone in your year has a longer list, a higher score, a better story. They "
-     "also have a version of this same evening. Comparison is borrowing a stranger's "
-     "scoreboard to grade your own game."),
+     ("Someone in your grade has a longer list, a higher score, or a better "
+      "story. They're also stressed tonight. Their path isn't yours, so try "
+      "not to grade yourself against it.")),
     ("The draft is allowed to be bad",
-     "A first draft exists to be wrong on paper instead of vague in your head. You "
-     "cannot edit a blank page, and you are not being graded on the version nobody "
-     "will read."),
+     ("A first draft is supposed to be messy. You can't edit a blank page, "
+      "and nobody is grading the version no one will read.")),
 ]
 
 

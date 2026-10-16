@@ -302,44 +302,52 @@ def _assess_financial_readiness(user: User, schools: list[School]) -> int:
 # ============================================================================
 
 
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}{'' if n == 1 else 's'}"
+
+
 def _explain_academic(user: User, scores: list[TestScore]) -> str:
     """Plain-English explanation of academic score."""
     parts = []
     if user.gpa:
-        try:
-            parts.append(f"GPA: {user.gpa}")
-        except:
-            pass
+        parts.append(f"GPA {user.gpa}")
 
     if scores:
         for s in scores[:2]:  # Top 2
             if s.score:
-                parts.append(f"{s.kind}: {s.score}")
+                parts.append(f"{s.kind} {s.score}")
 
     if not parts:
-        return "No GPA or test scores entered yet. Schools will want to see both."
+        return ("No GPA or test scores yet. Add them so each college can be "
+                "compared with your numbers.")
 
-    return "Your academic record shows " + ", ".join(parts) + ". Strong foundation."
+    # No verdict on whether the numbers are good: that depends entirely on
+    # which colleges they are being held up against, and the fit cards below
+    # say exactly that, college by college.
+    return "Your numbers so far: " + ", ".join(parts) + "."
 
 
 def _explain_extracurricular(
     user: User, recs: list[Recommender], checkpoints: list[CheckpointProgress]
 ) -> str:
     """Plain-English explanation of extracurricular score."""
-    ach_str = f"You've reached {len(checkpoints)} milestone{'s' if len(checkpoints) != 1 else ''}"
+    ach_str = f"You've reached {_plural(len(checkpoints), 'checkpoint')}"
 
     if len(recs) == 0:
-        return f"{ach_str}, but haven't asked for recommendation letters yet. Start asking now."
+        return (f"{ach_str}, but you haven't asked anyone for a recommendation "
+                f"yet. Now's a good time.")
     elif len(recs) == 1:
-        return f"{ach_str} and have 1 recommender lined up. Need 1-2 more."
+        return (f"{ach_str} and have one recommender lined up. Many colleges "
+                f"ask for two.")
     else:
-        return f"{ach_str} with {len(recs)} recommenders ready to support you."
+        return f"{ach_str} and have {len(recs)} recommenders lined up."
 
 
 def _explain_college_fit(schools: list[School]) -> str:
     """Plain-English explanation of college fit score."""
     if not schools:
-        return "You haven't added any colleges yet. Start with 5-8 to explore."
+        return ("You haven't added any colleges yet. Start with a few you're "
+                "curious about.")
 
     from veritagnosis.models import Tier
 
@@ -347,13 +355,14 @@ def _explain_college_fit(schools: list[School]) -> str:
     targ = sum(1 for s in schools if s.tier == Tier.target)
     reach = sum(1 for s in schools if s.tier == Tier.reach)
 
-    balance = ""
-    if safe == 0 or reach == 0:
-        balance = " ⚠️ Consider adding more " + ("safety schools" if safe == 0 else "reach schools")
+    if safe == 0:
+        balance = " You don't have a safety school yet."
+    elif reach == 0:
+        balance = " You don't have any reach schools yet."
     else:
-        balance = f" ✓ Good mix: {safe} safety, {targ} target, {reach} reach."
+        balance = f" A good mix: {safe} safety, {targ} target, {reach} reach."
 
-    return f"You're exploring {len(schools)} schools.{balance}"
+    return f"You have {_plural(len(schools), 'college')} on your list.{balance}"
 
 
 def _explain_application_progress(
@@ -366,16 +375,17 @@ def _explain_application_progress(
 
     parts = []
     if done_essays > 0:
-        parts.append(f"{done_essays} essay{'s' if done_essays != 1 else ''} written")
+        parts.append(f"{_plural(done_essays, 'essay')} written")
     if ready_recs > 0:
-        parts.append(f"{ready_recs} recommender{'s' if ready_recs != 1 else ''} ready")
+        parts.append(f"{_plural(ready_recs, 'recommender')} ready")
     if submitted > 0:
-        parts.append(f"{submitted} application{'s' if submitted != 1 else ''} submitted")
+        parts.append(f"{_plural(submitted, 'application')} submitted")
 
     if not parts:
-        return "You haven't started your applications yet. Pick 1-2 schools and draft an essay."
+        return ("You haven't started any applications yet. Pick one school and "
+                "start an essay.")
 
-    return "Progress: " + ", ".join(parts) + "."
+    return "So far: " + ", ".join(parts) + "."
 
 
 def _explain_financial_readiness(user: User, schools: list[School]) -> str:
@@ -384,13 +394,15 @@ def _explain_financial_readiness(user: User, schools: list[School]) -> str:
     aid_entered = sum(1 for s in schools if s.aid_offered)
 
     if costs_entered == 0:
-        return "You haven't entered any college costs yet. Look up sticker prices and estimate net cost."
+        return ("You haven't added any college costs yet. Start with the net "
+                "price calculator on each college's website.")
 
-    msg = f"You've researched costs for {costs_entered} college{'s' if costs_entered != 1 else ''}."
+    msg = f"You've added costs for {_plural(costs_entered, 'college')}."
     if aid_entered > 0:
-        msg += f" {aid_entered} have aid offers recorded."
+        msg += (f" {aid_entered} {'has an aid offer' if aid_entered == 1 else 'have aid offers'}"
+                f" recorded.")
     else:
-        msg += " Next: use the FAFSA simulator to estimate your EFC and aid."
+        msg += " Next, try the aid simulator to estimate your Student Aid Index."
 
     return msg
 
@@ -406,17 +418,24 @@ def _detect_blind_spots(
     """Identify what the student hasn't considered yet.
 
     Returns list of {title, why, action} sorted by importance.
+
+    None of these quote what "most students" do. Those figures vary by school,
+    by year and by who is counting, and a number the app cannot source is a
+    number it should not be showing a seventeen-year-old as fact.
     """
     spots = []
 
     # Blind spot 1: Not enough colleges researched
     if len(schools) < 5:
+        n = len(schools)
         spots.append(
             {
                 "icon": "🔍",
-                "title": "College research in early stages",
-                "why": f"You're exploring {len(schools) or 'no'} schools. Most students aim for 8-12 to find good fits.",
-                "action": "Spend 20 min in College Explorer",
+                "title": "Your college list is still short",
+                "why": (f"You have {_plural(n, 'college') if n else 'no colleges'} "
+                        f"on your list. A few more gives you real choices in the "
+                        f"spring."),
+                "action": "Add a few more colleges",
                 "impact": "College Fit",
             }
         )
@@ -429,9 +448,11 @@ def _detect_blind_spots(
             spots.append(
                 {
                     "icon": "⚠️",
-                    "title": "No safety schools selected",
-                    "why": "Having at least 2 schools where you're above-average makes sense. You only have reaches or targets.",
-                    "action": "Add 2-3 safety schools",
+                    "title": "No safety schools yet",
+                    "why": ("A safety is a school where your numbers are well "
+                            "above its usual range. One or two means you'll have "
+                            "options no matter what."),
+                    "action": "Add a safety school or two",
                     "impact": "College Fit",
                 }
             )
@@ -442,8 +463,9 @@ def _detect_blind_spots(
         spots.append(
             {
                 "icon": "✍️",
-                "title": "No essays written yet",
-                "why": "You haven't completed any application essays. Most students draft 4-5 (Common App + supplements).",
+                "title": "No essays finished yet",
+                "why": ("Most applications need a personal statement, and many "
+                        "add a few shorter supplements on top."),
                 "action": "Start your Common App essay",
                 "impact": "Application Progress",
             }
@@ -454,9 +476,10 @@ def _detect_blind_spots(
         spots.append(
             {
                 "icon": "💬",
-                "title": "No recommendations arranged",
-                "why": "Colleges expect 2-3 recommendation letters. Teachers need 4-6 weeks notice.",
-                "action": "Ask 3 teachers today",
+                "title": "No recommenders yet",
+                "why": ("Many colleges ask for teacher letters, and teachers need "
+                        "a few weeks' notice to write a good one."),
+                "action": "Ask a teacher this week",
                 "impact": "Extracurricular",
             }
         )
@@ -466,10 +489,12 @@ def _detect_blind_spots(
     if costs == 0 and schools:
         spots.append(
             {
-                "icon": "💷",
-                "title": "Haven't explored college costs",
-                "why": "Most families are surprised by net cost vs. sticker price. The FAFSA simulator shows your actual EFC.",
-                "action": "Run 3 colleges through the aid simulator",
+                "icon": "💵",
+                "title": "You haven't looked at costs yet",
+                "why": ("The sticker price is often very different from what a "
+                        "family actually pays. The aid simulator gives you a "
+                        "rough idea of yours."),
+                "action": "Try the aid simulator",
                 "impact": "Financial Readiness",
             }
         )
@@ -489,6 +514,10 @@ def _rank_next_steps(
 
     Strategy: Work on the lowest-scoring dimension first (biggest impact),
     but don't ignore multiple dimensions (spreads work).
+
+    These used to end in a points promise ("→ +15 Academic"). The scores are
+    worked out from the student's own rows, so no fixed number was ever true;
+    each step now says only what to do.
     """
     dims = [
         ("academic", academic),
@@ -506,30 +535,30 @@ def _rank_next_steps(
     # The lowest-scoring dimension gets 2 steps
     lowest = dims[0][0]
     if lowest == "academic" and academic < 70:
-        steps.append("Register for your next test → +15 Academic")
+        steps.append("Add your GPA and any test scores you have")
     elif lowest == "extracurricular" and extracurricular < 70:
-        steps.append("Ask a teacher for a recommendation → +20 Extracurricular")
+        steps.append("Ask a teacher for a recommendation")
     elif lowest == "college_fit" and college_fit < 70:
-        steps.append("Research 3 new colleges → +15 College Fit")
+        steps.append("Add a few more colleges to your list")
     elif lowest == "application_progress" and app_progress < 70:
-        steps.append("Write your next essay → +15 Application Progress")
+        steps.append("Work on your next essay")
     elif lowest == "financial_readiness" and financial < 70:
-        steps.append("Run your colleges through the aid simulator → +20 Financial")
+        steps.append("Run your colleges through the aid simulator")
 
     # Second-lowest gets one step
     if len(dims) > 1:
         second = dims[1][0]
         if second == "college_fit":
-            steps.append("Explore 3 more colleges on College Search")
+            steps.append("Look into a few more colleges")
         elif second == "application_progress":
-            steps.append("Collect another recommendation letter")
+            steps.append("Line up another recommendation letter")
         elif second == "financial_readiness":
-            steps.append("Submit your FAFSA")
+            steps.append("File your FAFSA")
 
     # If overall is under 50, add a motivational step
     overall = sum(d[1] for d in dims) // len(dims)
     if overall < 50:
-        steps.insert(0, "You're in the early stages. Pick one thing and spend 20 minutes on it.")
+        steps.insert(0, "You're just getting started. Pick one thing and give it 20 minutes.")
 
     return steps[:3]  # Top 3 next steps
 
@@ -563,10 +592,10 @@ class Standing:
     def sentence(self) -> str:
         band = f"{_n(self.low)}–{_n(self.high)}"
         if self.place == "below":
-            return f"Your {self.metric} of {_n(self.value)} is below their {band}."
+            return f"Your {self.metric} of {_n(self.value)} is below their usual range of {band}."
         if self.place == "above":
-            return f"Your {self.metric} of {_n(self.value)} is above their {band}."
-        return f"Your {self.metric} of {_n(self.value)} is inside their {band}."
+            return f"Your {self.metric} of {_n(self.value)} is above their usual range of {band}."
+        return f"Your {self.metric} of {_n(self.value)} is inside their usual range of {band}."
 
 
 @dataclasses.dataclass
@@ -665,14 +694,14 @@ def classify(college: dict, stats: dict) -> tuple[str | None, str]:
     if rate < REACH_FLOOR:
         return "reach", (
             f"{college['name']} admitted {rate}% of applicants. At that rate "
-            f"it is a reach for everyone — most rejected applicants also sit "
-            f"inside its published bands."
+            f"it's a reach for everyone. Most of the students it turns down "
+            f"have scores inside its usual range too."
         )
 
     if place is None:
         hint = ("Add an SAT or ACT score to compare directly."
                 if college.get("sat_25")
-                else "This college does not use test scores.")
+                else "This college doesn't publish test score ranges.")
         tier = "reach" if rate < 30 else "target" if rate < 60 else "safety"
         return tier, f"Based on its {rate}% admit rate alone. {hint}"
 
@@ -685,18 +714,20 @@ def classify(college: dict, stats: dict) -> tuple[str | None, str]:
         if rate >= 40:
             return "target", (
                 f"{stand[0].sentence} They admit {rate}% though, so this is "
-                f"still a target — the band describes the middle, not a cut-off."
+                f"still a target. The range shows the middle of admitted "
+                f"students, not a cutoff."
             )
         return "reach", (
             f"{stand[0].sentence} With a {rate}% admit rate, treat this as a "
-            f"reach and make sure the rest of your list is not all like it."
+            f"reach and make sure the rest of your list isn't all like it."
         )
 
     if place == "above":
         if rate < NEVER_SAFE_BELOW:
             return "target", (
                 f"{stand[0].sentence} That helps, but at a {rate}% admit rate "
-                f"no applicant is safe — this is a target, not a safety."
+                f"no applicant is a sure thing, so this is a target, not a "
+                f"safety."
             )
         tier = "safety" if rate >= 50 else "target"
         return tier, f"{stand[0].sentence} Their admit rate is {rate}%."
@@ -704,9 +735,9 @@ def classify(college: dict, stats: dict) -> tuple[str | None, str]:
     # within
     if rate < NEVER_SAFE_BELOW:
         return "reach", (
-            f"{stand[0].sentence} Being inside the band is normal for "
-            f"applicants here — at a {rate}% admit rate most of them are "
-            f"turned down anyway, so this stays a reach."
+            f"{stand[0].sentence} Most applicants here are inside the range "
+            f"too, and at a {rate}% admit rate most of them still get turned "
+            f"down, so this stays a reach."
         )
     tier = "target" if rate < 60 else "safety"
     return tier, f"{stand[0].sentence} Their admit rate is {rate}%."
@@ -741,11 +772,11 @@ def for_school(school: School, stats: dict, session: Session | None = None) -> F
     if entry.get("note"):
         caveats.append(entry["note"])
     if entry.get("confidence") == "low":
-        caveats.append("Sources for this college disagreed; treat these "
-                       "numbers as rough and check the college's own site.")
+        caveats.append(("Sources for this college disagree, so treat these numbers as rough "
+                        "and check the college's own website."))
     elif entry.get("confidence") == "medium":
-        caveats.append("These figures come from a secondary source, not the "
-                       "college's own published data set.")
+        caveats.append(("These numbers come from a secondary source, not the college's own "
+                        "report."))
 
     return Fit(
         school_name=school.name,
@@ -802,15 +833,15 @@ def review(uid: int) -> dict:
     # paragraph about the provenance of the dataset. What is left is only the
     # lines that tell them to do something.
     if known and by_tier["safety"] == 0 and by_tier["target"] == 0:
-        warnings.append("Everything on your list is a reach — worth adding one "
-                        "where your numbers already clear the bar.")
+        warnings.append((("Everything on your list is a reach, so try adding one where your "
+                          "numbers are above the usual range.")))
     elif known and by_tier["safety"] == 0:
         warnings.append("No safety on your list yet.")
 
     if not stats["sat"] and not stats["act"]:
-        warnings.append("Add an SAT or ACT score to sharpen these.")
+        warnings.append("Add an SAT or ACT score to make these more accurate.")
     if stats["gpa"] is None:
-        warnings.append("Add your GPA to include it.")
+        warnings.append("Add your GPA so it's included too.")
 
     return {
         "stats": stats,

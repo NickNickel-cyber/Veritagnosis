@@ -216,32 +216,30 @@ THEME_BLURBS = [(k, v["name"], v["blurb"]) for k, v in content.THEMES.items()]
 def _menu() -> rx.Component:
     return rx.box(
         rx.box(
-            rx.text("You have no weapon. Flying close to something without "
-                    "touching it is how you arm yourself.", class_name="rp-line"),
+            rx.text(("You don't have a weapon. Fly close to things without touching them "
+                     'to charge up.'), class_name="rp-line"),
             rx.box(
                 rx.box(
                     rx.el.b("Move"),
-                    rx.el.span(" — the ship follows your pointer. WASD and the "
-                               "arrow keys work too."),
+                    rx.el.span(': the ship follows your mouse. WASD and the arrow keys work too.'),
                     class_name="gz-rule",
                 ),
                 rx.box(
                     rx.el.b("Graze"),
-                    rx.el.span(" — skim past a shape without touching it. Your "
-                               "ring fills and time briefly slows."),
+                    rx.el.span((': skim past a shape without touching it. Your ring fills and time '
+                                'slows for a moment.')),
                     class_name="gz-rule",
                 ),
                 rx.box(
                     rx.el.b("Burst"),
-                    rx.el.span(" — click, tap or press space on a full ring to "
-                               "clear everything near you."),
+                    rx.el.span((': when your ring is full, click, tap or press space to clear '
+                                'everything near you.')),
                     class_name="gz-rule",
                 ),
                 rx.box(
-                    rx.el.b("Nothing here can be lost"),
-                    rx.el.span(" — if you get hit, the run restarts and the "
-                               "session clock keeps going. Every fourth wave "
-                               "sends a Guardian."),
+                    rx.el.b("You can't lose"),
+                    rx.el.span((': if you get hit, the run restarts and the session timer keeps '
+                                'going. Every fourth wave brings a Guardian.')),
                     class_name="gz-rule",
                 ),
                 class_name="gz-rules",
@@ -323,7 +321,7 @@ def _stage() -> rx.Component:
                       class_name="gz-bossbar", hidden=True),
             rx.el.div("", id="gz-respawn", class_name="gz-respawn", hidden=True),
             rx.el.div(
-                rx.el.div("Wave cleared — pick one", class_name="gz-draft-h"),
+                rx.el.div('Wave cleared! Pick an upgrade', class_name="gz-draft-h"),
                 rx.el.div(id="gz-cards", class_name="gz-cards"),
                 id="gz-draft", class_name="gz-draft", hidden=True,
             ),

@@ -91,7 +91,7 @@ def _school(s) -> rx.Component:
                 rx.cond(
                     s.next_label != "Everything done",
                     rx.box("Next: ", rx.el.strong(s.next_label), class_name="s-next"),
-                    rx.box("Everything on this one is done.", class_name="s-next ok"),
+                    rx.box("Everything's done for this one.", class_name="s-next ok"),
                 ),
                 style={"flex": "1", "minWidth": "0"},
             ),
@@ -170,9 +170,9 @@ def _school(s) -> rx.Component:
                     rx.el.label("Why this college"),
                     rx.el.textarea(
                         class_name="input s-notes",
-                        placeholder="What actually draws you here? Two or three "
-                                    "specifics beat a paragraph of adjectives — "
-                                    "and you will need these words later.",
+                        placeholder=("What draws you to this school? Two or three specific things are "
+                                     "better than a paragraph of adjectives, and you'll use these notes "
+                                     "later."),
                         default_value=s.notes,
                         key="n" + s.id.to_string(),
                         on_blur=lambda v: SchoolsState.set_notes(s.id, v),
@@ -367,7 +367,7 @@ def applications_page() -> rx.Component:
 # ====================================================================
 
 REACTIONS = [("💡", "idea", "I had an idea"),
-             ("❤️", "love", "I like this bit"),
+             ("❤️", "love", "I like this part"),
              ("🔥", "fire", "I'm on a roll"),
              ("😐", "stuck", "I'm stuck")]
 
@@ -426,7 +426,7 @@ def _issue(i) -> rx.Component:
                 rx.fragment(),
             ),
             rx.el.button("✕", type="button", class_name="btn btn-dismiss",
-                         title="Not a problem", on_click=EssayState.dismiss(i.idx)),
+                         title="Dismiss", on_click=EssayState.dismiss(i.idx)),
             class_name="iss-acts",
         ),
         class_name="iss",
@@ -550,7 +550,7 @@ def _toolbar() -> rx.Component:
                      title="Hear it back. Ctrl+Enter."),
         rx.el.button(rx.el.span("◱ Focus", class_name="lbl"),
                      type="button", id="vg-focus", class_name="btn btn-ghost",
-                     title="Hide everything but the words. Escape to leave."),
+                     title="Hide everything but your writing. Press Esc to exit."),
         # "Save version" and "Versions" used to live here. They are about the
         # history of the draft, not about writing it, and the Draft Journey
         # section below already has both — so this toolbar went from seven
@@ -616,7 +616,7 @@ def _editor() -> rx.Component:
                     rx.cond(
                         EssayState.paras.length() > 0,
                         rx.box(rx.foreach(EssayState.paras, _para), class_name="pa-list"),
-                        rx.box("Write a paragraph and its shape shows up here.",
+                        rx.box("Write a paragraph to see its shape here.",
                                class_name="faint"),
                     ),
                     class_name="editor review",
@@ -941,7 +941,7 @@ def _pane_strengths() -> rx.Component:
                 ),
                 class_name="gd-list",
             ),
-            rx.box(rx.text("Keep writing — these appear as the draft earns them.",
+            rx.box(rx.text("Keep writing. These show up as your draft grows.",
                            class_name="faint"), class_name="pane-empty"),
         ),
         rx.cond(
@@ -993,7 +993,7 @@ def _pane_prompt() -> rx.Component:
     """
     return rx.box(
         rx.box(
-            rx.el.span("You are answering", class_name="pane-h"),
+            rx.el.span("You're answering", class_name="pane-h"),
             rx.cond(
                 EssayState.prompt_words_hint != "",
                 rx.el.span(EssayState.prompt_words_hint, class_name="pq-limit"),
@@ -1088,7 +1088,7 @@ def _journey() -> rx.Component:
         EssayState.journey.length() > 1,
         rx.box(
             rx.box(
-                rx.heading("Draft journey", size="4"),
+                rx.heading("Draft history", size="4"),
                 rx.spacer(),
                 rx.el.button("💾 Save this version", type="button",
                              class_name="btn btn-ghost",
@@ -1272,9 +1272,8 @@ def _row(r) -> rx.Component:
                     r.follow_due,
                     rx.box(
                         rx.box("Follow-up due", class_name="note-tag"),
-                        rx.text("You set a reminder for today. One line is "
-                                "enough — they are not ignoring you, they have "
-                                "forty of these."),
+                        rx.text(("You set a reminder for today. A one-line follow-up is enough. "
+                                 "They're busy, not ignoring you.")),
                         class_name="card note warn",
                         style={"marginBottom": "var(--s3)"},
                     ),
@@ -1304,10 +1303,9 @@ def _row(r) -> rx.Component:
                     rx.el.label("What you want them to remember"),
                     rx.el.textarea(
                         class_name="input s-notes",
-                        placeholder="The project you did in their class, the "
-                                    "thing you were bad at and got better at, "
-                                    "why you picked them. Give them this and "
-                                    "the letter stops being generic.",
+                        placeholder=("A project from their class, something you struggled with and got "
+                                     "better at, why you picked them. This helps them write a specific "
+                                     "letter."),
                         default_value=r.note,
                         key="rn" + r.id.to_string(),
                         on_blur=lambda v: RecsState.set_note(r.id, v),
@@ -1343,7 +1341,7 @@ def _row(r) -> rx.Component:
                 # follow-up
                 rx.box(
                     rx.box(
-                        rx.el.label("Remind me to chase this up"),
+                        rx.el.label("Remind me to follow up"),
                         rx.el.input(
                             type="date", class_name="input",
                             default_value=r.follow_up_iso,
@@ -1417,7 +1415,7 @@ def _short() -> rx.Component:
     return rx.cond(
         RecsState.short_schools.length() > 0,
         rx.box(
-            rx.box("Still short of letters", class_name="note-tag"),
+            rx.box("Still need letters", class_name="note-tag"),
             rx.foreach(
                 RecsState.short_schools,
                 lambda n: rx.box(rx.el.span("•  "), rx.el.span(n),

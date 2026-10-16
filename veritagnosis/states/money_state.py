@@ -212,18 +212,18 @@ class AidState(FeatureState, rx.State):
         r = fafsa.student_aid_index(self._household())
         raw = [
             ("Parents' income", r.parent_income_part,
-             "The big one. Almost everything is decided here."),
+             "This one matters most."),
             ("Parents' savings", r.parent_asset_part,
              f"Only the part above ${fafsa.ASSET_PROTECTION:,} counts, and "
-             "then only 12% of it is even added in before the rates apply — "
-             "so a dollar saved reaches this number as a few cents. Your "
-             "home and every retirement account are not counted at all."),
+             "only 12% of that is added in, so each dollar saved adds just a "
+             "few cents here. Your home and retirement accounts don't count "
+             "at all."),
             ("Your own earnings", r.student_income_part,
              f"Protected up to ${fafsa.STUDENT_INCOME_PROTECTION:,}. "
-             "Above that it is assessed at 50%."),
+             "Above that, half of it counts."),
             ("Your own savings", r.student_asset_part,
-             "Assessed at 20% — the harshest rate in the formula. Money held "
-             "in a parent's name counts for less than money in yours."),
+             ("20% of it counts, the highest rate in the formula. Money in a "
+              "parent's name counts for less than money in yours.")),
         ]
         total = sum(max(0, v) for _, v, _ in raw) or 1
         return [PartRow(label=l, amount=f"${v:,}", note=n,
@@ -320,12 +320,13 @@ class AidState(FeatureState, rx.State):
         cheap = rows[0]
         dear = rows[-1]
         if cheap.key.startswith("private") and not dear.key.startswith("private"):
-            return (f"On these numbers the {cheap.name.lower()} is the "
-                    f"cheapest option you have, at {cheap.you_pay} against "
-                    f"{dear.you_pay}. The sticker price said the opposite.")
-        return (f"Cheapest here is {cheap.name.lower()} at {cheap.you_pay}; "
-                f"dearest is {dear.you_pay}. The gap is the whole argument "
-                f"for applying widely.")
+            return (f"With these numbers, the {cheap.name.lower()} is your "
+                    f"cheapest option at {cheap.you_pay}, compared with "
+                    f"{dear.you_pay}. That's the opposite of what the sticker "
+                    f"prices suggest.")
+        return (f"The cheapest here is {cheap.name.lower()} at {cheap.you_pay}, "
+                f"and the most expensive is {dear.you_pay}. That gap is a good "
+                f"reason to apply to a range of schools.")
 
     @rx.event
     def set_sim(self, field: str, value):
@@ -398,9 +399,9 @@ class AidState(FeatureState, rx.State):
     @rx.var(deps=["done_count", "step_total"])
     def checklist_line(self) -> str:
         if self.done_count == 0:
-            return "Nothing ticked yet. The first one takes five minutes."
+            return "Nothing checked off yet. The first one takes about five minutes."
         if self.done_count >= self.step_total:
-            return "Every step done. That is the whole paperwork trail."
+            return "Every step is done. That's all the paperwork."
         return f"{self.done_count} of {self.step_total} steps done."
 
     @rx.var(deps=["priced", "total_schools", "cheapest"])
@@ -408,8 +409,8 @@ class AidState(FeatureState, rx.State):
         if self.total_schools == 0:
             return "Add colleges to your list and their costs show up here."
         if self.priced == 0:
-            return ("No costs recorded yet. Every US college publishes a net "
-                    "price calculator — start there.")
+            return (("No costs added yet. Every US college has a net price calculator on "
+                     "its website. Start there."))
         if self.priced == 1:
             return f"{self.cheapest} is the only one priced so far."
         return f"{self.cheapest} is the cheapest so far, at {self.cheapest_net}."

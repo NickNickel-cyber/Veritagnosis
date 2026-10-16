@@ -29,12 +29,12 @@ from veritagnosis.ui.avatar import CATEGORIES
 TILES = [
     ("🧑‍🎨", "My avatar", "Customize your look", "/avatar"),
     ("🧭", "My profile", "Interests, activities, timeline", "/profile", True),
-    ("✍️", "Essay Lab", "Write with a guide", "/essays"),
-    ("🎓", "My colleges", "Progress by school", "/applications"),
-    ("💬", "Recommenders", "Teachers and guidance", "/recommendations"),
-    ("💷", "Financial aid", "Aid, costs, scholarships", "/aid"),
+    ("✍️", "Essay Lab", 'Write and get feedback', "/essays"),
+    ("🎓", "My colleges", 'Track each application', "/applications"),
+    ("💬", "Recommenders", 'Ask for letters', "/recommendations"),
+    ('💵', "Financial aid", "Aid, costs, scholarships", "/aid"),
     ("🧘", "Take a breath", "Breathe and reset", "/meditation"),
-    ("🛸", "Graze", "Fly close. 15 or 20 min", "/graze"),
+    ("🛸", "Graze", 'A short game break', "/graze"),
     ("⚙️", "Settings", "Account and theme", "/settings"),
 ]
 
@@ -56,8 +56,10 @@ def home() -> rx.Component:
             # 1 — greeting row
             rx.box(
                 rx.heading(
-                    rx.el.span("Good afternoon, "),
-                    rx.el.span(AuthState.display_name),
+                    rx.el.span(AuthState.greeting),
+                    rx.cond(AuthState.greet_name != "",
+                            rx.el.span(", ", AuthState.greet_name),
+                            rx.fragment()),
                     size="5",
                 ),
                 theme_picker(compact=True),
@@ -92,7 +94,7 @@ def home() -> rx.Component:
             # 3 — the bordered task box
             rx.box(
                 rx.box(
-                    rx.box("Your task for today", class_name="tb-label"),
+                    rx.box("Today's task", class_name="tb-label"),
                     rx.box(AuthState.task_title, class_name="tb-title"),
                     rx.box(AuthState.task_meta, class_name="tb-meta"),
                     class_name="tb-text",
@@ -116,11 +118,11 @@ def home() -> rx.Component:
                             rx.cond(
                                 AuthState.ach_next != "",
                                 rx.box(
-                                    rx.el.span("Closest: ", class_name="faint"),
+                                    rx.el.span('Up next: ', class_name="faint"),
                                     rx.el.strong(AuthState.ach_next),
                                     class_name="ach-next",
                                 ),
-                                rx.box("Every checkpoint reached.",
+                                rx.box("You've reached every checkpoint.",
                                        class_name="ach-next"),
                             ),
                             rx.box(rx.el.i(style={
@@ -227,7 +229,7 @@ def achievements_page() -> rx.Component:
                 rx.box(
                     rx.box(AchievementsState.next_icon, class_name="bg-icon big"),
                     rx.box(
-                        rx.box("Closest to unlocking", class_name="note-tag"),
+                        rx.box('Almost there', class_name="note-tag"),
                         rx.box(AchievementsState.next_title, class_name="bg-title big"),
                         rx.box(AchievementsState.next_blurb, class_name="bg-blurb"),
                         rx.box(
@@ -303,7 +305,7 @@ def _swatch(c) -> rx.Component:
         custom_attrs={
             "aria-pressed": AvatarState.selected_colour == c.index,
             "aria-disabled": c.locked,
-            "title": rx.cond(c.locked, c.unlock + " unlocks this colour", ""),
+            "title": rx.cond(c.locked, c.unlock + " unlocks this color", ""),
         },
         on_click=AvatarState.choose_colour(c.index),
     )
@@ -328,7 +330,7 @@ def avatar_page() -> rx.Component:
                     rx.box(AvatarState.locked_line, class_name="faint"),
                 ),
                 rx.spacer(),
-                rx.link("See the board →", href="/achievements",
+                rx.link('See checkpoints →', href="/achievements",
                         class_name="btn btn-ghost"),
                 class_name="card note av-locknote",
             ),

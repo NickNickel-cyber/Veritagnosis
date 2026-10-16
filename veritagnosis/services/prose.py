@@ -149,8 +149,8 @@ def paragraphs(text: str) -> list[str]:
 FILLER = {
     "very": "Almost always weaker than the stronger word it is propping up. "
             "'Very tired' is 'exhausted'.",
-    "really": "Same problem as 'very' — it asks the reader to take your word "
-              "for the intensity instead of showing it.",
+    "really": ("Same problem as 'very'. It asks the reader to take your word for it "
+               "instead of showing it."),
     "quite": "Hedges the sentence without adding information.",
     "extremely": "An intensifier doing the work a precise word should do.",
     "incredibly": "An intensifier doing the work a precise word should do.",
@@ -166,7 +166,7 @@ FILLER = {
     "absolutely": "An intensifier standing in for a stronger word.",
     "somewhat": "Weakens the claim without qualifying it usefully.",
     "rather": "Weakens the claim without qualifying it usefully.",
-    "pretty": "Conversational hedge — 'pretty good' tells the reader nothing.",
+    "pretty": "A casual hedge. 'Pretty good' tells the reader nothing.",
     "kind of": "Hedge. Either you mean it or you do not.",
     "sort of": "Hedge. Either you mean it or you do not.",
     "just": "Nine times out of ten it is filler. Read the sentence without it.",
@@ -183,8 +183,8 @@ FILLER = {
 # claims, and it is not this program's business to decide which one is true.
 # They are shown with an explanation and no fix button.
 VAGUE_QUANTITY = {
-    "a lot of": "Vague quantity. A number is far more convincing — 'a lot of "
-                "meetings' could be four or forty, and the reader assumes four.",
+    "a lot of": ("Vague. A number is more convincing. 'A lot of meetings' could be "
+                 "four or forty, and readers assume four."),
     "lots of": "Vague quantity. Give the number.",
     "many times": "How many? A specific count is more convincing.",
     "several times": "How many? A specific count is more convincing.",
@@ -202,7 +202,8 @@ VAGUE_QUANTITY = {
 HEDGES = {
     "i think": "You are the writer; the reader already knows it is your view. "
                "Stating it flat is more convincing.",
-    "i believe": "Same as 'I think' — it puts a wall between you and the claim.",
+    "i believe": ("Same as 'I think'. It puts distance between you and what you're "
+                  "saying."),
     "i feel like": "Softens the sentence to nothing. Say the thing.",
     "i guess": "Reads as if you do not trust your own point.",
     "in my opinion": "The essay is your opinion by definition.",
@@ -282,9 +283,8 @@ WORDY = {
 # The phrases that appear in tens of thousands of application essays every
 # year. They are not wrong; they are invisible, which is worse.
 CLICHES = {
-    "ever since i was little": "Roughly one in five essays opens this way. The "
-                               "specific moment you are about to describe is "
-                               "far more interesting than the runway to it.",
+    "ever since i was little": ("A lot of essays open this way. The moment you're about to describe "
+                                "is more interesting than the lead-up to it."),
     "ever since i was young": "An extremely common opening. Start at the moment "
                               "itself instead.",
     "for as long as i can remember": "A very common opening. Start with the scene.",
@@ -308,18 +308,18 @@ CLICHES = {
     "give back to the community": "One of the most common phrases in the genre.",
     "helping people": "Almost every applicant wants to help people. What did "
                       "you actually do?",
-    "passion for": "The single most overused word in application essays. Show "
-                   "the behaviour that proves the passion.",
+    "passion for": ("One of the most overused words in application essays. Show what you "
+                    "did that proves it."),
     "i am passionate about": "Show the passion through what you did with your "
                              "time; naming it convinces nobody.",
     "in today's society": "A dated essay-opening formula.",
     "in today's world": "A dated essay-opening formula.",
     "since the beginning of time": "Almost never accurate and always a cliché.",
     "throughout history": "Vague scale-setting that delays your actual point.",
-    "the dictionary defines": "The most recognisable weak opening there is.",
-    "webster's dictionary": "The most recognisable weak opening there is.",
+    "the dictionary defines": "The most recognizable weak opening there is.",
+    "webster's dictionary": "The most recognizable weak opening there is.",
     "little did i know": "A stock phrase that signals a stock twist.",
-    "took a deep breath": "Appears in a huge share of essays about nerves.",
+    "took a deep breath": "Shows up in a lot of essays about nerves.",
     "my heart was racing": "A stock way of writing nerves.",
     "butterflies in my stomach": "A stock way of writing nerves.",
     "against all odds": "Cliché, and it overclaims.",
@@ -362,7 +362,7 @@ TELLING = [
 # these can be trusted enough to auto-fix.
 CONFUSABLES = [
     (r"\bits\s+(a|an|the|not|been|going|too|very|so)\b", "it's",
-     "'Its' shows possession (its colour). Before a word like this you need "
+     "'Its' shows possession (its color). Before a word like this you need "
      "'it's', short for 'it is'.", 1),
     (r"\bit's\s+(colou?r|name|shape|size|value|purpose|own|edge|surface)\b",
      "its", "'It's' means 'it is'. Possession takes 'its' with no apostrophe.", 1),
@@ -387,9 +387,9 @@ CONFUSABLES = [
     (r"\balot\b", "a lot", "'A lot' is two words.", 0),
     (r"\bdefinately\b", "definitely", "Spelling.", 0),
     (r"\bseperate\b", "separate", "Spelling.", 0),
-    (r"\brecieve\b", "receive", "Spelling — i before e except after c.", 0),
-    (r"\boccured\b", "occurred", "Spelling — double the r.", 0),
-    (r"\buntill\b", "until", "Spelling — one l.", 0),
+    (r"\brecieve\b", "receive", "Spelling: i before e, except after c.", 0),
+    (r"\boccured\b", "occurred", "Spelling: double the r.", 0),
+    (r"\buntill\b", "until", "Spelling: one l.", 0),
     (r"\bteh\b", "the", "Typo.", 0),
     (r"\bthier\b", "their", "Spelling.", 0),
     (r"\bbelive\b", "believe", "Spelling.", 0),
@@ -414,7 +414,7 @@ WEAK_VERBS = {
     "put": "Put how? Dropped, placed, shoved, arranged?",
     "took": "Took how? Grabbed, carried, stole, accepted?",
     "had": "Often a placeholder for a more exact verb.",
-    "said": "Fine most of the time — but check whether the moment needs more.",
+    "said": "Usually fine, but check whether the moment needs more.",
     "nice": "Says nothing. What was nice about it?",
     "good": "Says nothing on its own.",
     "bad": "Says nothing on its own.",
@@ -422,8 +422,8 @@ WEAK_VERBS = {
     "small": "Compared to what?",
     "stuff": "Name the thing.",
     "things": "Name the things.",
-    "interesting": "The classic empty adjective — it asks the reader to be "
-                   "interested without giving them a reason.",
+    "interesting": ("The classic empty adjective. It asks the reader to be interested "
+                    "without giving them a reason."),
     "amazing": "An empty intensifier.",
     "awesome": "An empty intensifier.",
     "great": "An empty intensifier.",
@@ -628,9 +628,9 @@ def _check_passive(text: str) -> list[Finding]:
             continue
         out.append(Finding(
             start=m.start(), end=m.end(), kind="passive", label="Passive voice",
-            why=f"“{m.group(0)}” hides who did it. Passive voice is not wrong, "
-                f"but a personal essay is about you doing things — "
-                f"“the team was led by me” should be “I led the team”.",
+            why=f"“{m.group(0)}” hides who did it. Passive voice isn't wrong, "
+                f"but a personal essay is about you doing things. “The team was "
+                f"led by me” should be “I led the team.”",
             original=m.group(0), fix=m.group(0), severity="med", auto=False))
     return out
 
@@ -654,9 +654,9 @@ def _check_adverbs(text: str) -> list[Finding]:
         s, e = _delete_span(text, m.start(), m.end())
         out.append(Finding(
             start=s, end=e, kind="adverb", label="-ly adverb",
-            why=f"“{m.group(1)}” — you use {len(hits)} '-ly' adverbs in this "
-                f"draft. Most of them are propping up a verb that should be "
-                f"doing the work itself: 'walked quickly' is 'hurried'.",
+            why=f"You use {len(hits)} '-ly' adverbs in this draft, including "
+                f"“{m.group(1)}.” Most of them prop up a verb that should do the "
+                f"work itself: 'walked quickly' is 'hurried'.",
             original=text[s:e], fix="", severity="low", auto=False))
     return out
 
@@ -713,8 +713,9 @@ def _check_long_sentences(text: str) -> list[Finding]:
             out.append(Finding(
                 start=s, end=e, kind="long", label=f"{n}-word sentence",
                 why=f"This sentence runs {n} words. Anything past about 30 makes "
-                    f"the reader hold too much at once — they get to the end and "
-                    f"have lost the start. Find the natural break and make it two.",
+                    f"the reader hold too much at once, and they lose the start by "
+                    f"the time they reach the end. Find the natural break and split "
+                    f"it in two.",
                 original=seg, fix=seg, severity="high", auto=False))
     return out
 
@@ -736,10 +737,9 @@ def _check_openers(text: str) -> list[Finding]:
                     start=s0, end=run[-1][1], kind="rhythm",
                     label=f"{len(run)} sentences start with “{prev}”",
                     why=f"{len(run)} sentences in a row begin with “{prev}”. The "
-                        f"reader hears the repetition even if they cannot name "
-                        f"it, and it flattens the whole passage. Vary how you "
-                        f"enter a sentence — start one with a time, a place, or "
-                        f"the object rather than the subject.",
+                        f"reader notices the repetition even if they can't say "
+                        f"why, and it flattens the passage. Try starting one with "
+                        f"a time, a place, or the object instead of the subject.",
                     original=seg0, fix=seg0, severity="high", auto=False))
             run = [(s, e, seg)] if first else []
         prev = first
@@ -842,7 +842,7 @@ def rhythm(text: str) -> dict:
         note = ("Some variety, but it could swing wider. One deliberately short "
                 "sentence after a long one is the cheapest way to land a point.")
     else:
-        note = "Good variety — long and short sentences are playing off each other."
+        note = "Good variety. Your long and short sentences play off each other."
     return {"variety": variety, "shortest": min(lens), "longest": max(lens),
             "note": note}
 
@@ -860,8 +860,8 @@ def strengths(text: str, findings: list[Finding]) -> list[str]:
     segs = sentences(text)
 
     if sum(1 for w in ws if w in SENSORY) >= 3:
-        out.append("You use concrete, physical detail — that is the thing most "
-                   "drafts are missing.")
+        out.append(("You use concrete, physical details, which a lot of drafts are "
+                    "missing."))
     if re.search(r"[“\"']\s*\w+[^\"”']{3,}[\"”']", text):
         out.append("There is dialogue in here. It breaks up the narration and "
                    "makes the scene feel witnessed.")
@@ -869,17 +869,16 @@ def strengths(text: str, findings: list[Finding]) -> list[str]:
         out.append("You use specific numbers. Specifics are the fastest way to "
                    "sound like you were actually there.")
     if len(set(ws)) / len(ws) > 0.55 and len(ws) > 80:
-        out.append("Your vocabulary is varied — you are not leaning on the same "
-                   "handful of words.")
+        out.append("Your vocabulary is varied. You're not leaning on the same "
+                   "few words.")
     r = rhythm(text)
     if r["variety"] >= 55:
-        out.append("Your sentence lengths vary, so the writing has a pulse.")
+        out.append("Your sentence lengths vary, which keeps the writing moving.")
     if segs and len(words(segs[0][2])) <= 12:
-        out.append("You open with a short sentence. That is a strong way in — "
-                   "it pulls the reader straight to the second line.")
+        out.append(("You open with a short sentence. That's a strong start that pulls the "
+                    "reader into the next line."))
     if not any(f.kind == "cliche" for f in findings) and len(ws) > 100:
-        out.append("No stock phrases — you are writing in your own words, which "
-                   "is rarer than you would think.")
+        out.append("No stock phrases. You're writing in your own words.")
     return out[:4]
 
 
@@ -995,17 +994,17 @@ def _grade_note(read: dict) -> str:
     if not g:
         return ""
     if g < 6:
-        return (f"Reading level: grade {g:.0f}. Very plain — which is usually "
-                f"good, but check you are not simplifying your own thinking.")
+        return (f"Reading level: grade {g:.0f}. Very plain, which is usually "
+                f"good. Just make sure you're not oversimplifying your ideas.")
     if g <= 10:
-        return (f"Reading level: grade {g:.0f}. This is the sweet spot for a "
-                f"personal essay — clear without sounding young.")
+        return (f"Reading level: grade {g:.0f}. That's a good level for a "
+                f"personal essay: clear without sounding young.")
     if g <= 13:
         return (f"Reading level: grade {g:.0f}. Slightly formal. Fine, but read "
                 f"it aloud and check it still sounds like you.")
     return (f"Reading level: grade {g:.0f}. This reads more like an academic "
             f"paper than a personal statement. Long words and long sentences "
-            f"are hiding your voice — shorten both.")
+            f"are hiding your voice, so shorten both.")
 
 
 # ==========================================================================
@@ -1116,20 +1115,20 @@ _STORY_CUES["action"] = (
 
 STORY_STEPS: list[tuple[str, str, str]] = [
     ("situation", "Situation",
-     "Put us in one specific place at one specific time. Not “high school” — "
-     "a Tuesday, a room, a smell."),
+     ("Put us in one specific place at one specific time. Not “high "
+      "school,” but a Tuesday, a room, a smell.")),
     ("action", "Action",
      "Show yourself doing something. Verbs with you as the subject: what did you "
      "actually do with your hands?"),
     ("change", "Change",
-     "Something has to turn. A plan fails, a belief breaks, a person surprises you. "
-     "Without a turn it is a description, not a story."),
+     ("Something has to change. A plan fails, a belief breaks, someone "
+      "surprises you. Without that it's a description, not a story.")),
     ("reflection", "Reflection",
-     "Say what you understood afterwards that you did not understand before. This is "
-     "the part admissions officers are actually reading for."),
+     ("Say what you understood afterward that you didn't before. That's the "
+      "part admissions officers care about most.")),
     ("stakes", "Why it matters",
-     "Bring it to now. What do you do differently because of this? One honest "
-     "sentence beats a paragraph of significance."),
+     ("Bring it to the present. What do you do differently because of this? "
+      "One honest sentence is enough.")),
 ]
 
 
@@ -1328,7 +1327,8 @@ def _dim_structure(text: str, smap: list[dict], n_words: int) -> float:
 
 DIMENSIONS: list[tuple[str, str, float, str]] = [
     ("craft", "Craft", 0.28,
-     "Filler, hedging, passive voice, wrong words — the mechanical things."),
+     ("Filler, hedging, passive voice and wrong words: the mechanical "
+      "stuff.")),
     ("structure", "Structure", 0.24,
      "Whether the five moves of a personal essay are all in here."),
     ("concrete", "Detail", 0.20,

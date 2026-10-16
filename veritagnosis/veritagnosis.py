@@ -60,7 +60,8 @@ app.add_page(verify, route="/verify", title="Verify your email · Veritagnosis",
 # on_load re-checks the session server-side. Page-level guards only redirect —
 # the page source still ships — so anything private is fetched in the handler.
 app.add_page(home, route="/home", title="Home · Veritagnosis",
-             on_load=[AuthState.check_session, AuthState.load_home])
+             on_load=[AuthState.check_session, AuthState.load_home,
+                      AuthState.read_clock])
 
 # Every screen below needs a signed-in user. on_load runs the session check on
 # the server before the page state is populated — a page guard only redirects,

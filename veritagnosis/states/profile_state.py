@@ -250,9 +250,8 @@ class ProfileState(FeatureState, rx.State):
                 raw = user.profile_data if user else None
         except DecryptionError:
             self.load_error = (
-                "We could not read your saved profile, so the form below is "
-                "blank. Filling it in again will fix it — nothing else on "
-                "your account is affected."
+                ("We couldn't load your saved profile, so the form is blank. Filling "
+                 'it in again will fix it. Nothing else on your account was affected.')
             )
             raw = None
 
@@ -309,7 +308,10 @@ class ProfileState(FeatureState, rx.State):
             r = readiness_svc.assess(uid)
             self.readiness_overall = r.overall
             self.readiness_dims = [
-                {"key": k, "label": lbl, "score": str(v), "pct": f"{v}%",
+                # int(): one of the scores is worked out as a float, and
+                # "0.0" next to four whole numbers looks like a glitch.
+                {"key": k, "label": lbl, "score": str(int(round(v))),
+                 "pct": f"{int(round(v))}%",
                  "why": r.explanations.get(k, "")}
                 for k, lbl, v in (
                     ("academic", "Academic", r.academic),
@@ -473,7 +475,7 @@ class ProfileState(FeatureState, rx.State):
         try:
             g = float(self.gpa_input)
         except ValueError:
-            return "That is not a number."
+            return "That's not a number."
         return "" if 0.0 <= g <= 5.0 else "A GPA is between 0 and 5."
 
     @rx.var(deps=["sat_input"])
@@ -538,7 +540,7 @@ class ProfileState(FeatureState, rx.State):
                     s.delete(r)
             s.commit()
 
-        self.scores_msg = "Saved — the numbers above now use these."
+        self.scores_msg = 'Saved. Everything above now uses these numbers.'
         self._analyse(uid)
 
     @rx.event

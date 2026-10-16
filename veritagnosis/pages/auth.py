@@ -106,9 +106,9 @@ def login() -> rx.Component:
                     AuthState.demo_mode,
                     rx.box(
                         rx.box("Demo mode", class_name="demo-tag"),
-                        rx.text("No email is configured, so sign-in codes are "
-                                "shown on screen instead of being sent. Fine for "
-                                "a demo; set up email before real use.",
+                        rx.text(("Email isn't set up yet, so sign-in codes show up on screen instead "
+                                 "of in your inbox. That's fine for a demo. Set up email before real "
+                                 'students use it.'),
                                 class_name="demo-note"),
                         class_name="demo-banner demo-slim",
                     ),
@@ -179,7 +179,7 @@ def signup() -> rx.Component:
                 _progress(),
                 rx.text(AuthState.step_label, class_name="step-label"),
                 rx.heading("Create your account", class_name="auth-title"),
-                rx.text("One thing at a time. Nothing is saved until the end.",
+                rx.text('Three quick steps. Nothing is saved until the end.',
                         class_name="calm-sub"),
 
                 rx.form(
@@ -308,9 +308,9 @@ def verify() -> rx.Component:
             rx.box(
                 rx.heading("Check your email", class_name="auth-title"),
                 rx.text(
-                    rx.el.span("We sent six digits to "),
+                    rx.el.span('We sent a 6-digit code to '),
                     rx.el.strong(AuthState.masked_email),
-                    rx.el.span(". It lasts ten minutes and works once."),
+                    rx.el.span('. It expires in ten minutes.'),
                     class_name="calm-sub",
                 ),
 
@@ -348,13 +348,13 @@ def verify() -> rx.Component:
                 rx.cond(
                     AuthState.demo_code != "",
                     rx.box(
-                        rx.box("Demo mode — no email configured",
+                        rx.box("Demo mode: email isn't set up",
                                class_name="demo-tag"),
                         rx.box(AuthState.demo_code, class_name="demo-code"),
                         rx.text(
-                            "Anyone who can see this screen can sign in. Set up "
-                            "email before putting real student work in here — "
-                            "python scripts/manage.py email-setup",
+                            ('Anyone who can see this screen can sign in. Set up email before real '
+                             'students use the app by running: python scripts/manage.py '
+                             'email-setup'),
                             class_name="demo-note",
                         ),
                         class_name="demo-banner",
@@ -427,10 +427,9 @@ def settings_page() -> rx.Component:
                     ~AuthState.confirm_delete,
                     rx.box(
                         rx.text(
-                            "Everything goes: your essays and their history, "
-                            "your colleges, your recommenders, your checkpoints "
-                            "and your profile. It cannot be undone and there is "
-                            "no copy.",
+                            ('This deletes everything: your essays and their history, your '
+                             'colleges, your recommenders, your checkpoints and your profile. It '
+                             "can't be undone, and we don't keep a copy."),
                             class_name="faint",
                         ),
                         rx.el.button("Delete my account",
@@ -442,8 +441,8 @@ def settings_page() -> rx.Component:
                     rx.form(
                         error_box(AuthState.delete_error),
                         rx.text(
-                            "This is permanent. Type your password to confirm "
-                            "that it is you, and the account is gone.",
+                            ('This is permanent. Type your password to confirm, and your account '
+                             'will be deleted.'),
                             class_name="faint",
                         ),
                         rx.el.input(

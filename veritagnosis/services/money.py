@@ -228,12 +228,14 @@ ARCHETYPES = [
     Archetype("public_in", "State school, in state",
               "Your own state's public university.", 29_000, 60),
     Archetype("public_out", "State school, out of state",
-              "The same kind of place, one state over. Rarely worth the gap.",
+              ("Same kind of school, one state over. Usually not worth the extra "
+               "cost."),
               48_000, 45),
     Archetype("private_ok", "Private, ordinary endowment",
               "A private college without a famous endowment.", 62_000, 70),
     Archetype("private_rich", "Private, meets full need",
-              "The wealthy ones. High sticker, and they cover the gap.",
+              ("The wealthy schools. A high sticker price, but they cover your full "
+               "need."),
               85_000, 100),
 ]
 
@@ -280,22 +282,20 @@ class Experiment:
 EXPERIMENTS = [
     Experiment("retire",
                "Move $20,000 of savings into a retirement account",
-               "Retirement accounts are invisible to FAFSA. The same money, "
-               "in a different pot, stops counting."),
+               ("FAFSA doesn't count retirement accounts, so the same money stops "
+                "counting once it's moved there.")),
     Experiment("sibling",
                "A second sibling starts college",
-               "Before 2024 this roughly halved the family contribution. It "
-               "no longer does, and that is the change that catches families "
-               "who are planning from an older sibling's experience."),
+               ("This used to roughly halve what each family was expected to pay. "
+                "Since 2024 it doesn't, which surprises families going off an older "
+                "sibling's experience.")),
     Experiment("raise",
                "A $10,000 raise at home",
-               "Income moves the number far more than savings do. This is "
-               "the lever that actually matters."),
+               "Income moves this number much more than savings do."),
     Experiment("student_savings",
                "The student saves $5,000 from a job",
-               "A student's own savings are assessed at 20%, against 12% for "
-               "the parents' — the harshest rate in the formula. Money in a "
-               "parent's name counts for less."),
+               ("Student savings count at 20%, the highest rate in the formula. The "
+                "same money in a parent's name counts for less.")),
 ]
 
 
@@ -352,9 +352,9 @@ NEED_MET_LOW = 60
 NEED_MET_HIGH = 100
 
 NET_PRICE_CALCULATOR_NOTE = (
-    "Every US college is required by law to host a net price calculator. "
-    "That is the only thing that gives you a real number for a real college — "
-    "this is arithmetic to get you oriented before you go and use one."
+    ("Every US college is required to have a net price calculator on its "
+     "website. That's the only way to get a real number for a specific "
+     "college. This is just to help you get your bearings first.")
 )
 
 
@@ -474,11 +474,10 @@ def timeline(today=None) -> Timeline:
             award_year=f"{y + 1}-{str(y + 2)[2:]}",
             phase="before_open",
             headline=f"FAFSA opens in {days_to_open} days.",
-            detail=("Filing in the first weeks matters more than most people "
-                    "realise: several states and many colleges hand out their "
-                    "own aid until it runs out, so the same family filing in "
-                    "October can get more than one filing in March. Get your "
-                    "tax return and account details together now."),
+            detail=(("Filing early matters more than people think. Some states and many "
+                     "colleges give out their own aid until it runs out, so a family that "
+                     "files in October can get more than the same family filing in March. "
+                     "Get your tax return and account info together now.")),
             urgent=False,
         )
 
@@ -486,27 +485,26 @@ def timeline(today=None) -> Timeline:
     if weeks_open <= 8:
         return Timeline(
             award_year=award, phase="open_early",
-            headline=f"FAFSA for {award} is open — this is the best time to file.",
-            detail=("You are inside the window where first-come aid is still "
-                    "available. This is the single cheapest thing you can do "
-                    "for your own finances this year."),
+            headline=f"FAFSA for {award} is open, and now is the best time to file.",
+            detail=(("First-come aid is still available right now. Filing early is one of "
+                     "the easiest ways to get more money for college.")),
             urgent=True,
         )
     if weeks_open <= 26:
         return Timeline(
             award_year=award, phase="open_late",
             headline=f"FAFSA for {award} is open, and state money is going.",
-            detail=("Many state deadlines have passed or are close. File now "
-                    "rather than waiting for admissions decisions — you do "
-                    "not need to know where you are going to submit it."),
+            detail=(("A lot of state deadlines have passed or are coming up. File now "
+                     "instead of waiting for admissions decisions. You don't need to know "
+                     "where you're going to submit it.")),
             urgent=True,
         )
     return Timeline(
         award_year=award, phase="closing",
-        headline=f"The {award} FAFSA is still open, and late is far better than never.",
-        detail=("Most state and institutional money for this year is gone, "
-                "but federal aid including Pell is not first-come — it is "
-                "still worth filing."),
+        headline=f"The {award} FAFSA is still open, and filing late is much better than not filing.",
+        detail=(("Most state and college aid for this year is gone, but federal aid "
+                 "like the Pell Grant isn't first-come, first-served, so it's still "
+                 "worth filing.")),
         urgent=True,
     )
 
@@ -626,23 +624,23 @@ def flags(session: Session, user_id: int, cs: list[Cost]) -> list[Flag]:
         out.append(Flag(
             "warn", "Two binding applications",
             f"{', '.join(c.name for c in binding)} are all marked Early "
-            f"Decision. ED is a commitment to attend if admitted, so you can "
-            f"only hold one. Change the others before you send them."))
+            f"Decision. ED means you commit to attend if you're admitted, so "
+            f"you can only apply ED to one. Change the others before you send "
+            f"them."))
     elif len(binding) == 1:
         out.append(Flag(
             "info", f"{binding[0].name} is binding",
-            "Early Decision commits you to attend if you are admitted, which "
-            "means accepting before you can compare aid offers. If cost will "
-            "decide where you go, that is worth talking through with your "
-            "counsellor first."))
+            ("Early Decision means you commit to attend if admitted, before you "
+             "can compare aid offers. If cost will decide where you go, talk it "
+             "through with your counselor first.")))
 
     css = [c for c in cs if c.needs_css]
     if css:
         out.append(Flag(
             "info", f"{len(css)} " + ("college needs" if len(css) == 1 else
                                       "colleges need") + " a CSS Profile",
-            ", ".join(c.name for c in css) + ". It is a separate form from the "
-            "FAFSA with its own deadline, usually earlier than you expect."))
+            ", ".join(c.name for c in css) + ". It's a separate form from the "
+            "FAFSA with its own deadline, often earlier than you'd expect."))
 
     soon = [c for c in cs if c.aid_days is not None and 0 <= c.aid_days <= 21]
     if soon:
@@ -651,24 +649,24 @@ def flags(session: Session, user_id: int, cs: list[Cost]) -> list[Flag]:
             "warn", "An aid deadline is close",
             f"{nearest.name} closes in {nearest.aid_days} "
             f"{'day' if nearest.aid_days == 1 else 'days'}. Aid deadlines are "
-            f"often separate from the application deadline and are frequently "
-            f"the earlier of the two."))
+            f"often separate from application deadlines, and they're often "
+            f"earlier."))
 
     passed = [c for c in cs if c.aid_days is not None and c.aid_days < 0]
     if passed:
         out.append(Flag(
             "warn", "An aid deadline has gone by",
-            f"{', '.join(c.name for c in passed)}. Ring the financial aid "
-            f"office anyway — late is not always closed, and they would rather "
-            f"tell you than have you assume."))
+            f"{', '.join(c.name for c in passed)}. Call the financial aid "
+            f"office anyway. Late doesn't always mean closed, and they'd rather "
+            f"hear from you."))
 
     unknown = [c for c in cs if not c.known]
     if unknown and len(unknown) == len(cs):
         out.append(Flag(
             "info", "No costs recorded yet",
-            "Run each college's net price calculator — every US college has to "
-            "publish one — and put the estimate in here. Sticker prices are "
-            "usually nothing like what a family actually pays."))
+            ("Run each college's net price calculator (every US college has one) "
+             "and enter the estimate here. The sticker price is often very "
+             "different from what families actually pay.")))
 
     return out
 

@@ -35,9 +35,10 @@ def is_configured() -> bool:
 def _plain(code: str, minutes: int) -> str:
     return (
         f"Your Veritagnosis code is {code}\n\n"
-        f"It works for the next {minutes} minutes and can only be used once.\n\n"
-        f"If you didn't try to sign in, you can ignore this — someone typed your\n"
-        f"email address by mistake, and without the code nothing happens.\n"
+        f"Enter it in the app to sign in. It expires in {minutes} minutes and\n"
+        f"only works once.\n\n"
+        f"Didn't try to sign in? You can ignore this email. Someone probably\n"
+        f"typed your address by mistake, and nobody can get in without the code.\n"
     )
 
 
@@ -59,18 +60,18 @@ def _html(code: str, minutes: int) -> str:
    <tr><td style="font-size:22px;font-weight:600;color:#1F1B2E;padding-bottom:8px;">
      Here's your code</td></tr>
    <tr><td style="font-size:15px;color:#5D5873;line-height:1.55;padding-bottom:24px;">
-     Type these six digits back into the app to finish setting up your account.</td></tr>
+     Enter this code in the app to sign in.</td></tr>
    <tr><td align="center" style="padding:20px 0 24px;">
      <div style="display:inline-block;background:#F1EEFA;border:1px solid #DDD6F2;
                  border-radius:12px;padding:18px 26px;font-size:34px;font-weight:700;
                  letter-spacing:10px;color:#3D3268;
                  font-family:'SFMono-Regular',Consolas,monospace;">{spaced}</div></td></tr>
    <tr><td style="font-size:14px;color:#5D5873;line-height:1.55;padding-bottom:6px;">
-     Good for {minutes} minutes, and only once.</td></tr>
+     It expires in {minutes} minutes and only works once.</td></tr>
    <tr><td style="font-size:13px;color:#8F8AA4;line-height:1.55;padding-top:18px;
                   border-top:1px solid #EFEDF4;">
-     Didn't try to sign in? Ignore this email. Someone mistyped their address, and
-     without this code nothing happens to your account.</td></tr>
+     Didn't try to sign in? You can ignore this email. Someone probably mistyped
+     their address, and nobody can get into your account without this code.</td></tr>
   </table>
  </td></tr>
 </table>

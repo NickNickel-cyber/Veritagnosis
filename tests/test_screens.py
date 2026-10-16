@@ -1103,7 +1103,7 @@ def test_everything_submitted_says_so_instead_of_inventing_work(db):
     s.status = AppStatus.submitted
     db.add(s); db.commit()
     t = progress.next_task(db, uid)
-    assert "every application is in" in t.title.lower()
+    assert "applications are in" in t.title.lower()
 
 
 def test_the_task_is_stable_and_never_raises_on_odd_data(db):

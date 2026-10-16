@@ -143,8 +143,7 @@ class AvatarState(FeatureState, rx.State):
         if n == 0:
             return f"All {total} unlockable items are yours."
         if n == total:
-            return (f"{total} more items are waiting behind checkpoints. "
-                    f"Reach one and it appears here.")
+            return f"{total} more items unlock as you reach checkpoints."
         return f"{total - n} of {total} unlockable items earned. {n} to go."
 
     # ------------------------------------------------------------------ load
@@ -179,7 +178,7 @@ class AvatarState(FeatureState, rx.State):
     def choose(self, index: int):
         if not parts.is_available(self.tab, index, set(self.earned)):
             need = self._unlock_text(parts.lock_for(self.tab, index))
-            self.blocked = f"“{need}” unlocks that one." if need else "Not yours yet."
+            self.blocked = f"“{need}” unlocks that one." if need else 'Not unlocked yet.'
             return
         self.selection = {**self.selection, self.tab: index}
         self.saved = False
@@ -190,7 +189,7 @@ class AvatarState(FeatureState, rx.State):
         if self.palette_key == "hair_color":
             need = parts.colour_lock_for(index)
             if need and need not in set(self.earned):
-                self.blocked = f"“{self._unlock_text(need)}” unlocks that colour."
+                self.blocked = f"“{self._unlock_text(need)}” unlocks that color."
                 return
         self.selection = {**self.selection, self.palette_key: index}
         self.saved = False
@@ -611,9 +610,9 @@ class AchievementsState(FeatureState, rx.State):
     @rx.var(deps=["reached", "total"])
     def headline(self) -> str:
         if self.reached == 0:
-            return "Nothing earned yet — the first few are one click away."
+            return 'Nothing earned yet. The first few take about a minute.'
         if self.reached == self.total:
-            return "Every checkpoint reached. That is the whole process, done."
+            return "You've reached every checkpoint. Nice work."
         return f"{self.reached} of {self.total} reached."
 
     @rx.event

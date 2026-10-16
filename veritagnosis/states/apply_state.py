@@ -192,7 +192,7 @@ class SchoolsState(FeatureState, rx.State):
             essays_required=r.essays_required or 1,
             recs_required=r.recs_required or 0,
             next_label=nxt.label if nxt else "Everything done",
-            next_hint=nxt.hint if nxt else "Nothing left on this one.",
+            next_hint=nxt.hint if nxt else "Nothing left to do here.",
             next_route=nxt.route if nxt else "/applications",
             steps=[Step(key=m.key, label=m.label, done=m.done, detail=m.detail,
                         hint=m.hint, route=m.route, weight=m.weight) for m in ms],
@@ -615,13 +615,12 @@ class EssayState(FeatureState, rx.State):
     _undo_label: str = ""
 
     REACTIONS: dict[str, str] = {
-        "idea": "Good — write the idea down badly right now, before it goes. "
-                "You can make it good afterwards.",
-        "love": "Keep that bit. Whatever you just wrote that you liked, do more "
-                "of that and less of everything else.",
-        "fire": "You're moving. Don't stop to edit — finish the thought first.",
-        "stuck": "Stuck is normal here. Write the worst possible version of the "
-                 "next sentence on purpose. It unsticks you almost every time.",
+        "idea": ("Write it down now, even if it's messy, before you lose it. You can "
+                 "clean it up later."),
+        "love": "Keep that part. Whatever you liked about it, do more of that.",
+        "fire": "Nice, keep going. Finish the thought before you edit anything.",
+        "stuck": ("Getting stuck is normal. Try writing a bad version of the next "
+                  "sentence on purpose. It usually gets you moving again."),
     }
 
     # ------------------------------------------------------------ the coach
@@ -685,7 +684,7 @@ class EssayState(FeatureState, rx.State):
             return f"{left} words left"
         if left == 0:
             return "Exactly on the limit"
-        return f"{abs(left)} words over — you will have to cut"
+        return f"{abs(left)} words over. You'll need to cut some."
 
     @rx.var(deps=["stat_words", "word_target"])
     def over_limit(self) -> bool:
@@ -710,14 +709,14 @@ class EssayState(FeatureState, rx.State):
         if not self.score_ready:
             return ""
         if self.score_provisional:
-            return ("Early reading — real, but it will move as you write. "
-                    "The shape matters more than the number right now.")
+            return (("Early score. It'll change a lot as you write, so focus on the shape "
+                     "for now."))
         return {
-            "sharp": "This is in good shape. Read it aloud once and send it.",
-            "solid": "Solid draft. The list below is polish, not repair.",
-            "getting there": "The bones are here. Clear the red ones first.",
+            "sharp": "This is in good shape. Read it out loud once more and you're done.",
+            "solid": "Solid draft. What's left below is polish.",
+            "getting there": "The structure is there. Fix the red items first.",
             "rough draft": "Normal for a draft. Nothing here is hard to fix.",
-            "early days": "Early days — that is exactly where you should be.",
+            "early days": "It's early, and that's fine.",
         }.get(self.band, "")
 
     @rx.var(deps=["auto_count"])
@@ -758,11 +757,10 @@ class EssayState(FeatureState, rx.State):
         if self.score_ready:
             return ""
         if self.stat_words == 0:
-            return ("Nothing to read yet. Write the worst possible first "
-                    "sentence — it is the fastest way in.")
-        return (f"{self.words_needed} more words and I can score this properly. "
-                f"Scoring a paragraph would only be guessing, and you would learn "
-                f"nothing from the number.")
+            return (("Nothing here yet. Write a rough first sentence. It doesn't have to "
+                     "be good."))
+        return (f"Write {self.words_needed} more words and I can give you a real "
+                f"score. Anything shorter would just be a guess.")
 
     @rx.var(deps=["stat_words"])
     def gate_percent(self) -> int:
@@ -775,20 +773,20 @@ class EssayState(FeatureState, rx.State):
         if not self.score_ready:
             return ""
         if self.score_provisional:
-            return (f"Provisional — {self.score_confidence}% confidence. The score "
-                    f"steadies as the draft grows.")
-        return f"Full reading · {self.score_confidence}% confidence"
+            return (f"Early estimate, {self.score_confidence}% confidence. It'll "
+                    f"settle as you write more.")
+        return f"Full score · {self.score_confidence}% confidence"
 
     @rx.var(deps=["story_done"])
     def story_line(self) -> str:
         if self.stat_words < 25:
-            return "The five moves show up here as you write them."
+            return "The five moves show up here as you write."
         if self.story_done == 5:
-            return "All five moves are in the draft. That is the hard part done."
+            return "All five moves are in your draft. The hard part is done."
         missing = 5 - self.story_done
-        return (f"{self.story_done} of 5 moves are here. The {missing} missing "
-                f"{'one is' if missing == 1 else 'ones are'} usually worth more "
-                f"than every word-level fix put together.")
+        return (f"{self.story_done} of 5 moves are here. Adding the missing "
+                f"{'one' if missing == 1 else missing} will help more than all the "
+                f"small fixes combined.")
 
     # ------------------------------------------------------- the analysis
     def _build_dims(self, detail: dict) -> None:
@@ -832,15 +830,13 @@ class EssayState(FeatureState, rx.State):
         if self.stat_words < prose.WORDS_NO_SCORE:
             left = max(0, prose.WORDS_NO_SCORE - self.stat_words)
             self.nbe_kind = "write"
-            self.nbe_title = ("Write the first draft badly" if self.stat_words < 20
-                              else f"Keep going — about {left} more words")
-            self.nbe_why = ("There is nothing to edit yet, and editing while you "
-                            "draft is the most reliable way to never finish. The "
-                            "analysis stays quiet until there is a draft to read.")
-            self.nbe_how = ("Pick the smallest true moment you can think of — one "
-                            "afternoon, one conversation — and write what happened "
-                            "in order. Do not stop to fix anything.")
-            self.nbe_gain = "Unlocks the full reading"
+            self.nbe_title = ("Just get a first draft down" if self.stat_words < 20
+                              else f"Keep going, about {left} more words")
+            self.nbe_why = (("There's nothing to edit yet, and editing while you draft makes it "
+                             "hard to finish. Feedback will show up once there's a draft to read."))
+            self.nbe_how = (("Pick one small, real moment, like an afternoon or a conversation, "
+                             "and write what happened in order. Don't stop to fix anything."))
+            self.nbe_gain = "Unlocks your full score"
             self.nbe_idx = -1
             return
 
@@ -859,22 +855,20 @@ class EssayState(FeatureState, rx.State):
                 "action": "Put yourself in the action",
             }.get(s.key, f"Add the missing {s.name.lower()}")
             self.nbe_why = {
-                "change": "Nothing turns in this draft. Without a turn it reads as "
-                          "a description of a person rather than a story about one, "
-                          "and description is what readers skim.",
-                "reflection": "You tell us what happened but not what you understood "
-                              "afterwards. That understanding is the part an "
-                              "admissions officer is actually reading for.",
-                "situation": "The essay never lands anywhere specific. A reader needs "
-                             "one concrete place and time to stand in before anything "
-                             "else can matter to them.",
-                "stakes": "It ends in the past. Without a line bringing it to now, "
-                          "the reader has no reason to think any of it stuck.",
-                "action": "You are the subject of this essay but not the actor in it. "
-                          "Things happen around you rather than because of you.",
+                "change": ("Nothing changes in this draft. Without a turning point it reads like "
+                           "a description instead of a story, and readers tend to skim "
+                           "descriptions."),
+                "reflection": ("You say what happened, but not what you understood afterward. That's "
+                               "the part admissions officers care about most."),
+                "situation": ("The essay never settles on a specific place or time. Give the reader "
+                              "one real scene to stand in."),
+                "stakes": ("It ends in the past. Add a line about now so the reader knows it "
+                           "stuck with you."),
+                "action": ("The essay is about you, but you're not doing much in it. Things "
+                           "happen around you instead of because of you."),
             }.get(s.key, s.note)
             self.nbe_how = s.note
-            self.nbe_gain = "Biggest single gain available"
+            self.nbe_gain = "Biggest improvement you can make"
             self.nbe_idx = -1
             return
 
@@ -885,19 +879,19 @@ class EssayState(FeatureState, rx.State):
             if worst.value < 50 and spread >= 22:
                 self.nbe_kind = "dimension"
                 self.nbe_title = f"{worst.name} is holding the score down"
-                self.nbe_why = (f"{worst.note} It is scoring {worst.value} out of "
-                                f"100 while the rest of the draft is well ahead of "
-                                f"it, so this is where the points are.")
+                self.nbe_why = (f"{worst.note} It's at {worst.value} out of 100 "
+                                f"while the rest of the draft is well ahead, so "
+                                f"this is where you'll gain the most.")
                 self.nbe_how = {
-                    "craft": "Work down the Problems tab from the red ones. Most have "
-                             "a one-tap fix.",
-                    "concrete": "Find every abstract noun — passion, journey, growth — "
-                                "and replace it with the actual thing that happened.",
-                    "voice": "Cut the hedges. “I think that maybe” becomes “I”. "
-                             "Read a paragraph aloud and write down how you said it.",
+                    "craft": ("Go through the Problems tab, starting with the red ones. Most have a "
+                              "one-tap fix."),
+                    "concrete": ("Find abstract words like “passion,” “journey” and “growth” and "
+                                 "replace them with what actually happened."),
+                    "voice": ("Cut the hedging. “I think that maybe” can usually just be “I.” Read "
+                              "a paragraph out loud and write it the way you said it."),
                     "rhythm": "Find your longest sentence and break it in two. Then make "
                               "one sentence four words long.",
-                    "structure": "Look at the Structure tab and fill the thinnest move.",
+                    "structure": "Check the Structure tab and build up the weakest move.",
                 }.get(worst.key, "See the Problems tab.")
                 self.nbe_gain = f"Up to {min(20, int((70 - worst.value) * 0.3))} points"
                 self.nbe_idx = -1
@@ -913,17 +907,16 @@ class EssayState(FeatureState, rx.State):
             self.nbe_how = (f"Replace it with “{top.fix}”." if top.has_fix and top.fix
                             else "Delete it." if top.has_fix
                             else "Rewrite the sentence around it.")
-            self.nbe_gain = "Small but free"
+            self.nbe_gain = "Quick win"
             self.nbe_idx = top.idx
             return
 
         # 5. Nothing left to say.
         self.nbe_kind = "done"
-        self.nbe_title = "Nothing left that I can see"
-        self.nbe_why = ("Every check passes and all five moves are in the draft. "
-                        "What is left is judgement, and that is yours.")
-        self.nbe_how = ("Read it aloud once, start to finish. Anything you stumble "
-                        "over is the last thing to fix.")
+        self.nbe_title = "Nothing left to fix"
+        self.nbe_why = (("Every check passes and all five moves are there. Anything else is "
+                         "your call."))
+        self.nbe_how = ("Read it out loud from start to finish. Fix anything you trip over.")
         self.nbe_gain = ""
         self.nbe_idx = -1
 
@@ -1152,7 +1145,7 @@ class EssayState(FeatureState, rx.State):
 
         new = prose.apply_one(self.body, f)
         if new == self.body:
-            self.flash = "That bit has changed since I read it — re-checking."
+            self.flash = "That part changed since I last checked. Checking again."
             self._analyse()
             return
 
@@ -1182,7 +1175,7 @@ class EssayState(FeatureState, rx.State):
         before = self.body
         new, n = prose.apply_all(self.body, self._findings)
         if not n or new == before:
-            self.flash = "Nothing safe to change automatically."
+            self.flash = "Nothing I can safely fix automatically."
             return
         self._undo_body = before
         self._undo_label = f"{n} automatic " + ("fix" if n == 1 else "fixes")
@@ -1504,17 +1497,16 @@ class RecsState(FeatureState, rx.State):
 
     @rx.var
     def list_label(self) -> str:
-        return "List of teachers" if self.tab == "teacher" else "Guidance counsellors"
+        return "List of teachers" if self.tab == "teacher" else "School counselors"
 
     @rx.var(deps=["agreed", "needed"])
     def cover_line(self) -> str:
         if self.needed == 0:
-            return ("Add a college with a deadline and this will tell you how "
-                    "many letters you need.")
+            return ("Add a college with a deadline to see how many letters you need.")
         if self.agreed >= self.needed:
             return f"You have all {self.needed} letters covered."
         short = self.needed - self.agreed
-        return (f"{self.agreed} of {self.needed} covered — "
+        return (f"{self.agreed} of {self.needed} covered. You need "
                 f"{short} more {'teacher' if short == 1 else 'teachers'} to say yes.")
 
     @rx.var(deps=["agreed", "needed"])

@@ -440,7 +440,7 @@ def test_every_step_belongs_to_a_declared_phase():
 
 def test_the_disclaimer_actually_disclaims():
     d = content.DISCLAIMER.lower()
-    assert "not financial advice" in d
+    assert "not financial advice" in d or "isn't financial advice" in d
     assert "counsellor" in d or "counselor" in d
 
 
