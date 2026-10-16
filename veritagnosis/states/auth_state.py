@@ -411,11 +411,15 @@ class AuthState(rx.State):
     # laptop they are the same clock; once the app is hosted somewhere else
     # they are not, and "Good morning" at 9pm is exactly the kind of thing
     # that makes an app feel like it is not paying attention.
+    #
+    # How the hour gets here matters. rx.call_script runs its code with eval(),
+    # and the app's Content-Security-Policy (security.CSP) rightly forbids
+    # eval — so that route threw "EvalError ... 'unsafe-eval' is not an
+    # allowed source" on every visit to the home screen. Instead the greeting
+    # heading's on_mount passes BROWSER_HOUR as an ordinary event argument:
+    # that expression is compiled into the page's own JavaScript bundle, which
+    # the CSP allows, and nothing is ever evaluated from a string.
     hour: int = -1
-
-    @rx.event
-    def read_clock(self):
-        return rx.call_script("new Date().getHours()", callback=AuthState.set_hour)
 
     @rx.event
     def set_hour(self, value):
@@ -630,6 +634,10 @@ class AuthState(rx.State):
             return json.loads(self.avatar_json)
         except (ValueError, TypeError):
             return {}
+
+
+# The browser's local hour, as a JavaScript expression compiled into the page.
+BROWSER_HOUR = rx.Var(_js_expr="(new Date()).getHours()", _var_type=int)
 
 
 def greeting_for(hour: int) -> str:

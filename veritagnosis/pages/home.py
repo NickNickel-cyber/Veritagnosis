@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import reflex as rx
 
-from veritagnosis.states.auth_state import AuthState
+from veritagnosis.states.auth_state import BROWSER_HOUR, AuthState
 from veritagnosis.ui.theme import btn, shell, theme_picker
 from veritagnosis.states.play_state import AchievementsState
 from veritagnosis.ui.theme import shell
@@ -61,6 +61,7 @@ def home() -> rx.Component:
                             rx.el.span(", ", AuthState.greet_name),
                             rx.fragment()),
                     size="5",
+                    on_mount=AuthState.set_hour(BROWSER_HOUR),
                 ),
                 theme_picker(compact=True),
                 class_name="home-greet",

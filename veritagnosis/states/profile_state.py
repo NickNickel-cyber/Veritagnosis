@@ -306,7 +306,7 @@ class ProfileState(FeatureState, rx.State):
         a seventeen-year-old."""
         try:
             r = readiness_svc.assess(uid)
-            self.readiness_overall = r.overall
+            self.readiness_overall = int(round(r.overall))
             self.readiness_dims = [
                 # int(): one of the scores is worked out as a float, and
                 # "0.0" next to four whole numbers looks like a glitch.

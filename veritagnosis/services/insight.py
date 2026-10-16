@@ -68,7 +68,7 @@ class ReadinessResult:
             {"label": "Extracurricular", "score": self.extracurricular, "icon": "🌟"},
             {"label": "College Fit", "score": self.college_fit, "icon": "🎯"},
             {"label": "Application", "score": self.application_progress, "icon": "📝"},
-            {"label": "Financial", "score": self.financial_readiness, "icon": "💷"},
+            {"label": "Financial", "score": self.financial_readiness, "icon": "💵"},
         ]
 
 
@@ -104,12 +104,15 @@ def assess(uid: int) -> ReadinessResult:
     blind_spots = _detect_blind_spots(user, schools, essays, recs)
     next_steps = _rank_next_steps(academic, extracurricular, college_fit, app_progress, financial)
 
+    # Whole numbers, always. One of the scorers works in fractions, and a
+    # float leaking out of here reached an int field on the profile screen
+    # ("Expected field 'readiness_overall' to receive type int, got 51.0").
     return ReadinessResult(
-        academic=academic,
-        extracurricular=extracurricular,
-        college_fit=college_fit,
-        application_progress=app_progress,
-        financial_readiness=financial,
+        academic=int(round(academic)),
+        extracurricular=int(round(extracurricular)),
+        college_fit=int(round(college_fit)),
+        application_progress=int(round(app_progress)),
+        financial_readiness=int(round(financial)),
         explanations=explanations,
         blind_spots=blind_spots,
         next_steps=next_steps,
