@@ -19,8 +19,9 @@ import reflex as rx
 from sqlmodel import select
 
 from veritagnosis import db
-from veritagnosis.models import TestScore, User
+from veritagnosis.models import School, TestScore, User
 from veritagnosis.crypto import DecryptionError
+from veritagnosis.services import catalog
 from veritagnosis.services import insight as fit_svc
 from veritagnosis.services import insight as readiness_svc
 from veritagnosis.states.base import FeatureState
@@ -364,6 +365,8 @@ class ProfileState(FeatureState, rx.State):
             "confidence": f.confidence,
             "caveat": " ".join(f.caveats),
             "disagrees": "yes" if f.disagrees else "no",
+            "school_id": str(getattr(f, "school_id", 0) or 0),
+            "sug1": "", "sug2": "", "sug3": "",
             "metric": "", "sentence": "", "place": "",
             "band_left": "0%", "band_width": "0%", "marker": "0%",
             "low": "", "high": "", "value": "",
@@ -382,7 +385,32 @@ class ProfileState(FeatureState, rx.State):
                 "low": str(int(st.low)), "high": str(int(st.high)),
                 "value": str(int(st.value)),
             })
+        for i, name in enumerate((getattr(f, "suggestions", None) or [])[:3], 1):
+            row[f"sug{i}"] = str(name)
         return row
+
+    @rx.event
+    async def rename_school(self, school_id: str, name: str):
+        """Replace a name the catalogue did not recognise with a full one.
+
+        Only the student's own row, and only a name the catalogue resolves,
+        so this cannot be used to write an arbitrary string."""
+        uid = await self._user_id()
+        if uid is None:
+            return rx.redirect("/login")
+        try:
+            sid = int(school_id)
+        except (TypeError, ValueError):
+            return
+        with db.get_session() as s:
+            row = s.get(School, sid)
+            match = catalog.resolve(s, name)
+            if row is None or row.user_id != uid or match is None:
+                return
+            row.name = match.name[:120]
+            s.add(row)
+            s.commit()
+        self._analyse(uid)
 
     def _load_scores(self, session, uid: int) -> None:
         """Fill the inputs from what is stored.

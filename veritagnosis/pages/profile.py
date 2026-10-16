@@ -64,11 +64,6 @@ def _readiness() -> rx.Component:
                        class_name="rd-score"),
                 rx.box("readiness", class_name="rd-score-lab"),
             ),
-            rx.box(
-                "This is a measure of the work you have done, not a prediction "
-                "of any decision. It moves when you do something.",
-                class_name="faint", style={"flex": "1", "minWidth": "220px"},
-            ),
             class_name="rd-head",
         ),
         rx.box(rx.foreach(ProfileState.readiness_dims, _dim),
@@ -99,6 +94,37 @@ def _band(f) -> rx.Component:
     )
 
 
+def _fix_button(f, key: str) -> rx.Component:
+    return rx.cond(
+        f[key] != "",
+        rx.el.button(f[key], type="button", class_name="sug",
+                     on_click=ProfileState.rename_school(f["school_id"], f[key])),
+        rx.fragment(),
+    )
+
+
+def _unmatched(f) -> rx.Component:
+    """A name on the list that is not a college the catalogue knows.
+
+    Says plainly what to do: pick the full name, or re-add it with one. One
+    tap renames the row, and the card fills with that college's data."""
+    return rx.cond(
+        f["sug1"] != "",
+        rx.box(
+            rx.box("“" + f["name"] + "” isn't a full college name. "
+                   "Which one do you mean?", class_name="unmatched-q"),
+            rx.box(_fix_button(f, "sug1"), _fix_button(f, "sug2"),
+                   _fix_button(f, "sug3"), class_name="sug-list"),
+        ),
+        rx.box(
+            "“" + f["name"] + "” isn't a college we can find. Remove it on "
+            "My colleges and add it again with its full name, like "
+            "“University of Michigan-Ann Arbor”.",
+            class_name="unmatched-q",
+        ),
+    )
+
+
 def _fit_card(f) -> rx.Component:
     return rx.box(
         rx.box(
@@ -118,12 +144,7 @@ def _fit_card(f) -> rx.Component:
         ),
         rx.cond(
             f["has_data"] == "no",
-            rx.box(
-                "We do not have published data for this one yet, so it is not "
-                "scored above. That is a gap in our data, not a comment on the "
-                "college.",
-                class_name="faint",
-            ),
+            _unmatched(f),
             rx.box(
                 rx.cond(f["metric"] != "", _band(f),
                         rx.box("No test-score comparison for this college.",
@@ -161,24 +182,14 @@ def _mismatch(f) -> rx.Component:
             "Its published data makes it a " + f["data_tier"] + ". " +
             f["sentence"],
         ),
-        rx.box(
-            "Worth a look before you finalise your list — not a reason to drop "
-            "it.",
-            class_name="faint", style={"marginTop": "var(--s2)"},
-        ),
         class_name="mismatch",
     )
 
 
 def _where_you_stand() -> rx.Component:
     return rx.box(
-        rx.heading("Where you actually stand", size="4"),
-        rx.box(
-            "Your numbers against what each college published about the class "
-            "it admitted. There is no predicted chance of admission here, "
-            "because nobody can honestly calculate one.",
-            class_name="faint", style={"marginBottom": "var(--s3)"},
-        ),
+        rx.heading("Where you actually stand", size="4",
+                   style={"marginBottom": "var(--s3)"}),
 
         rx.foreach(ProfileState.disagreements, _mismatch),
 
@@ -220,9 +231,8 @@ def _gaps() -> rx.Component:
     return rx.cond(
         ProfileState.blind_spots.length() > 0,
         rx.box(
-            rx.heading("What you have not looked at yet", size="4"),
-            rx.box("Not criticism — just the things that are easy to miss.",
-                   class_name="faint", style={"marginBottom": "var(--s3)"}),
+            rx.heading("What you have not looked at yet", size="4",
+                       style={"marginBottom": "var(--s3)"}),
             rx.foreach(ProfileState.blind_spots, _spot),
             class_name="card", style={"marginBottom": "var(--s4)"},
         ),
@@ -234,9 +244,8 @@ def _steps() -> rx.Component:
     return rx.cond(
         ProfileState.next_steps.length() > 0,
         rx.box(
-            rx.heading("Do these next", size="4"),
-            rx.box("Ordered by how much they move the number at the top.",
-                   class_name="faint", style={"marginBottom": "var(--s3)"}),
+            rx.heading("Do these next", size="4",
+                       style={"marginBottom": "var(--s3)"}),
             rx.foreach(
                 ProfileState.next_steps,
                 lambda s, i: rx.box(
@@ -287,9 +296,6 @@ def _your_numbers() -> rx.Component:
     return rx.box(
         rx.box(
             rx.heading("Your numbers", size="4"),
-            rx.box("Everything above is calculated from these. Leave a box "
-                   "empty if you do not have it yet — nothing is guessed.",
-                   class_name="faint"),
             class_name="num-head",
         ),
         rx.box(
@@ -348,9 +354,7 @@ def _ec_row(ec, index) -> rx.Component:
 
 def _details() -> rx.Component:
     return rx.box(
-        rx.heading("Your details", size="4"),
-        rx.box("Everything above gets sharper as you fill this in.",
-               class_name="faint", style={"marginBottom": "var(--s4)"}),
+        rx.heading("Your details", size="4", style={"marginBottom": "var(--s4)"}),
 
         rx.box(
             rx.el.label("What field interests you?"),
@@ -449,12 +453,7 @@ def profile_page() -> rx.Component:
                 rx.link("← Home", href="/home", class_name="btn btn-ghost"),
                 class_name="screen-head",
             ),
-            rx.heading("My profile", size="5"),
-            rx.box(
-                "Where you stand, what you have not looked at, and what to do "
-                "next.",
-                class_name="faint", style={"marginBottom": "var(--s5)"},
-            ),
+            rx.heading("My profile", size="5", style={"marginBottom": "var(--s5)"}),
             rx.cond(
                 ProfileState.load_error != "",
                 rx.box(ProfileState.load_error, class_name="fit-caveat",

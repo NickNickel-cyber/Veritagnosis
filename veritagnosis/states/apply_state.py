@@ -14,6 +14,7 @@ from veritagnosis import db
 from veritagnosis.content.aid import ROUNDS as ROUND_NAMES
 from veritagnosis.models import AppStatus, Recommender, School, Tier, utcnow
 from veritagnosis.services import wellbeing as achievements, apply as progress
+from veritagnosis.services import catalog
 from veritagnosis.states.base import FeatureState
 from veritagnosis.content import copy as promptlib
 from veritagnosis.content.copy import DONE, STEPS
@@ -98,6 +99,13 @@ class SchoolsState(FeatureState, rx.State):
     next_urgency: str = "none"
 
     just_earned: str = ""
+
+    # The add box. `query` is what is typed; `suggestions` are full official
+    # names matching it, so the student picks a name the catalogue knows.
+    query: str = ""
+    suggestions: list[dict[str, str]] = []
+    added_as: str = ""
+    add_error: str = ""
 
     @rx.var
     def has_schools(self) -> bool:
@@ -200,16 +208,60 @@ class SchoolsState(FeatureState, rx.State):
         uid = await self._user_id()
         if uid is None:
             return rx.redirect("/login")
-        name = (form.get("name") or "").strip()
+        name = (form.get("name") or self.query or "").strip()
         if not name:
-            self.error = "Give the school a name first."
+            self.add_error = "Type the college's full name first."
             return
         tier = form.get("tier") or "target"
+        if tier not in Tier._value2member_map_:
+            tier = "target"
         with db.get_session() as s:
-            s.add(School(user_id=uid, name=name[:120], tier=Tier(tier)))
+            match = catalog.resolve(s, name)
+            if match is None and catalog.is_imported(s):
+                # Not a name the catalogue knows. Saving it anyway is how a
+                # list ends up with "UMich" and no data behind it.
+                options = catalog.suggest(s, name, 6)
+                self.suggestions = options
+                self.added_as = ""
+                self.add_error = (
+                    f"“{name}” isn't a full college name. Pick the one you "
+                    f"mean below." if options else
+                    f"No college called “{name}” was found. Type its full "
+                    f"name, like “University of Michigan-Ann Arbor”.")
+                return
+            full = match.name if match else name
+            mine = s.exec(select(School).where(School.user_id == uid)).all()
+            if any(catalog.loose(x.name) == catalog.loose(full) for x in mine):
+                self.add_error = f"{full} is already on your list."
+                self.suggestions = []
+                return
+            s.add(School(user_id=uid, name=full[:120], tier=Tier(tier)))
             s.commit()
-        self.error = ""
+        self.add_error = ""
+        self.query = ""
+        self.suggestions = []
+        self.added_as = (f"Added as “{full}”."
+                         if catalog.loose(full) != catalog.loose(name) else "")
         self._refresh(uid)
+
+    @rx.event
+    def set_query(self, value: str):
+        """Typing in the add box: offer full names as the student types."""
+        self.query = value
+        self.add_error = ""
+        self.added_as = ""
+        if len(catalog.loose(value)) < 2:
+            self.suggestions = []
+            return
+        with db.get_session() as s:
+            self.suggestions = catalog.suggest(s, value, 6)
+
+    @rx.event
+    def pick(self, name: str):
+        """Fill the box with a suggested full name."""
+        self.query = name
+        self.suggestions = []
+        self.add_error = ""
 
     @rx.event
     def toggle_open(self, school_id: int):

@@ -81,8 +81,6 @@ def meditation_page() -> rx.Component:
                         key=MeditationState.quote_text),
                 rx.box(
                     rx.text(MeditationState.quote_source, class_name="faint"),
-                    rx.spacer(),
-                    rx.text("tap for another", class_name="faint tiny"),
                     style={"display": "flex", "alignItems": "baseline",
                            "gap": "var(--s3)"},
                 ),

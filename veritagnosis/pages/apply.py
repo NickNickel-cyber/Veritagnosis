@@ -150,9 +150,6 @@ def _school(s) -> rx.Component:
                     rx.box(
                         rx.el.label("Round"),
                         rx.el.span(s.round_name, class_name="input ro"),
-                        rx.el.span("Set the round on the Paying for it screen — "
-                                   "it changes when you can compare aid.",
-                                   class_name="faint tiny"),
                         class_name="field",
                     ),
                     rx.box(
@@ -298,9 +295,18 @@ def applications_page() -> rx.Component:
                 rx.box(
                     rx.box(
                         rx.el.label("School"),
-                        rx.el.input(class_name="input", name="name",
-                                    placeholder="Type a college name"),
-                        class_name="field",
+                        # Debounced: a controlled input that round-trips every
+                        # keystroke drops letters when someone types quickly.
+                        rx.debounce_input(
+                            rx.el.input(class_name="input", name="name",
+                                        value=SchoolsState.query,
+                                        on_change=SchoolsState.set_query,
+                                        auto_complete="off",
+                                        placeholder="Full name, e.g. University "
+                                                    "of Michigan-Ann Arbor"),
+                            debounce_timeout=250,
+                        ),
+                        class_name="field school-field",
                     ),
                     rx.box(
                         rx.el.label("Column"),
@@ -315,8 +321,41 @@ def applications_page() -> rx.Component:
                     rx.el.button("Add", class_name="btn btn-primary", type="submit"),
                     class_name="add-row",
                 ),
+                rx.box(
+                    "Write the college's full name, not a nickname: "
+                    "“University of Michigan-Ann Arbor”, not “UMich”.",
+                    class_name="name-rule",
+                ),
+                rx.cond(
+                    SchoolsState.add_error != "",
+                    rx.box(SchoolsState.add_error, class_name="add-error",
+                           role="alert"),
+                    rx.fragment(),
+                ),
+                rx.cond(
+                    SchoolsState.suggestions.length() > 0,
+                    rx.box(
+                        rx.foreach(
+                            SchoolsState.suggestions,
+                            lambda c: rx.el.button(
+                                rx.el.span(c["name"], class_name="sug-name"),
+                                rx.cond(c["state"] != "",
+                                        rx.el.span(c["state"], class_name="sug-st"),
+                                        rx.fragment()),
+                                type="button", class_name="sug",
+                                on_click=SchoolsState.pick(c["name"]),
+                            ),
+                        ),
+                        class_name="sug-list",
+                    ),
+                    rx.fragment(),
+                ),
+                rx.cond(
+                    SchoolsState.added_as != "",
+                    rx.box(SchoolsState.added_as, class_name="added-as"),
+                    rx.fragment(),
+                ),
                 on_submit=SchoolsState.add_school,
-                reset_on_submit=True,
             ),
             class_name="screen-wrap",
         ),
@@ -481,8 +520,6 @@ def _prompt_picker() -> rx.Component:
                 rx.box(
                     rx.box(
                         rx.heading("Choose your prompt", size="4"),
-                        rx.text("You can change this later — it does not delete "
-                                "your draft.", class_name="faint tiny"),
                         class_name="pp-head-text",
                     ),
                     rx.spacer(),
@@ -1300,10 +1337,6 @@ def _row(r) -> rx.Component:
                         rx.text("Add colleges on the applications screen first.",
                                 class_name="faint tiny"),
                     ),
-                    rx.text("Leave them all off and this counts as a general "
-                            "letter that goes everywhere.",
-                            class_name="faint tiny",
-                            style={"marginTop": "var(--s2)"}),
                     style={"marginTop": "var(--s4)"},
                 ),
 

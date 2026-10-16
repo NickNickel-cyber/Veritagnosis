@@ -517,10 +517,6 @@ def _cost(c) -> rx.Component:
                     ),
                     class_name="s-fields",
                 ),
-                rx.text("A net price typed in here wins over the subtraction — "
-                        "it came from a real calculator or a real offer letter.",
-                        class_name="faint tiny",
-                        style={"marginTop": "var(--s3)"}),
                 class_name="s-panel",
             ),
             rx.fragment(),

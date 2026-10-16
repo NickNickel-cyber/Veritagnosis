@@ -85,7 +85,6 @@ def login() -> rx.Component:
             ),
             rx.box(
                 rx.heading("Welcome back", class_name="auth-title"),
-                rx.text("Pick up where you left off.", class_name="auth-sub"),
                 rx.cond(
                     AuthState.verified_just_now,
                     rx.box("You're signed in.",
@@ -113,13 +112,7 @@ def login() -> rx.Component:
                                 class_name="demo-note"),
                         class_name="demo-banner demo-slim",
                     ),
-                    rx.box(
-                        "Every sign-in sends a six-digit code to your email. "
-                        "Your password on its own is never enough to open your "
-                        "account.",
-                        class_name="faint",
-                        style={"marginTop": "var(--s4)"},
-                    ),
+                    rx.fragment(),
                 ),
                 rx.text(
                     rx.el.span("New here? "),
@@ -226,9 +219,6 @@ def signup() -> rx.Component:
                         1,
                         field("Email", "email", "where your code will arrive",
                               type_="email", required=True),
-                        rx.text("We send one six-digit code to confirm it's you. "
-                                "That's the only email you'll get.",
-                                class_name="faint"),
                     ),
 
                     _panel(
@@ -256,9 +246,6 @@ def signup() -> rx.Component:
                             ),
                             class_name="field",
                         ),
-                        rx.text("Both are optional and only used to show you "
-                                "deadlines and scholarships that actually apply.",
-                                class_name="faint"),
                     ),
 
                     rx.box(
@@ -325,12 +312,6 @@ def verify() -> rx.Component:
                     rx.el.strong(AuthState.masked_email),
                     rx.el.span(". It lasts ten minutes and works once."),
                     class_name="calm-sub",
-                ),
-                rx.text(
-                    "This happens every time you sign in — it is what stops a "
-                    "stolen password from being enough.",
-                    class_name="faint",
-                    style={"marginTop": "var(--s2)"},
                 ),
 
                 error_box(AuthState.error),

@@ -180,6 +180,10 @@ def recompute(session: Session, user_id: int, school: School) -> int:
 def recompute_all(session: Session, user_id: int) -> None:
     """Refresh every school. Cheap enough to run on every screen load, which is
     what keeps the numbers honest without anyone maintaining them."""
+    # Nicknames saved before the add box checked names ("UMich") become full
+    # names here, so every screen reads one unambiguous college.
+    from veritagnosis.services import catalog
+    catalog.tidy_names(session, user_id)
     for school in session.exec(
             select(School).where(School.user_id == user_id)).all():
         recompute(session, user_id, school)

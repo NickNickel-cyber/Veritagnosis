@@ -584,6 +584,10 @@ class Fit:
     confidence: str
     caveats: list[str]
     has_data: bool
+    # Which row this is, and — when the name was not recognised — the full
+    # names it might be, so the screen can offer a one-tap fix.
+    school_id: int = 0
+    suggestions: list[str] = dataclasses.field(default_factory=list)
 
     @property
     def disagrees(self) -> bool:
@@ -722,10 +726,12 @@ def for_school(school: School, stats: dict, session: Session | None = None) -> F
     student_tier = school.tier.value if hasattr(school.tier, "value") else str(school.tier)
 
     if entry is None:
+        options = [c["name"] for c in catalog.suggest(session, school.name or "", 3)]
         return Fit(school_name=school.name, student_tier=student_tier,
                    data_tier=None, standings=[], accept_rate=None,
                    cost_year=None, data_year="", source_url="",
-                   confidence="", caveats=[], has_data=False)
+                   confidence="", caveats=[], has_data=False,
+                   school_id=school.id or 0, suggestions=options)
 
     tier, why = classify(entry, stats)
 
@@ -753,6 +759,7 @@ def for_school(school: School, stats: dict, session: Session | None = None) -> F
         confidence=entry.get("confidence", ""),
         caveats=[c for c in caveats if c],
         has_data=True,
+        school_id=school.id or 0,
     )
 
 
@@ -765,6 +772,9 @@ def review(uid: int) -> dict:
     """
     stats = student_stats(uid)
     with db.get_session() as s:
+        # Nicknames saved before names were checked become full names first,
+        # so a list holding "UMich" is measured as Michigan, not as no data.
+        catalog.tidy_names(s, uid)
         schools = list(s.exec(select(School).where(School.user_id == uid)).all())
 
     with db.get_session() as s:
