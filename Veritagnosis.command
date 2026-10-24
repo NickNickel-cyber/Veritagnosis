@@ -10,7 +10,6 @@
 #  Options, if you ever want them:
 #      ./Veritagnosis.command dev     reload automatically while editing
 #      ./Veritagnosis.command reset   rebuild the web page from scratch
-#      ./Veritagnosis.command test    run the test suite
 #
 #  Windows users: use Veritagnosis.bat instead.
 # ===================================================================

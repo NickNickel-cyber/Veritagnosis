@@ -14,7 +14,6 @@ the app every day.
     python start.py --dev      start with hot reload (for editing the code)
     python start.py --reset    rebuild the web frontend from scratch
     python start.py --check    set everything up, verify it, and stop
-    python start.py --test     run the test suite
 
 Most people never type this. Double-clicking Veritagnosis.bat on Windows or
 Veritagnosis.command on macOS runs exactly the same thing.
@@ -144,7 +143,7 @@ def ensure_venv() -> None:
 def deps_fingerprint() -> str:
     """Contents of the requirement files, so any edit forces a reinstall."""
     parts = []
-    for name in ("requirements.txt", "requirements-dev.txt"):
+    for name in ("requirements.txt",):
         f = ROOT / name
         parts.append(f.read_text(encoding="utf-8") if f.exists() else "")
     return str(hash("".join(parts)))
@@ -170,9 +169,9 @@ def reflex_imports() -> bool:
     ).returncode == 0
 
 
-def ensure_deps(dev: bool) -> None:
-    req = "requirements-dev.txt" if dev else "requirements.txt"
-    want = deps_fingerprint() + ("+dev" if dev else "")
+def ensure_deps() -> None:
+    req = "requirements.txt"
+    want = deps_fingerprint()
     have = STAMP.read_text(encoding="utf-8").strip() if STAMP.exists() else ""
 
     if have != want or not reflex_imports():
@@ -286,7 +285,6 @@ def start_app(dev: bool) -> int:
 def main() -> int:
     args = {a.lstrip("-").lower() for a in sys.argv[1:]}
     dev = "dev" in args
-    want_tests = "test" in args or "tests" in args
     check_only = "check" in args
 
     say()
@@ -302,7 +300,7 @@ def main() -> int:
     ensure_venv()
 
     step(3, total, "checking dependencies")
-    ensure_deps(dev=dev or want_tests or check_only)
+    ensure_deps()
 
     if "reset" in args:
         say("      clearing the web build so it is made fresh")
@@ -312,11 +310,6 @@ def main() -> int:
     step(4, total, "checking your keys and database")
     ensure_keys_and_db()
     clear_stale_state()
-
-    if want_tests:
-        say()
-        return subprocess.run([str(venv_python()), "-m", "pytest", "-q"],
-                              cwd=ROOT).returncode
 
     if check_only:
         say()

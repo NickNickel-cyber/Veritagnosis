@@ -8,7 +8,6 @@ REM
 REM  Options, if you ever want them:
 REM      Veritagnosis.bat dev     reload automatically while editing code
 REM      Veritagnosis.bat reset   rebuild the web page from scratch
-REM      Veritagnosis.bat test    run the test suite
 REM
 REM  macOS users: use Veritagnosis.command instead.
 REM ===================================================================

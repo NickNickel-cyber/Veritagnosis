@@ -44,8 +44,8 @@ then double-click as normal.
 
 ### Other things the launcher can do
 
-Pass these after the file name (`Veritagnosis.bat test`, or
-`./Veritagnosis.command test`):
+Pass these after the file name (`Veritagnosis.bat reset`, or
+`./Veritagnosis.command reset`):
 
 | option | what it does |
 |---|---|
@@ -53,7 +53,6 @@ Pass these after the file name (`Veritagnosis.bat test`, or
 | `dev` | Hot reload, for editing the code. |
 | `reset` | Rebuild the web page from scratch. Try this if it looks wrong. |
 | `check` | Set everything up, verify it, and stop without starting. |
-| `test` | Run the test suite. |
 
 Under the hood all of these run `start.py`, which is where the actual logic
 lives — the two launchers are a handful of lines each so that Windows and Mac
@@ -294,9 +293,6 @@ Veritagnosis/
 ├── scripts/
 │   └── manage.py            init-keys, init-db, demo-user, check
 │
-├── tests/
-│   └── test_security.py     27 tests
-│
 └── veritagnosis/            the app package
     ├── __init__.py
     ├── veritagnosis.py      app entry; registers pages
@@ -354,13 +350,12 @@ anything drops below WCAG AA.** Hand-picked hexes usually miss.
 
 ## Security
 
-See [SECURITY.md](SECURITY.md). Short version: Argon2id passwords, AES-256-GCM
+Short version: Argon2id passwords, AES-256-GCM
 on sensitive columns, hashed session tokens with expiry and lockout, secrets
-from `.env` with a fail-fast config, mandatory two-factor sign-in, and 466
-tests including one that greps the raw database file for plaintext.
+from `.env` with a fail-fast config, and mandatory two-factor sign-in. The
+details are below.
 
 ```
-./Veritagnosis.command test
 python scripts/manage.py check
 ```
 
@@ -470,7 +465,7 @@ used on `email` and never on `gender` or `age`.
 - **No account enumeration.** Unknown username and wrong password return the
   identical message. When the username does not exist, `dummy_verify()` burns
   the same CPU and memory as a real check, so response time does not give it
-  away either. There is a test that measures this.
+  away either.
 - **Session tokens**: 256 bits from `secrets.token_urlsafe`, stored as SHA-256
   only. A database leak cannot be replayed as a live session. (SHA-256 rather
   than Argon2 here on purpose: slow hashing exists to make *guessable* secrets
@@ -551,23 +546,6 @@ Two rules:
    says this in its own README: page-level guards still ship the page source.
    Private data must be fetched inside an event handler that checks the
    authenticated user, then assigned to a var.
-
----
-
-### Tests — `tests/test_security.py`
-
-27 tests. The ones worth knowing about assert on *absence*:
-
-- `test_sensitive_values_are_not_readable_in_the_db_file` opens the `.db` as raw
-  bytes and confirms the email, gender, GPA and password are not sitting in it.
-- `test_audit_log_holds_no_secrets` confirms no password, token, or encrypted
-  value reached the audit table.
-- `test_unknown_user_takes_comparable_time` guards the timing defence.
-
-```
-python -m pytest tests/ -q
-python scripts/manage.py check
-```
 
 ---
 
