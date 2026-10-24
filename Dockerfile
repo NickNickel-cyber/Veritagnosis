@@ -50,6 +50,12 @@ VOLUME ["/app/data"]
 USER app
 EXPOSE 8000
 
+# Inside a container the server must listen on every interface, or the
+# published port reaches nothing. On a laptop rxconfig.py defaults to
+# 127.0.0.1 instead, so a downloaded copy is never visible to the rest of the
+# network. VG_ORIGIN still has to be set to the site's real address at run time.
+ENV VG_HOST=0.0.0.0
+
 # No shell form: signals reach the process directly so the container stops
 # cleanly and SQLite gets to checkpoint its WAL.
 CMD ["python", "-m", "reflex", "run", "--env", "prod", "--backend-port", "8000"]

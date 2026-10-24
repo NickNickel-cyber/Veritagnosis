@@ -72,8 +72,22 @@ CORS_ORIGINS = _origins or [
     "http://127.0.0.1:8000",
 ]
 
+# Which network interface the server listens on.
+#
+# Reflex listens on 0.0.0.0 unless told otherwise, which means every device on
+# the same Wi-Fi can reach the app running on a student's laptop: a school or
+# library network full of strangers, talking to a server that holds essays and
+# GPAs. Nobody running it from a downloaded copy needs that, so the default is
+# 127.0.0.1 — this computer only. The page opens exactly as before, at
+# http://localhost:3000.
+#
+# A real deployment (the Dockerfile, a hosting service) has to listen on every
+# interface and sets VG_HOST=0.0.0.0 itself, together with VG_ORIGIN.
+BACKEND_HOST = os.environ.get("VG_HOST", "").strip() or "127.0.0.1"
+
 config = rx.Config(
     app_name="veritagnosis",
+    backend_host=BACKEND_HOST,
     db_url=os.environ.get("VG_DB_URL", _DB_URL),
     cors_allowed_origins=CORS_ORIGINS,
     # Declared explicitly: implicit Radix enablement is deprecated in 0.9 and

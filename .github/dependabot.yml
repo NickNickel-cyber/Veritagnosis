@@ -1,0 +1,16 @@
+# Opens a pull request when a pinned dependency or a GitHub Action used by the
+# build has a security fix. Nothing changes until such a pull request is
+# reviewed and merged, so the app keeps running the exact versions it was
+# tested with.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

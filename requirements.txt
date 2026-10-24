@@ -13,9 +13,9 @@
 # precise thing that went missing, and an explicit pin makes a partial or
 # interrupted install visible to pip instead of at startup.
 #
-# To move to a newer Reflex: change the versions here, run the test suite
-# (python -m pytest), and run `python start.py` once to confirm the frontend
-# still builds. Do not loosen the pins.
+# To move to a newer Reflex: change the versions here and run
+# `python start.py` once to confirm the frontend still builds and the app
+# works. Do not loosen the pins.
 
 # --- app framework ---
 reflex==0.9.9

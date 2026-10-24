@@ -622,6 +622,7 @@ reflex login                 # opens a browser, free account
 reflex deploy \
   --env VG_FIELD_KEY="<the value from .env>" \
   --env VG_INDEX_KEY="<the value from .env>" \
+  --env VG_HOST="0.0.0.0" \
   --env VG_ORIGIN="https://<the-url-it-gives-you>"
 ```
 
@@ -670,6 +671,7 @@ Two things that matter on any host:
 | `VG_FIELD_KEY` | yes | Encrypts GPA, scores, age, gender, essays, aid figures |
 | `VG_INDEX_KEY` | yes | Derives blind indexes so encrypted email stays searchable |
 | `VG_ORIGIN` | **in production** | Which origins may open a websocket. Comma-separated. Defaults to localhost only — set it to your real URL |
+| `VG_HOST` | **in production** | Which network interface to listen on. Defaults to `127.0.0.1`, so a copy running on a laptop is invisible to the rest of the Wi-Fi. A hosted copy needs `0.0.0.0` (the Dockerfile sets it) |
 | `VG_DB_URL` | no | Defaults to `sqlite:///data/veritagnosis.db` |
 | `VG_DEBUG` | no | Leave unset. `1` turns on SQL echo |
 | `VG_SMTP_USER` / `VG_SMTP_PASSWORD` | no | Email verification codes. Without them, signup still works but no code is sent |

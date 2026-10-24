@@ -106,10 +106,14 @@ def demo_user():
         try:
             user = auth.register(s, "demo", pw, email="demo@example.com",
                                  age="17", gender="unspecified")
+            # Read inside the session: once it closes the row is detached and
+            # touching user.id raised DetachedInstanceError, which hid the
+            # one-time password the account had just been created with.
+            uid = user.id
         except auth.RegistrationError as e:
             print(f"Could not create demo user: {e}")
             return 1
-    print(f"username: demo\npassword: {pw}\nuser id:  {user.id}")
+    print(f"username: demo\npassword: {pw}\nuser id:  {uid}")
     print("Shown once. It is hashed with Argon2id and cannot be recovered.")
     return 0
 
