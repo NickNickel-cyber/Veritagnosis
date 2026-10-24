@@ -38,6 +38,20 @@ class Badge:
     percent: int
 
 
+def full_sentences(text: str) -> int:
+    """Finished sentences: at least three words and closing punctuation.
+
+    "Hi." is not a first sentence and neither is half a thought still being
+    typed, so the first-sentence checkpoint waits for a real one.
+    """
+    n = 0
+    for _, _, sent in prose.sentences(text or ""):
+        t = sent.strip()
+        if t[-1:] in ".!?" and len(prose.words(t)) >= 3:
+            n += 1
+    return n
+
+
 def gather(session: Session, user_id: int) -> dict:
     """Everything the achievement list can ask about, computed from real rows."""
     user = session.get(User, user_id)
@@ -47,9 +61,11 @@ def gather(session: Session, user_id: int) -> dict:
     words = 0
     best = 0
     polished = 0
+    sentences = 0
     for e in essays:
         body = e.body or ""
         words += len(prose.words(body))
+        sentences += full_sentences(body)
         s = prose.score(body)
         best = max(best, s)
         if s >= 70:
@@ -96,6 +112,7 @@ def gather(session: Session, user_id: int) -> dict:
         "break_minutes": sum(b.minutes for b in breaks_),
         "essays": len(essays),
         "essay_words": words,
+        "essay_sentences": sentences,
         "essay_best": best,
         "essay_polished": polished,
         "essay_finished": sum(1 for e in essays if e.done),

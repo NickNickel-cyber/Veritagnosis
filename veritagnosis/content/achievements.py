@@ -42,6 +42,7 @@ CATEGORIES = [
 # stat keys available to `requires` — see services/achievements.gather():
 #   essays            drafts started
 #   essay_words       total words written across all drafts
+#   essay_sentences   finished sentences (3+ words, end punctuation) across drafts
 #   essay_best        best coach score on any draft
 #   essay_polished    drafts scoring 70 or better
 #   essay_finished    drafts marked done
@@ -73,6 +74,10 @@ ACHIEVEMENTS = [
     {"key": "a_first_school", "cat": "start", "title": "First college",
      "blurb": "Add any college to your list. You can change it later.",
      "requires": {"schools": 1}, "icon": "🎓", "xp": 20},
+
+    {"key": "a_first_sentence", "cat": "start", "title": "First sentence",
+     "blurb": "Write your first full sentence in the Essay Lab.",
+     "requires": {"essay_sentences": 1}, "icon": "🌱", "xp": 15},
 
     {"key": "a_first_words", "cat": "start", "title": "Blank page beaten",
      "blurb": "Write your first 100 words. They're the hardest ones.",

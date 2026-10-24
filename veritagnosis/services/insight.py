@@ -23,7 +23,7 @@ from veritagnosis.models import (
     utcnow,
 )
 from veritagnosis.content.colleges import BY_NAME, COLLEGES
-from veritagnosis.services import catalog
+from veritagnosis.services import activities, catalog
 from veritagnosis.models import School, TestScore, Tier, User
 import json
 from datetime import timedelta
@@ -102,7 +102,8 @@ def assess(uid: int) -> ReadinessResult:
     }
 
     blind_spots = _detect_blind_spots(user, schools, essays, recs)
-    next_steps = _rank_next_steps(academic, extracurricular, college_fit, app_progress, financial)
+    next_steps = _rank_next_steps(academic, extracurricular, college_fit, app_progress,
+                                  financial, _activity_rows(user))
 
     # Whole numbers, always. One of the scorers works in fractions, and a
     # float leaking out of here reached an int field on the profile screen
@@ -170,27 +171,27 @@ def _assess_academic(user: User, scores: list[TestScore]) -> int:
     return test_points if test_points > 0 else 50
 
 
+def _activity_rows(user: User) -> list[dict]:
+    """The activities on the student's profile. An unreadable profile is the
+    same as an empty one here: the profile screen says so and offers a fix."""
+    try:
+        return activities.parse(user.profile_data)
+    except Exception:                                          # noqa: BLE001
+        return []
+
+
 def _assess_extracurricular(
     user: User, recs: list[Recommender], checkpoints: list[CheckpointProgress]
 ) -> int:
-    """Leadership, sustained commitment, achievement milestones.
+    """The student's activities: intensity, years, leadership, and what the
+    names say about them. See services/activities.py for every rule.
 
-    Scoring:
-      - Recommender count = leadership asked for (0 = 0pts, 1-2 = 30pts, 3+ = 60pts)
-      - Checkpoint count = sustained commitment (20pts per checkpoint reached, capped at 100)
-      - Leadership flag in profile = 20pts (future expansion)
+    This used to be recommenders and app checkpoints, which measured how much
+    of this app had been used rather than anything a college would read.
+    `recs` and `checkpoints` are still accepted so callers need not change;
+    recommenders count under Applications instead.
     """
-    rec_points = 0
-    if len(recs) >= 3:
-        rec_points = 60
-    elif len(recs) >= 1:
-        rec_points = 30
-
-    # Checkpoints = work done: each one signals effort and follow-through
-    # 24 total checkpoints; at 20pts each, 5 = 100%
-    checkpoint_points = min(100, len(checkpoints) * 20)
-
-    return (rec_points + checkpoint_points) // 2
+    return activities.score(_activity_rows(user))
 
 
 def _assess_college_fit(schools: list[School]) -> int:
@@ -333,17 +334,8 @@ def _explain_academic(user: User, scores: list[TestScore]) -> str:
 def _explain_extracurricular(
     user: User, recs: list[Recommender], checkpoints: list[CheckpointProgress]
 ) -> str:
-    """Plain-English explanation of extracurricular score."""
-    ach_str = f"You've reached {_plural(len(checkpoints), 'checkpoint')}"
-
-    if len(recs) == 0:
-        return (f"{ach_str}, but you haven't asked anyone for a recommendation "
-                f"yet. Now's a good time.")
-    elif len(recs) == 1:
-        return (f"{ach_str} and have one recommender lined up. Many colleges "
-                f"ask for two.")
-    else:
-        return f"{ach_str} and have {len(recs)} recommenders lined up."
+    """Plain-English explanation of the activities score."""
+    return activities.explain(_activity_rows(user))
 
 
 def _explain_college_fit(schools: list[School]) -> str:
@@ -474,7 +466,21 @@ def _detect_blind_spots(
             }
         )
 
-    # Blind spot 4: No recommendations sought
+    # Blind spot 4: No activities on the profile
+    if not _activity_rows(user):
+        spots.append(
+            {
+                "icon": "🏅",
+                "title": "No activities on your profile yet",
+                "why": ("Clubs, sports, jobs, volunteering and anything else you "
+                        "put real time into all count. So does leading any of "
+                        "them."),
+                "action": "Add your activities",
+                "impact": "Extracurricular",
+            }
+        )
+
+    # Blind spot 5: No recommendations sought
     if len(recs) == 0:
         spots.append(
             {
@@ -483,11 +489,11 @@ def _detect_blind_spots(
                 "why": ("Many colleges ask for teacher letters, and teachers need "
                         "a few weeks' notice to write a good one."),
                 "action": "Ask a teacher this week",
-                "impact": "Extracurricular",
+                "impact": "Application Progress",
             }
         )
 
-    # Blind spot 5: No financial planning
+    # Blind spot 6: No financial planning
     costs = sum(1 for s in schools if s.sticker)
     if costs == 0 and schools:
         spots.append(
@@ -511,7 +517,8 @@ def _detect_blind_spots(
 
 
 def _rank_next_steps(
-    academic: int, extracurricular: int, college_fit: int, app_progress: int, financial: int
+    academic: int, extracurricular: int, college_fit: int, app_progress: int, financial: int,
+    activity_rows: list[dict] | None = None,
 ) -> list[str]:
     """Rank next steps by impact on readiness.
 
@@ -540,7 +547,7 @@ def _rank_next_steps(
     if lowest == "academic" and academic < 70:
         steps.append("Add your GPA and any test scores you have")
     elif lowest == "extracurricular" and extracurricular < 70:
-        steps.append("Ask a teacher for a recommendation")
+        steps.append(activities.tip(activity_rows or []))
     elif lowest == "college_fit" and college_fit < 70:
         steps.append("Add a few more colleges to your list")
     elif lowest == "application_progress" and app_progress < 70:
@@ -554,7 +561,9 @@ def _rank_next_steps(
         if second == "college_fit":
             steps.append("Look into a few more colleges")
         elif second == "application_progress":
-            steps.append("Line up another recommendation letter")
+            steps.append("Line up a teacher recommendation")
+        elif second == "extracurricular":
+            steps.append(activities.tip(activity_rows or []))
         elif second == "financial_readiness":
             steps.append("File your FAFSA")
 

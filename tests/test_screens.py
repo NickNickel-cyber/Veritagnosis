@@ -1150,6 +1150,17 @@ def _typing_double():
             self.dirty = False
             return True
 
+        # The writing-checkpoint hooks set_body now calls. Ending a sentence is
+        # what triggers them, so none of the typing below does.
+        _writing_mark = ""
+        checked = []
+
+        def _crossed_mark(self, text):
+            return False
+
+        async def _check_writing_checkpoints(self, text):
+            self.checked.append(text)
+
     return _Fake(), saves
 
 

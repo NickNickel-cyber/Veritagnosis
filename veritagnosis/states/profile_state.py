@@ -21,7 +21,7 @@ from sqlmodel import select
 from veritagnosis import db
 from veritagnosis.models import School, TestScore, User
 from veritagnosis.crypto import DecryptionError
-from veritagnosis.services import catalog
+from veritagnosis.services import activities as activity_svc, catalog
 from veritagnosis.services import insight as fit_svc
 from veritagnosis.services import insight as readiness_svc
 from veritagnosis.states.base import FeatureState
@@ -85,6 +85,18 @@ class ProfileState(FeatureState, rx.State):
     # Held as a typed list so rx.foreach can walk it in the page; it is
     # serialised into the JSON column on save.
     extracurriculars: list[dict[str, str]] = []
+
+    @rx.var(deps=["extracurriculars"])
+    def ec_rows(self) -> list[dict[str, str]]:
+        """The activities as the page shows them, each with what it scored
+        and why ("intense +15 · 3 years +6 · “captain” +10"), so a student can
+        see exactly which words and choices moved their readiness."""
+        out = []
+        for r in self.extracurriculars:
+            sc = activity_svc.score_one(r)
+            out.append({**r, "points": str(sc.points),
+                        "signals": " · ".join(sc.signals)})
+        return out
 
     app_deadline: str = ""          # "2026-01-15"
     target_schools_count: int = 5
@@ -210,6 +222,7 @@ class ProfileState(FeatureState, rx.State):
         self.new_ec_years = "1"
         self.form_epoch += 1      # clear the inputs, deliberately
         self.saved_msg = ""
+        return ProfileState.store_activities
 
     @rx.event
     def remove_extracurricular(self, index: int):
@@ -218,6 +231,7 @@ class ProfileState(FeatureState, rx.State):
             rows.pop(index)
             self.extracurriculars = rows
             self.saved_msg = ""
+            return ProfileState.store_activities
 
     @rx.event
     def toggle_leadership(self, index: int):
@@ -228,8 +242,21 @@ class ProfileState(FeatureState, rx.State):
             )
             self.extracurriculars = rows
             self.saved_msg = ""
+            return ProfileState.store_activities
 
     # -- persistence -------------------------------------------------------
+
+    @rx.event
+    async def store_activities(self):
+        """Activities save the moment they change, and the readiness numbers
+        above move with them. Waiting for "Save profile" meant adding a
+        captaincy did nothing visible, which reads as the feature not working.
+        """
+        uid = await self._user_id()
+        if uid is None:
+            return rx.redirect("/login")
+        self._write_profile(uid)
+        self._analyse(uid)
 
     @rx.event
     async def load(self):
@@ -549,20 +576,25 @@ class ProfileState(FeatureState, rx.State):
         if uid is None:
             return rx.redirect("/login")
 
+        self._write_profile(uid)
+        self.saved_msg = "Saved ✓"
+        # The readiness numbers read the profile, so they change with it.
+        self._analyse(uid)
+
+    def _write_profile(self, uid: int) -> None:
         blob = json.dumps({
             "career_interest": self.career_interest,
             "major_preference": self.major_preference,
-            "extracurriculars": list(self.extracurriculars),
+            "extracurriculars": [
+                {k: str(r.get(k, "")) for k in ("name", "intensity", "years", "leadership")}
+                for r in self.extracurriculars],
             "app_deadline": self.app_deadline,
             "target_schools_count": self.target_schools_count,
             "priority": self.priority,
         })
-
         with db.get_session() as s:
             user = s.get(User, uid)
             if user:
                 user.profile_data = blob
                 s.add(user)
                 s.commit()
-
-        self.saved_msg = "Saved ✓"

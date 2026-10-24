@@ -114,27 +114,28 @@ def test_academic_score_requires_gpa_or_test():
         assert r2_academic > 50
 
 
-def test_extracurricular_score_rewards_checkpoints():
-    """Each checkpoint reached = 20 points, capped at 100."""
+def test_extracurricular_score_comes_from_activities_not_app_use():
+    """Checkpoints measure how much of this app was used, which no college
+    reads. The Activities score is built from the profile's activities."""
+    import json
     user = User(username=_unique_username("test_checkpoints"), password_hash="x")
     with db.get_session() as s:
         s.add(user)
         s.commit()
         s.refresh(user)
-
-        # Add 3 checkpoints
         for i in range(3):
             s.add(CheckpointProgress(user_id=user.id, checkpoint_key=f"a_test_{i}"))
         s.commit()
-
         checkpoints = s.exec(
             select(CheckpointProgress).where(CheckpointProgress.user_id == user.id)
         ).all()
 
-    score = _assess_extracurricular(user, [], checkpoints)
-    # 3 checkpoints * 20 = 60, but it's capped at 100 and averaged
-    # (0 recs + 60 checkpoints) / 2 = 30
-    assert score >= 25 and score <= 60
+    assert _assess_extracurricular(user, [], checkpoints) == 0
+
+    user.profile_data = json.dumps({"extracurriculars": [
+        {"name": "Varsity soccer captain", "intensity": "intense",
+         "years": "3", "leadership": "no"}]})
+    assert _assess_extracurricular(user, [], checkpoints) > 30
 
 
 def test_college_fit_zero_schools():

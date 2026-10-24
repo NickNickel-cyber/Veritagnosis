@@ -334,6 +334,7 @@ def _ec_row(ec, index) -> rx.Component:
             rx.el.strong(ec["name"]),
             rx.box(ec["intensity"] + " · " + ec["years"] + " yr",
                    class_name="faint"),
+            rx.box(ec["signals"], class_name="ec-signals"),
             style={"flex": "1", "minWidth": "0"},
         ),
         rx.el.button(
@@ -342,6 +343,9 @@ def _ec_row(ec, index) -> rx.Component:
             custom_attrs={"aria-selected": rx.cond(is_lead, "true", "false")},
             on_click=ProfileState.toggle_leadership(index),
         ),
+        rx.box(ec["points"], rx.el.span(" pts", class_name="faint"),
+               class_name="ec-points",
+               custom_attrs={"title": "What this activity adds to your Activities score"}),
         rx.el.button("Remove", type="button", class_name="btn btn-ghost",
                      on_click=ProfileState.remove_extracurricular(index)),
         style={"display": "flex", "alignItems": "center", "gap": "var(--s3)",
@@ -372,7 +376,7 @@ def _details() -> rx.Component:
 
         rx.box(
             rx.el.label("What do you spend time on?"),
-            rx.box(rx.foreach(ProfileState.extracurriculars, _ec_row),
+            rx.box(rx.foreach(ProfileState.ec_rows, _ec_row),
                    style={"display": "flex", "flexDirection": "column",
                           "gap": "var(--s2)", "margin": "var(--s2) 0"}),
             rx.box(
@@ -386,6 +390,7 @@ def _details() -> rx.Component:
                 rx.box(
                     rx.el.input(class_name="input", type="number", min="1",
                                 max="6", default_value=ProfileState.new_ec_years,
+                                key="ecy-" + ProfileState.form_epoch.to_string(),
                                 on_change=ProfileState.set_new_ec_years),
                     class_name="field", style={"flex": "1", "minWidth": "80px"},
                 ),

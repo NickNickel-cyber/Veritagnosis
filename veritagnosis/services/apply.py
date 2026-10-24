@@ -495,36 +495,62 @@ def next_task(session: Session, user_id: int) -> Task:
                     step.hint if step else f"{s.progress}% done. See what's left",
                     step.route if step else "/applications")
 
-    # 3. An essay that has not been started.
+    # 3 and 4 read the essay a school actually gets, by the same rule as
+    # milestones(): its own essay if it has one, otherwise the general draft.
+    #
+    # This used to look only at essays linked to a school. The Essay Lab
+    # writes one general draft with no school attached, so every school
+    # counted as unstarted forever: the home screen said "Blank page" to a
+    # student with four hundred words written.
     essays = list(session.exec(
         select(Essay).where(Essay.user_id == user_id)).all())
     by_school = {e.school_id: e for e in essays if e.school_id}
-    blank = [s for s in live
-             if word_count(by_school.get(s.id).body if by_school.get(s.id) else None) == 0]
-    if blank:
-        # Soonest deadline first; an undated school is less urgent than a dated one.
-        blank.sort(key=lambda s: (days_left(s) is None, days_left(s) or 9999))
-        s = blank[0]
-        due = deadline_phrase(s)
-        return Task(f"Start your {s.name} essay",
-                    "Blank page. Just get something down"
-                    + (f" · {due}" if s.deadline else ""),
-                    "/essays")
+    general = [e for e in essays if not e.school_id]
+    # The draft the Essay Lab opens: the one touched most recently.
+    main = max(general, key=lambda e: e.updated_at or e.created_at) if general else None
 
-    # 4. An essay that is under its own word target.
+    def essay_for(s: School) -> Essay | None:
+        return by_school.get(s.id) or main
+
+    def label(s: School) -> str:
+        """"your Rutgers essay" for a school's own essay, "your essay" for the
+        general one, which goes to every school on the list."""
+        return f"your {s.name} essay" if s.id in by_school else "your essay"
+
+    by_deadline = sorted(live, key=lambda x: (days_left(x) is None, days_left(x) or 9999))
+
+    # 3. An essay that has not been started.
+    for s in by_deadline:
+        e = essay_for(s)
+        if word_count(e.body if e else None) == 0:
+            d = days_left(s)
+            when = (None if d is None or d < 0 else "today" if d == 0
+                    else "tomorrow" if d == 1 else f"in {d} days")
+            due = ""
+            if when:
+                due = (f" · due {when}" if s.id in by_school
+                       else f" · {s.name} is due {when}")
+            return Task(f"Start {label(s)}",
+                        "Blank page. Just get something down" + due, "/essays")
+
+    # 4. An essay that is under its own word target. One task per essay, not
+    # per school: the general draft is one piece of writing however many
+    # schools it goes to.
     short = []
-    for s in live:
-        e = by_school.get(s.id)
-        if e is None:
+    counted: set[int] = set()
+    for s in by_deadline:
+        e = essay_for(s)
+        if e is None or e.id in counted:
             continue
+        counted.add(e.id)
         n = word_count(e.body)
         target = e.word_target or 650
         if 0 < n < target:
             short.append((target - n, s, n, target))
     if short:
-        short.sort()
+        short.sort(key=lambda t: t[0])
         left, s, n, target = short[0]
-        return Task(f"Keep going on your {s.name} essay",
+        return Task(f"Keep going on {label(s)}",
                     f"{n} of {target} words, {left} to go", "/essays")
 
     # 5. Letters, which nobody asks for until it is too late.

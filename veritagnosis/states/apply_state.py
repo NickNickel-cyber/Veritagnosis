@@ -563,6 +563,11 @@ class EssayState(FeatureState, rx.State):
     dirty: bool = False
     saved_at: str = ""
     just_earned: str = ""
+    # Where this draft stood the last time checkpoints were checked: (has a
+    # finished sentence, how many writing thresholds it has passed). Checked
+    # again only when that changes, so typing does not run the whole
+    # achievement scan on every autosave.
+    _writing_mark: str = ""
 
     versions: list[VersionRow] = []
 
@@ -960,6 +965,7 @@ class EssayState(FeatureState, rx.State):
             self.essay_id = row.id
             self.prompt = row.prompt
             self.body = row.body or ""
+            self._writing_mark = self._mark_for(self.body)
             self.step = row.step
             self.done = row.done
             self.reaction = row.reaction or ""
@@ -1120,12 +1126,44 @@ class EssayState(FeatureState, rx.State):
         self.flash = ""
         self.last_applied = ""
         self.dirty = True
-        if abs(len(value) - self.analysed_len) >= 40:
+        if abs(len(value) - self.analysed_len) >= 40 or self._crossed_mark(value):
             self._analyse()
             # A failure here is a sign-out mid-draft. Say nothing and leave
             # dirty set: the blur handler and the Save button both try again,
             # and the text is still in the box either way.
-            await self._persist()
+            if await self._persist():
+                await self._check_writing_checkpoints(value)
+
+    # The word counts the writing checkpoints are set at. A draft crossing one
+    # of these, or finishing its first sentence, is the moment to look.
+    _WORD_MARKS = (100, 300, 650, 2000)
+
+    def _mark_for(self, text: str) -> str:
+        has_sentence = achievements.full_sentences(text) > 0
+        n = len(prose.words(text or ""))
+        passed = sum(1 for m in self._WORD_MARKS if n >= m)
+        return f"{int(has_sentence)}:{passed}"
+
+    def _crossed_mark(self, text: str) -> bool:
+        """True the moment a sentence is finished or a word mark is passed,
+        even if fewer than 40 characters were typed since the last save.
+        The cheap test only runs when the text just ended a sentence."""
+        if not text or text.rstrip()[-1:] not in ".!?":
+            return False
+        return self._mark_for(text) != self._writing_mark
+
+    async def _check_writing_checkpoints(self, text: str) -> None:
+        mark = self._mark_for(text)
+        if mark == self._writing_mark:
+            return
+        self._writing_mark = mark
+        uid = await self._user_id()
+        if uid is None:
+            return
+        with db.get_session() as s:
+            new = achievements.award(s, uid)
+        if new:
+            self.just_earned = new[0]["title"]
 
     # ---------------------------------------------------------------- fixes
     @rx.event

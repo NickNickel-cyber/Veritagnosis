@@ -2866,3 +2866,9 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 .danger-zone{display:grid;gap:var(--s3);margin-top:var(--s3)}
 .danger-zone .input{max-width:320px}
 .danger-actions{display:flex;gap:var(--s3);flex-wrap:wrap;margin-top:var(--s2)}
+
+/* Activities: what each one scored, so the readiness number is never a mystery. */
+.ec-signals{font-size:var(--fs-xs,12px);color:var(--accent-ink,var(--accent));margin-top:2px;
+  overflow-wrap:anywhere}
+.ec-points{flex:none;font-weight:800;font-size:var(--fs-lg);color:var(--accent-ink,var(--accent));
+  min-width:56px;text-align:right}
