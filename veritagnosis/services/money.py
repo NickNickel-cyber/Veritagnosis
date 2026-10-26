@@ -1,9 +1,3 @@
-"""
-Paying for it: the Student Aid Index model, Pell, what colleges
-would actually cost this family, and the aid paperwork.
-
-Merged from: fafsa, aid.
-"""
 from __future__ import annotations
 
 import dataclasses
@@ -13,9 +7,7 @@ from veritagnosis.content import aid as content
 from veritagnosis.models import AidTask, School, Scholarship, utcnow
 
 
-# ====================================================================
 # fafsa
-# ====================================================================
 
 PELL_MAX = 7395          # 2026-27 award year
 PELL_MIN = 740           # 10% of the maximum, rounded to the nearest $5
@@ -31,9 +23,6 @@ FPL_STEP = 5500
 # student. Single-parent households get the more generous line.
 MAX_PELL_FPL = {"single": 2.25, "two": 1.75}
 MIN_PELL_FPL = {"single": 3.25, "two": 2.75}
-
-# --------------------------------------------------------------- simplified
-# Everything below this line is an approximation of the federal formula.
 
 # Income the family is not expected to touch, by household size. The real
 # table is finer; this is the shape of it.
@@ -76,9 +65,6 @@ def income_protection(household: int) -> int:
 
 
 def _assess(available: float) -> float:
-    """Walk the progressive bands. Only what is above each band is taxed at
-    the next rate, which is why a raise never costs a family more than it
-    gains — a thing people genuinely fear and should not."""
     if available <= 0:
         return 0.0
     total, last = 0.0, 0
@@ -120,28 +106,10 @@ class Result:
 
 
 def student_aid_index(h: Household) -> Result:
-    """The whole calculation, with its parts kept separate.
-
-    The parts are returned rather than just the total because the parts are
-    the lesson: seeing that the asset contribution is a few hundred dollars
-    while the income contribution is several thousand is what corrects the
-    belief that savings are what disqualify you.
-    """
     # --- parents' income
     allowances = income_protection(h.household) + h.income * TAX_ALLOWANCE_RATE
     available = max(0.0, h.income - allowances)
 
-    # --- parents' assets. The house and every retirement account are absent
-    # from this line on purpose: FAFSA does not ask about them.
-    #
-    # Savings do NOT go straight onto the total. 12% of what is left after the
-    # protection allowance is added to available income, and the *sum* is what
-    # gets assessed. That routing is the reason savings barely register: a
-    # dollar saved reaches the SAI as twelve cents, and only then is that
-    # twelve cents taxed at the band rate. Adding the 12% to the total
-    # directly — which is the obvious way to write it — overstates the damage
-    # done by savings several times over, and savings are exactly what
-    # families wrongly believe disqualifies them.
     countable = max(0, h.parent_savings - ASSET_PROTECTION)
     from_assets = countable * PARENT_ASSET_RATE
 
@@ -157,9 +125,6 @@ def student_aid_index(h: Household) -> Result:
     total = (parent_income_part + parent_asset_part
              + student_income_part + student_asset_part)
 
-    # Before 2024 this was divided by the number in college. It is not any
-    # more, and that single change is why some families are suddenly asked
-    # for far more than an older sibling was.
     sai = int(round(max(SAI_FLOOR, total)))
 
     pell, basis = pell_award(h, sai)
@@ -178,13 +143,6 @@ def student_aid_index(h: Household) -> Result:
 
 
 def pell_award(h: Household, sai: int) -> tuple[int, str]:
-    """Pell, and the reason for it.
-
-    Three doors, checked in order, exactly as the federal rules do it: under
-    the generous poverty multiple you get the maximum regardless of the SAI;
-    under the higher multiple you get at least the minimum; otherwise the
-    award is the maximum less your SAI.
-    """
     kind = "single" if h.single_parent else "two"
     line = poverty_line(h.household)
     max_line = line * MAX_PELL_FPL[kind]
@@ -212,7 +170,6 @@ def pell_award(h: Household, sai: int) -> tuple[int, str]:
         f"Pell here is the maximum ({PELL_MAX:,}) less your SAI ({sai:,}).")
 
 
-# ------------------------------------------------------------------ colleges
 @dataclasses.dataclass
 class Archetype:
     key: str
@@ -271,7 +228,6 @@ def what_you_would_pay(result: Result, colleges=None) -> list[Estimate]:
     return out
 
 
-# ------------------------------------------------------------- experiments
 @dataclasses.dataclass
 class Experiment:
     key: str
@@ -325,27 +281,6 @@ if __name__ == "__main__":
             print(f"     {e.name:<34} sticker {e.cost:>7,} -> you pay {e.you_pay:>7,}")
 
 
-# =====================================================================
-# Your own list, not four made-up colleges
-# =====================================================================
-#
-# Everything above runs the SAI against four illustrative archetypes. That
-# teaches the shape, but the student is sitting there with a real list, and
-# the question they actually have is "what would MY schools cost me".
-#
-# content/colleges.py carries a real, cited sticker price for each college we
-# have data for, so need (cost minus SAI) is honest arithmetic on honest
-# inputs and can simply be shown.
-#
-# What we deliberately do NOT have is each college's "percent of demonstrated
-# need met" — the figure that decides what you finally pay. It ranges from
-# about 40% to 100% between institutions and we have not sourced it. Inventing
-# it would produce a confident dollar figure that could be wrong by tens of
-# thousands, aimed at a family deciding whether college is affordable. So
-# instead of one fabricated number this returns a RANGE across the plausible
-# spread, labelled as a range, and points at the one place that gives a real
-# answer: that college's own net price calculator.
-
 # The observed spread of "percent of need met" across US institutions. Used to
 # bound the range, never to predict where a particular college sits.
 NEED_MET_LOW = 60
@@ -375,17 +310,6 @@ class RealEstimate:
 
 
 def price_your_list(result: "Result", schools, session=None) -> list[RealEstimate]:
-    """Run the SAI against the student's actual colleges.
-
-    `schools` is any iterable of objects with a `.name`. Colleges we have no
-    published cost for come back with has_cost False rather than a guess, so
-    the screen can say so instead of quietly leaving them out — a missing
-    college is information too.
-
-    Sorted by the optimistic figure, because the ranking is the lesson: an
-    expensive college that meets full need routinely costs a family less than
-    a cheap one that does not.
-    """
     from veritagnosis.services import catalog
 
     out: list[RealEstimate] = []
@@ -426,17 +350,6 @@ def price_your_list(result: "Result", schools, session=None) -> list[RealEstimat
     out.sort(key=lambda e: (not e.has_cost, e.pay_if_generous))
     return out
 
-
-# =====================================================================
-# Where you are in the FAFSA year
-# =====================================================================
-#
-# The form opens on 1 October for the following academic year, and the single
-# most expensive mistake in the whole process is filing late — several states
-# and many colleges award their own aid first-come-first-served until the
-# money is gone, which means an identical family filing in March gets less
-# than one filing in October. Nothing in the app knew what month it was, so it
-# could not say any of that at the moment it mattered.
 
 FAFSA_OPENS_MONTH = 10
 FAFSA_OPENS_DAY = 1
@@ -509,20 +422,12 @@ def timeline(today=None) -> Timeline:
     )
 
 
-# ====================================================================
 # aid
-# ====================================================================
 
 _NUM = re.compile(r"[-+]?\d[\d,]*\.?\d*")
 
 
 def money(text: str | None) -> float | None:
-    """Read a number out of whatever a person typed, or None.
-
-    Deliberately returns None rather than 0 for junk: zero is a real answer
-    ("this college would cost me nothing") and must not be confused with "we
-    could not read this".
-    """
     if text is None:
         return None
     t = str(text).strip().lower().replace("$", "").replace(" ", "")
@@ -604,9 +509,7 @@ def costs(session: Session, user_id: int) -> list[Cost]:
     return out
 
 
-# --------------------------------------------------------------------------
 # Things worth noticing
-# --------------------------------------------------------------------------
 
 @dataclasses.dataclass
 class Flag:
@@ -695,9 +598,7 @@ def summary(session: Session, user_id: int, cs: list[Cost] | None = None) -> dic
     }
 
 
-# --------------------------------------------------------------------------
 # The checklist
-# --------------------------------------------------------------------------
 
 def done_keys(session: Session, user_id: int) -> set[str]:
     return {r.task_key for r in session.exec(
@@ -705,11 +606,6 @@ def done_keys(session: Session, user_id: int) -> set[str]:
 
 
 def toggle(session: Session, user_id: int, key: str) -> bool:
-    """Tick or untick a step. Returns whether it is now done.
-
-    Unticking has to be possible: someone will tap the wrong row, and a
-    checklist you cannot correct is a checklist people stop trusting.
-    """
     if key not in {s["key"] for s in content.STEPS}:
         return False
     row = session.exec(

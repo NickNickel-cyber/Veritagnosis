@@ -1,19 +1,8 @@
-"""
-Financial aid content: the paperwork checklist and the eligibility
-rules behind it.
-
-The steps are the same for everyone, so only the *doing* of one is
-per-user (models.AidTask).
-
-Merged from: aid, eligibility.
-"""
 from __future__ import annotations
 
 
 
-# ====================================================================
 # aid
-# ====================================================================
 
 FORMS = [
     {
@@ -58,9 +47,7 @@ FORMS = [
     },
 ]
 
-# --------------------------------------------------------------------------
 # The paperwork, as a checklist
-# --------------------------------------------------------------------------
 STEPS = [
     {"key": "fsa_id", "phase": "Before you start", "title": "Create your FSA ID",
      "detail": ("You and a parent each need your own account at studentaid.gov. Make "
@@ -127,9 +114,7 @@ STEPS = [
 
 PHASES = ["Before you start", "The forms", "Beyond the forms", "After you file"]
 
-# --------------------------------------------------------------------------
 # The words nobody explains
-# --------------------------------------------------------------------------
 GLOSSARY = [
     ("Sticker price", ("The listed cost of one year: tuition, fees, housing and food. Many "
                        "families end up paying less.")),
@@ -158,9 +143,7 @@ GLOSSARY = [
                            "federal deadline, and it's the one to watch.")),
 ]
 
-# --------------------------------------------------------------------------
 # Warnings worth shouting about
-# --------------------------------------------------------------------------
 TRAPS = [
     ("Never pay to file the FAFSA",
      ("If a site charges you to submit it, skip it. It's free at "
@@ -221,9 +204,7 @@ def total_xp() -> int:
     return sum(s["xp"] for s in STEPS)
 
 
-# ====================================================================
 # eligibility
-# ====================================================================
 
 GENDERS = [
     ("female", "Female"),

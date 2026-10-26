@@ -1,9 +1,3 @@
-"""
-The screens that are not the application: avatar, meditation,
-Graze, and the checkpoint board.
-
-Merged from: avatar_state, meditation_state, graze_state, achievements_state.
-"""
 from __future__ import annotations
 
 import dataclasses
@@ -25,16 +19,10 @@ from veritagnosis.ui.widgets import DURATIONS, PATTERNS
 from veritagnosis.services import wellbeing as achievements, wellbeing as breaks
 from veritagnosis.services import wellbeing as achievements, apply as progress
 
-# Two sections of this file each had a module aliased to `content`, and they
-# were different modules. Merged into one file the second binding silently
-# won, and the Graze screen started reading the checkpoint content. They get
-# distinct names here so neither can shadow the other again.
 from veritagnosis.ui import widgets as graze_content
 
 
-# ====================================================================
 # avatar_state
-# ====================================================================
 
 @dataclasses.dataclass
 class OptionRow:
@@ -62,7 +50,6 @@ class AvatarState(FeatureState, rx.State):
     earned: list[str] = []
     blocked: str = ""      # set when a locked tile is pressed, cleared on move
 
-    # ---------------------------------------------------------------- helpers
     def _unlock_text(self, key: str | None) -> str:
         if not key:
             return ""
@@ -75,12 +62,6 @@ class AvatarState(FeatureState, rx.State):
 
     @rx.var(cache=True)
     def option_rows(self) -> list[OptionRow]:
-        """Each tile shows the whole avatar with only this one part swapped, so
-        you judge the choice in context instead of seeing a floating body part.
-
-        A locked tile still renders its preview. Seeing the thing you have not
-        got is the entire motivation; a grey square is just a grey square.
-        """
         got = set(self.earned)
         names = parts.OPTIONS.get(self.tab, [])
         rows = []
@@ -146,7 +127,6 @@ class AvatarState(FeatureState, rx.State):
             return f"{total} more items unlock as you reach checkpoints."
         return f"{total - n} of {total} unlockable items earned. {n} to go."
 
-    # ------------------------------------------------------------------ load
     @rx.event
     async def load(self):
         uid = await self._user_id()
@@ -166,7 +146,6 @@ class AvatarState(FeatureState, rx.State):
         self.blocked = ""
         self.loading = False
 
-    # ---------------------------------------------------------------- events
     @rx.event
     def set_tab(self, tab: str):
         if tab in parts.OPTIONS:
@@ -197,9 +176,6 @@ class AvatarState(FeatureState, rx.State):
 
     @rx.event
     def surprise(self):
-        """Random, but only from what has actually been earned — a surprise
-        that hands you something locked and then refuses to save it would be
-        a small cruelty."""
         got = set(self.earned)
         pick = {}
         for cat, opts in parts.OPTIONS.items():
@@ -235,9 +211,7 @@ class AvatarState(FeatureState, rx.State):
         self.saved = True
 
 
-# ====================================================================
 # meditation_state
-# ====================================================================
 
 @dataclasses.dataclass
 class Checkpoint:
@@ -265,10 +239,6 @@ class MeditationState(FeatureState, rx.State):
     quote_text: str = ""
     quote_source: str = ""
 
-    # Bumped on every load. The rotating task carries the value it started
-    # with and stops as soon as it stops matching, which is how a loop from
-    # a previous visit to this screen dies instead of stacking up with the
-    # new one and making the quote flicker twice as fast.
     quote_gen: int = 0
     rotating: bool = False
 
@@ -295,24 +265,10 @@ class MeditationState(FeatureState, rx.State):
 
     @rx.event
     def reroll_quote(self):
-        """Another quote. Tapping the card runs this, and because the text
-        changes, motion.js re-splits it and the word-by-word reveal replays —
-        which is the whole reason the card is tappable."""
         self._next_quote()
 
     @rx.event(background=True)
     async def rotate_quotes(self):
-        """Change the line on its own every so often.
-
-        Tapping the card already worked, but a card that only changes when
-        you tap it is a card that never changes, because nobody knows it is
-        tappable. This screen is one a student sits in front of doing
-        nothing on purpose, so the reading material should move.
-
-        Eleven seconds is long enough to read a line twice and short enough
-        that you see it happen at least once while a two-minute breathing
-        session runs.
-        """
         async with self:
             if self.rotating:
                 return
@@ -320,12 +276,6 @@ class MeditationState(FeatureState, rx.State):
             mine = self.quote_gen
 
         try:
-            # Bounded rather than infinite. Closing the tab does not tell the
-            # server anything a background task can see, so an endless loop
-            # keeps rotating a quote for a browser that left and fills the log
-            # with "delta to disconnected client". Roughly forty minutes is
-            # far longer than anyone sits on this screen, and coming back
-            # mounts the page again and starts a fresh one.
             for _ in range(220):
                 await asyncio.sleep(11)
                 async with self:
@@ -359,7 +309,6 @@ class MeditationState(FeatureState, rx.State):
         self.rotating = False
         return MeditationState.rotate_quotes
 
-    # ------------------------------------------------------------------ stats
     def _stats(self, uid: int) -> dict:
         with db.get_session() as s:
             logs = s.exec(select(MeditationLog)
@@ -407,7 +356,6 @@ class MeditationState(FeatureState, rx.State):
             for c in roadmap.ROADMAP
         ]
 
-    # -------------------------------------------------------------- finishing
     @rx.event
     async def finish_session(self):
         """Called when the timer runs out. Logs the sitting, then awards any
@@ -450,9 +398,7 @@ class MeditationState(FeatureState, rx.State):
         self.just_unlocked = ""
 
 
-# ====================================================================
 # graze_state
-# ====================================================================
 
 class GrazeState(FeatureState, rx.State):
     minutes: int = 15
@@ -516,9 +462,6 @@ class GrazeState(FeatureState, rx.State):
 
     @rx.event
     def quit_early(self):
-        """Stopping early is not a failure and is not logged — the session was
-        for a set length, and a partial one is just a person changing their
-        mind."""
         self.started = False
         self.finished = False
 
@@ -567,9 +510,7 @@ class GrazeState(FeatureState, rx.State):
         self.just_earned = ""
 
 
-# ====================================================================
 # achievements_state
-# ====================================================================
 
 @dataclasses.dataclass
 class BadgeRow:

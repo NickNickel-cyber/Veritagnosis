@@ -1,26 +1,6 @@
-"""
-Layered SVG avatar. Single source of truth for both the Reflex app and the
-standalone design preview.
-
-The avatar is a stack of SVG fragments drawn into one 200x200 viewBox. Every
-fragment is a plain string with two optional placeholders:
-
-    {skin}  -> the chosen skin tone
-    {hair}  -> the chosen hair color
-
-Layers paint back to front in LAYER_ORDER. A selection is just a dict of
-category -> option id, so a saved avatar is a small JSON blob on the user row:
-
-    {"head": 2, "hair": 3, "hair_color": 1, ...}
-
-Deliberately flat and stylized: shapes stay legible at 40px in the home header
-and at 200px on the customization screen, and they carry no color of their own
-beyond skin and hair, so the avatar reads the same in all five themes.
-"""
 
 from __future__ import annotations
 
-# ---------------------------------------------------------------- palettes
 SKIN_TONES = ["#F7E0CE", "#F3D2BC", "#E8B991", "#D9A273", "#C98D62", "#B0754C",
               "#A2653F", "#8B5733", "#75492B", "#5E3A22", "#4A2E1C", "#38220F"]
 HAIR_COLORS = ["#2B2118", "#4A3728", "#5B3A21", "#7A4E2D", "#A9691F", "#C98A3A",
@@ -28,8 +8,6 @@ HAIR_COLORS = ["#2B2118", "#4A3728", "#5B3A21", "#7A4E2D", "#A9691F", "#C98A3A",
                # the loud ones are rewards; see LOCKED_COLOURS
                "#7B4BC9", "#2F9E8F", "#E8590C", "#C2255C"]
 
-# ---------------------------------------------------------------- layers
-# Order matters: earlier entries paint first (further back).
 LAYER_ORDER = [
     "hair_back", "clothes", "head", "eyes", "eyebrows", "nose",
     "piercings", "hair", "accessories", "hat",
@@ -44,14 +22,6 @@ CATEGORIES = [
 
 NONE = ""  # an option that draws nothing
 
-# --- head: face shape ------------------------------------------------------
-# Every head shares an IDENTICAL skull dome: the arc from (58,88) over the top
-# and down to (142,88), i.e. a 42-radius crown centred at (100,88), topping out
-# at y=46. Face shape varies only BELOW the cheekbones.
-#
-# This matters: hair is a fixed drawing. When each head had its own dome, a
-# taller skull poked out through the hair. Sharing the crown makes every hair
-# style sit correctly on every head, which is the whole fix.
 HEAD = [
     ("Round",  '<path d="M58 88 a42 42 0 0 1 84 0 v12 a42 42 0 0 1 -84 0 Z" fill="{skin}"/>'
                '<path d="M88 126 h24 v16 h-24 Z" fill="{skin}"/>'),
@@ -349,7 +319,6 @@ PIERCINGS = [
               '<circle cx="140" cy="88" r="2.4" fill="#F5C518"/>'),
 ]
 
-# ---------------------------------------------------------------- assembly
 OPTIONS = {
     "head": [n for n, _ in HEAD],
     "hair": [n for n, _, _ in HAIR],
@@ -367,20 +336,6 @@ DEFAULT_AVATAR = {
     "nose": 0, "clothes": 0, "hat": 0, "accessories": 0, "piercings": 0,
 }
 
-# --------------------------------------------------------------- what's locked
-# (category, option index) -> the achievement key that opens it.
-#
-# Only ever the *decorative* categories. Faces, skin tones and the plain hair
-# colours are never locked, because a student has to be able to make something
-# that looks like themselves on their first visit — locking identity behind
-# work would be a genuinely nasty thing to do. What is locked is the showing
-# off: the hats, the loud hair, the jacket with a number on it.
-#
-# Each one is deliberately attached to an achievement it *reads* as a reward
-# for. The graduation cap comes from sending an application, the laurel and
-# the crown from the two hardest things on the board, the lab coat from a
-# polished draft. The point is that somebody looking at your avatar can tell
-# what you did.
 LOCKED = {
     ("hat", 3): "a_submitted",          # Grad cap — you sent one
     ("hat", 7): "a_first_yes",          # Beret — somebody said yes
@@ -428,14 +383,6 @@ def is_available(category: str, index: int, earned: set[str]) -> bool:
 
 
 def sanitise(sel: dict, earned: set[str]) -> dict:
-    """Drop any selection the student is not entitled to.
-
-    Worth doing even though the UI will not offer a locked tile: a saved
-    avatar is a JSON blob on the user row, and blobs outlive the rules that
-    made them. If an achievement is ever reworded or removed, this quietly
-    puts the avatar back to something legitimate instead of rendering a
-    reward nobody earned.
-    """
     out = dict(sel)
     for (cat, idx), need in LOCKED.items():
         if out.get(cat) == idx and need not in earned:

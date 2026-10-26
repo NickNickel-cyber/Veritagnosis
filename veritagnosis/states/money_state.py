@@ -86,12 +86,6 @@ class PayRow:
 
 @dataclasses.dataclass
 class MyCollegeRow:
-    """One college from the student's real list, priced against their SAI.
-
-    Two figures rather than one, on purpose: we have each college's published
-    sticker price but not its percent-of-need-met, and inventing that would
-    put a confident, possibly very wrong number in front of a family deciding
-    whether they can afford college."""
 
     name: str
     cost: str
@@ -163,7 +157,6 @@ class AidState(FeatureState, rx.State):
 
     DISCLAIMER: str = content.DISCLAIMER
 
-    # ------------------------------------------------------------ simulator
     def _household(self) -> fafsa.Household:
         return fafsa.Household(
             income=self.sim_income,
@@ -175,9 +168,6 @@ class AidState(FeatureState, rx.State):
             student_savings=self.sim_student_savings,
         )
 
-    # Formatted on the server. Var arithmetic in the browser has no thousands
-    # separator, and "$65000" beside a slider is exactly the kind of number
-    # nobody can read at a glance.
     @rx.var(cache=True)
     def sim_income_label(self) -> str:
         return f"${self.sim_income:,}"
@@ -246,10 +236,6 @@ class AidState(FeatureState, rx.State):
 
     @rx.var(cache=True)
     def my_colleges(self) -> list[MyCollegeRow]:
-        """The simulator, pointed at the student's actual list.
-
-        The four archetypes above teach the shape. This answers the question
-        they actually walked in with."""
         r = fafsa.student_aid_index(self._household())
         with db.get_session() as s:
             schools = list(s.exec(
@@ -279,10 +265,6 @@ class AidState(FeatureState, rx.State):
 
     @rx.var(cache=True)
     def fafsa_when(self) -> dict:
-        """Where the student is in the FAFSA year, right now.
-
-        Filing late is the most expensive ordinary mistake in this process,
-        and the app previously had no idea what month it was."""
         t = fafsa.timeline()
         return {"headline": t.headline, "detail": t.detail,
                 "award_year": t.award_year, "phase": t.phase,
@@ -415,7 +397,6 @@ class AidState(FeatureState, rx.State):
             return f"{self.cheapest} is the only one priced so far."
         return f"{self.cheapest} is the cheapest so far, at {self.cheapest_net}."
 
-    # ---------------------------------------------------------------- load
     @rx.event
     async def load(self):
         uid = await self._user_id()
@@ -485,12 +466,8 @@ class AidState(FeatureState, rx.State):
         self.won = summary["won"]
         self.chasing = summary["chasing"]
 
-    # ------------------------------------------------------------ actions
     @rx.event
     def set_tab(self, tab: str):
-        # Whitelisted rather than assigned straight through: `tab` reaches
-        # this from the client, and an unknown value would render an empty
-        # screen with no tab looking selected.
         known = ("checklist", "simulator", "costs", "scholarships", "learn")
         self.tab = tab if tab in known else "checklist"
 
@@ -568,7 +545,6 @@ class AidState(FeatureState, rx.State):
         self.error = ""
         self._refresh(uid)
 
-    # ------------------------------------------------------- scholarships
     @rx.event
     async def add_scholarship(self, form: dict):
         uid = await self._user_id()

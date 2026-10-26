@@ -1,27 +1,3 @@
-"""
-The college catalogue: looking colleges up, and searching for them.
-
-Two sources, deliberately
--------------------------
-`content/colleges.py` holds about two dozen colleges read by hand out of each
-institution's own Common Data Set. Those numbers are as good as published
-admissions data gets, and each entry names the PDF it came from.
-
-That does not scale to the whole country, and a student's real list is mostly
-not in those two dozen. So every institution in the federal College Scorecard
-is imported into the `college` table (see scripts/import_colleges.py), and this
-module is the one place that knows about both.
-
-The rule is simple and always the same: **a curated entry wins.** A number read
-out of the institution's own CDS beats the same number averaged into a federal
-release a year later, so when both exist the curated one is returned and the
-Scorecard row is not consulted. Scorecard rows carry `confidence="medium"` and
-a real Scorecard URL, so a screen can still say where a number came from —
-which is the promise the curated file was built on and this must not break.
-
-Nothing in here invents a number. A field that neither source publishes comes
-back as None, and the screens already know how to render that.
-"""
 
 from __future__ import annotations
 
@@ -39,12 +15,6 @@ def _norm(name: str) -> str:
 
 
 def loose(name: str) -> str:
-    """A name with case, punctuation and a leading "The" ignored.
-
-    "University of Michigan Ann Arbor", "university of michigan-ann arbor" and
-    "University of Michigan – Ann Arbor" are one college; matching them only
-    when every hyphen agreed is how a full, correct name still found no data.
-    """
     s = (name or "").lower().replace("&", " and ").replace("’", "'")
     s = re.sub(r"[^a-z0-9]+", " ", s).strip()
     s = re.sub(r"^the ", "", s)
@@ -59,18 +29,12 @@ def official_name(name: str) -> str:
     return _ALIAS.get(loose(name), (name or "").strip())
 
 
-# Curated entries, reachable by their own name and by the official full name.
-# Several are stored under a nickname ("UCLA", "UNC Chapel Hill"), and a
-# student who types the full name should still get the hand-checked figures.
 _CURATED: dict[str, dict] = {}
 for _c in COLLEGES:
     _CURATED[loose(_c["name"])] = _c
     _CURATED[loose(official_name(_c["name"]))] = _c
 
 
-# The imported catalogue, indexed by loose name. Built once per database and
-# rebuilt whenever the row count changes (a re-import), so a lookup costs a
-# dictionary hit rather than a scan of two thousand names.
 _INDEX: dict = {"sig": None, "names": {}, "rows": []}
 
 
@@ -95,14 +59,6 @@ class Match:
 
 
 def resolve(session: Session | None, text: str) -> Match | None:
-    """Recognise what a student typed, or None when it is not a known college.
-
-    Nicknames become the official full name first, then the name is matched
-    ignoring punctuation: curated entries win (they are read out of each
-    college's own Common Data Set), then the imported Scorecard catalogue.
-    Ambiguous text ("Rutgers", "Michigan") is deliberately not guessed at —
-    `suggest()` offers the candidates instead.
-    """
     official = official_name(text)
     key = loose(official)
     if not key:
@@ -127,13 +83,6 @@ def lookup(session: Session | None, name: str) -> dict | None:
 
 
 def suggest(session: Session | None, text: str, limit: int = 6) -> list[dict]:
-    """Full names that match what has been typed so far, for the pick-list.
-
-    A nickname's college comes first, then names that start with the text,
-    then names that contain it, larger colleges before smaller ones. Every
-    suggestion is a full official name, so whatever is picked is saved in a
-    form the catalogue recognises.
-    """
     q = loose(text)
     if len(q) < 2:
         return []
@@ -183,12 +132,6 @@ def suggest(session: Session | None, text: str, limit: int = 6) -> list[dict]:
 
 
 def tidy_names(session: Session, user_id: int) -> int:
-    """Rewrite nicknames on a student's list as full names. Returns how many.
-
-    Only an unambiguous match is rewritten ("UMich" becomes "University of
-    Michigan-Ann Arbor"); anything the catalogue does not recognise is left
-    exactly as typed, and the profile screen asks the student to pick.
-    """
     changed = 0
     for school in session.exec(select(School).where(School.user_id == user_id)).all():
         m = resolve(session, school.name or "")
@@ -202,14 +145,6 @@ def tidy_names(session: Session, user_id: int) -> int:
 
 
 def search(session: Session | None, query: str, limit: int = 12) -> list[dict]:
-    """Colleges whose name matches, for the add-a-school box.
-
-    Ordered so the useful answer is first: names that *start* with what was
-    typed, then names that merely contain it, then by undergraduate size —
-    because a student typing "michigan" means Ann Arbor, and a list that put
-    Michigan School of Psychology above it would be technically correct and
-    practically useless.
-    """
     q = _norm(query)
     if len(q) < 2:
         return []

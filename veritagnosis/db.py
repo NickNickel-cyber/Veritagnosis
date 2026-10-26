@@ -1,22 +1,3 @@
-"""
-Database access.
-
-Uses the database Reflex sets up for you: the connection string comes from
-`db_url` in rxconfig.py, so this is the same file `reflex db migrate` manages.
-
-It does NOT use `rx.Model` / `rx.session()`. Reflex deprecated those in 0.9.2 and
-removes them in 1.0.0, telling you to "directly use database ORM layer, like
-sqlalchemy or SQLModel" — which is what this does. Same database, supported path.
-
-SQLite's defaults are not good enough, and all three of these are per-connection,
-so they are attached to the engine rather than run once:
-
-  foreign_keys=ON   SQLite ignores foreign keys unless asked. Without it,
-                    deleting a user silently orphans their rows.
-  journal_mode=WAL  Readers stop blocking writers; better crash recovery.
-  secure_delete=ON  Overwrites freed pages instead of leaving deleted rows
-                    readable in the file's slack space.
-"""
 
 from __future__ import annotations
 
@@ -63,20 +44,6 @@ def restrict_file_permissions() -> None:
 
 
 def ensure_schema(target: "Engine | None" = None) -> list[str]:
-    """Bring an existing database up to date with the models, in place.
-
-    `create_all()` only creates tables that are missing. It will not add a new
-    column to a table that already exists — so adding a field to a model leaves
-    older databases broken, and every query on that table fails with
-    "no such column". That is not something a person using the app should ever
-    have to know about, so it is repaired automatically here.
-
-    SQLite can add a column to an existing table cheaply, which is all this
-    needs. Anything more involved (renaming, changing a type, dropping) is a
-    real migration: use `reflex db makemigrations` and `reflex db migrate`.
-
-    Returns a list of what it changed, for logging.
-    """
     from sqlalchemy import inspect, text
 
     # SQLModel.metadata only knows about tables whose classes have been
@@ -99,9 +66,6 @@ def ensure_schema(target: "Engine | None" = None) -> list[str]:
             if column.name in have:
                 continue
 
-            # Added as nullable with no constraint: SQLite refuses ADD COLUMN
-            # for anything NOT NULL without a constant default, and existing
-            # rows have no value for it anyway.
             col_type = column.type.compile(eng.dialect)
             with eng.begin() as conn:
                 conn.execute(text(
@@ -121,11 +85,6 @@ def ensure_schema(target: "Engine | None" = None) -> list[str]:
 
 
 def init_db() -> None:
-    """Create any missing tables, then repair any out-of-date ones.
-
-    Safe to call on every start, and it is — from veritagnosis.py — so a person
-    who updates the app never has to think about the database.
-    """
     from veritagnosis import models  # noqa: F401  (registers the tables)
 
     config.DATA_DIR.mkdir(parents=True, exist_ok=True)

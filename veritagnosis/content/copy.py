@@ -1,19 +1,8 @@
-"""
-Words the app says: quotes, essay prompts, coaching lines, the
-scripts for asking a teacher, and the meditation roadmap.
-
-All of it is content rather than logic — the same for every
-student, changed by editing text, never by a migration.
-
-Merged from: quotes, prompts, essay_coach, asking, meditation.
-"""
 from __future__ import annotations
 
 
 
-# ====================================================================
 # quotes
-# ====================================================================
 
 QUOTES = {
 "serenity": [
@@ -81,9 +70,7 @@ if __name__ == "__main__":
         print(f"  {t:10s} {sum(1 for r in rows if r[0]==t)}")
 
 
-# ====================================================================
 # prompts
-# ====================================================================
 
 COMMON_APP = [
     {"key": "background",
@@ -185,9 +172,7 @@ def find(text: str) -> dict | None:
     return None
 
 
-# ====================================================================
 # essay_coach
-# ====================================================================
 
 STEPS = [
     {"say": ("First: who's reading this, and what do you want them to remember "
@@ -216,9 +201,7 @@ DONE = {"say": ("That's a draft. Leave it alone overnight. You'll see it more cl
         "hint": "First drafts are supposed to be rough. That's normal."}
 
 
-# ====================================================================
 # asking
-# ====================================================================
 
 TEMPLATES = {
     "teacher": {
@@ -297,9 +280,7 @@ def message(role: str, teacher: str, name: str, deadline: str, reason: str) -> s
     )
 
 
-# ====================================================================
 # meditation
-# ====================================================================
 
 ROADMAP = [
     {"key": "first_breath", "title": "First breath",

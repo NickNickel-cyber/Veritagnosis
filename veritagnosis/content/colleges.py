@@ -1,31 +1,3 @@
-"""
-Published admitted-student data, one entry per college.
-
-Every number here came from a named source on a named date, and every entry
-carries that source so the screen can show it. That is the whole point: the
-app tells a student "Michigan's admitted middle 50% was 1360-1530, here is the
-PDF" — never "you have a 23% chance", which would be a number nobody can
-stand behind.
-
-`confidence` is about provenance, not about the college:
-
-  high    read directly out of the institution's own Common Data Set
-  medium  the institution's own page, or a CDS quoted by a reputable
-          aggregator that could not be fetched directly
-  low     aggregator only, or sources that disagreed with each other
-
-The screen shows medium and low differently, because a student deciding where
-to apply deserves to know which numbers are solid.
-
-Adding a college: append a dict. Every field may be None except name and
-state. Nothing else in the app needs changing, and `python -m pytest
-tests/test_colleges.py` will tell you if an entry is malformed.
-
-Test policy: UC campuses are test-blind (scores are not considered at all), so
-their test fields are None by fact, not by omission. Many other schools remain
-test-optional, which means a published range describes only the self-selected
-minority who submitted — `test_optional_note` says so where it matters.
-"""
 
 from __future__ import annotations
 
@@ -192,28 +164,6 @@ COLLEGES: list[dict] = [
 # Name -> entry, for the lookup the fit engine does on the student's school list.
 BY_NAME = {c["name"].lower(): c for c in COLLEGES}
 
-# What the dataset does NOT cover, stated plainly so the screen can say it.
-# The set skews selective: there is nothing here above a 45% admit rate, so a
-# student whose list is mostly accessible schools will find few matches. That
-# is a gap in the data, not a judgement about their list, and the screen says
-# so rather than leaving them to infer it.
-# COVERAGE_NOTE used to live here: a paragraph naming how many universities
-# were loaded and what range of admit rates they spanned, rendered under every
-# statistics box. It was written when this file was the whole catalogue. The
-# Scorecard import (scripts/import_colleges.py) means it no longer describes
-# the data, and a student reading their own numbers does not need a paragraph
-# about where the dataset came from — each entry already carries its own
-# source_url for anyone who wants to check a figure.
-
-
-# Nicknames -> the college's full official name, as the federal College
-# Scorecard spells it. Students type "UMich" or "UPenn"; the catalogue only
-# knows full names, so without this a nickname finds no data at all. The app
-# saves the full name, never the nickname, so the list always says exactly
-# which college it means. Only unambiguous nicknames are here: "Michigan",
-# "Rutgers" or "Miami" could mean several colleges, so those get a pick-list
-# instead of a guess. Every target was checked against the Scorecard import
-# (Jun 2026 release); tests/test_college_names.py re-checks them.
 ALIASES: dict[str, str] = {
     'umich': 'University of Michigan-Ann Arbor',
     'university of michigan': 'University of Michigan-Ann Arbor',

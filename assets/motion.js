@@ -2,28 +2,12 @@
 (function () {
   'use strict';
 
-  /* ONE INSTANCE, EVER.
-     Reflex renders this <script> from the app shell, so it is re-evaluated on
-     every navigation. Without this guard, each page visit added another set of
-     timers and another document-wide click listener. Nothing ever removed
-     them, so ripples multiplied, the polls piled up, and the app got steadily
-     worse the longer it was left open. */
   if (window.__vgMotion) return;
   window.__vgMotion = true;
 
   var reduced = window.matchMedia &&
                 window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* ==================================================================== 1
-     Kinetic quotes: split the line into words so each can arrive on its own
-     delay. CSS cannot address a word inside a sentence, so the spans have to
-     be made here.
-
-     The guard: the text we split is stashed in data-split. React re-renders
-     this node when the quote changes, which wipes our spans and restores plain
-     text — the comparison notices and re-splits. When nothing has changed the
-     comparison matches and we do nothing, so this can never feed itself.
-  ==================================================================== */
   function splitQuote(node) {
     var text = (node.textContent || '').trim();
     if (!text) return;
@@ -66,9 +50,6 @@
     for (var i = 0; i < nodes.length; i++) splitQuote(nodes[i]);
   }
 
-  /* ==================================================================== 2
-     Ripples, placed where the click actually happened.
-  ==================================================================== */
   document.addEventListener('click', function (e) {
     if (reduced) return;
     var t = e.target;
@@ -89,10 +70,6 @@
     }, 620);
   }, false);
 
-  /* ==================================================================== 3
-     Pulse a value that just changed. The previous value is remembered on the
-     node itself, so this survives every re-render.
-  ==================================================================== */
   function scanPulse() {
     var nodes = document.querySelectorAll('[data-pulse]');
     for (var i = 0; i < nodes.length; i++) {
@@ -116,21 +93,6 @@
     }
   }
 
-  /* ==================================================================== 4
-     CONNECTION WATCHDOG.
-
-     The other half of "if the app is open too long, it breaks". When the
-     websocket to the Python side dies — laptop slept, wifi dropped, the server
-     restarted — the page keeps looking completely normal. Buttons still
-     highlight, ripples still fire, and absolutely nothing happens. There is no
-     error, which is the worst kind of broken.
-
-     So: every few minutes we press a hidden button that asks the server to
-     increment a number, and we watch for that number to change. If it does
-     not, the connection is gone and we say so instead of leaving someone
-     clicking a dead page. It reloads itself shortly after, which is what
-     restores the connection.
-  ==================================================================== */
   var HEARTBEAT_MS = 240000;     /* ask every 4 minutes */
   var REPLY_MS = 30000;          /* an answer must arrive within 30 seconds */
   var beat = { last: null, sentAt: 0, waiting: false, failures: 0 };
@@ -194,14 +156,6 @@
     if (!document.hidden) setTimeout(sendBeat, 400);
   });
 
-  /* ==================================================================== 5
-     COPY
-
-     Any button carrying data-copy="#some-id" copies that element's text. Lives
-     here rather than on one screen because the drafted recommendation message
-     needs it too, and a student who cannot get the message out of the app will
-     not send it.
-  ==================================================================== */
   document.addEventListener('click', function (e) {
     var t = e.target;
     if (!t || !t.closest) return;
@@ -224,8 +178,6 @@
     }
   }, false);
 
-  /* ==================================================================== */
-
   function tick() {
     scanQuotes();
     scanPulse();
@@ -243,21 +195,6 @@
   setTimeout(sendBeat, 3000);      /* first check shortly after load */
 })();
 
-/* ------------------------------------------------------------------ theme
- * Mirror data-theme from the app wrapper onto <html>.
- *
- * Every theme's variables — including its two typefaces — are declared on
- * [data-theme="..."], and that attribute lives on the .vg-app wrapper. Custom
- * properties only inherit DOWNWARDS, so html and body sit above the theme and
- * cannot see any of them: the document's base font fell back to the system
- * sans on every theme, and so did anything rendered outside the wrapper.
- *
- * Copying the attribute up means [data-theme="..."] matches the root element
- * too, and the same single declaration serves the whole document. The
- * alternative was repeating all five themes' font stacks under a
- * :root:has(...) selector, which would be two places to edit for every future
- * theme change.
- */
 (function () {
   'use strict';
   function sync() {
@@ -279,19 +216,6 @@
   setInterval(sync, 1000);
 })();
 
-/* --------------------------------------------------------------- password
- * Tick the password rules off as they are met.
- *
- * Deliberately here and not in Python. A Reflex state var holding the typed
- * password would travel to the server on every keystroke AND be serialised
- * back into the page as state — a password in two more places than it needs
- * to be. This listener never sends anything anywhere: it reads the field,
- * toggles five classes, and forgets.
- *
- * The rules are the same five that veritagnosis/crypto.py enforces, in the
- * same order. The server is what actually decides; this only tells the
- * student what the server is going to say, before they press the button.
- */
 (function () {
   'use strict';
   if (window.__vgPwRules) return;

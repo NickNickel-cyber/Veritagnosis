@@ -1,9 +1,3 @@
-"""
-The design system in Python: tokens, the page shell, shared
-controls, and the painted scene behind every screen.
-
-Merged from: theme, scene.
-"""
 from __future__ import annotations
 
 import reflex as rx
@@ -11,9 +5,7 @@ from veritagnosis.states.auth_state import AuthState
 from veritagnosis.states.base import THEMES, ThemeState
 
 
-# ====================================================================
 # theme
-# ====================================================================
 
 FONTS = [
     "https://fonts.googleapis.com/css2"
@@ -65,18 +57,11 @@ T = _Tokens()
 def shell(*children, **props) -> rx.Component:
     """Root wrapper. Carries data-theme, and paints the environment behind
     everything before laying the content on top of it."""
-    # Merge rather than overwrite: pages add their own data-* attributes (the
-    # meditation screen passes the chosen pattern down to its browser script),
-    # and a second custom_attrs kwarg would collide with data-theme.
     attrs = {"data-theme": ThemeState.theme, **props.pop("custom_attrs", {})}
     return rx.box(
         scene(),
         rx.box(*children, class_name="vg-content"),
         _watchdog(),
-        # Motion that CSS cannot do on its own: splitting a quote into words so
-        # each one can arrive separately, putting a ripple where the click
-        # actually landed, and pulsing a number the moment it changes. Loaded
-        # from the shell so every screen has it.
         rx.script(src="/motion.js"),
         class_name="vg-app",
         custom_attrs=attrs,
@@ -85,14 +70,6 @@ def shell(*children, **props) -> rx.Component:
 
 
 def _watchdog() -> rx.Component:
-    """The three pieces the connection watchdog in motion.js needs.
-
-    A dead websocket is invisible: the page still looks right, buttons still
-    light up, and nothing happens. So the browser presses the hidden button
-    every few minutes and watches the hidden number for a reply. If no reply
-    comes, the banner appears and the page reloads itself, which is the only
-    thing that actually restores the connection.
-    """
     return rx.fragment(
         rx.el.button(
             "", id="vg-beat-btn", type="button",
@@ -135,21 +112,8 @@ def theme_picker(compact: bool = False) -> rx.Component:
 
 
 def hero(on_click=None) -> rx.Component:
-    """Theme scene artwork with the randomized quote on a frosted plate.
-
-    A plate rather than a gradient scrim: five very different illustrations sit
-    behind this text, and only an opaque surface keeps it readable in all of
-    them."""
     return rx.box(
         rx.box(
-            # "kinetic" is the hook motion.js looks for: it splits the line into
-            # words so they arrive one at a time, and re-splits whenever the
-            # quote changes, which is what makes a reroll feel like an event
-            # rather than a text swap.
-            # Keyed on the text for the same reason as the meditation card:
-            # motion.js rewrites this node's innerHTML, so React must replace
-            # the node on a change rather than try to patch one it no longer
-            # recognises. Without the key the line goes blank on a reroll.
             rx.text(f'"{ThemeState.quote_text}"', class_name="hero-quote kinetic",
                     key=ThemeState.quote_text),
             rx.text(ThemeState.quote_source, class_name="hero-by"),
@@ -160,9 +124,7 @@ def hero(on_click=None) -> rx.Component:
     )
 
 
-# --------------------------------------------------------------------------
 # Small shared pieces
-# --------------------------------------------------------------------------
 def field(label: str, name: str, placeholder: str = "", type_: str = "text",
           **props) -> rx.Component:
     """A labelled input inside an rx.form. `name` is what the submit handler
@@ -183,9 +145,7 @@ def btn(label, variant: str = "primary", **props) -> rx.Component:
     return rx.el.button(label, class_name=f"btn btn-{variant}", **props)
 
 
-# ====================================================================
 # scene
-# ====================================================================
 
 _MOTES = [
     (8, 7, 34, 0), (23, 4, 46, 6), (41, 9, 39, 13),

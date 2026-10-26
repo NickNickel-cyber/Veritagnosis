@@ -1,17 +1,9 @@
-"""
-Screen-specific components: the breathing guide, the essay
-coach's badge, and the Graze stage.
-
-Merged from: breathing, coach, graze.
-"""
 from __future__ import annotations
 
 import reflex as rx
 
 
-# ====================================================================
 # breathing
-# ====================================================================
 
 PATTERNS = [
     {
@@ -43,15 +35,6 @@ PATTERNS = [
 DURATIONS = [1, 2, 3, 5, 10]  # minutes, student picks one
 
 PHASE_LABELS = ["Breathe in", "Hold", "Breathe out", "Hold"]
-
-# --------------------------------------------------------------------------
-# Theme figures. All draw into a 200x200 viewBox.
-#
-#   back   painted behind the animated element
-#   shape  the animated element — scaled ("expand") or clipped ("fill")
-#   front  painted on top (cup rim, rocket window, outline strokes)
-#   level  for "fill": [y_empty, y_full] in viewBox units for the liquid top
-# --------------------------------------------------------------------------
 
 def _lotus():
     petals = "".join(
@@ -185,9 +168,7 @@ if __name__ == "__main__":
     print("missing figures:", missing or "none")
 
 
-# ====================================================================
 # coach
-# ====================================================================
 
 MOOD_BADGE = {
     "idle": "",
@@ -201,11 +182,6 @@ MOOD_BADGE = {
 
 
 def coach_figure(svg, mood) -> rx.Component:
-    """The character, wrapped so CSS can move it by mood.
-
-    `svg` is the rendered avatar markup (AuthState.avatar_svg) and `mood` is a
-    Var, so this re-renders whenever either changes.
-    """
     return rx.box(
         rx.box(rx.html(svg), class_name="coach-av"),
         rx.box(class_name="coach-shadow"),
@@ -222,18 +198,9 @@ def coach_figure(svg, mood) -> rx.Component:
 
 
 def mood_badge_css() -> str:
-    """The badge glyph per mood, emitted as CSS content rules.
-
-    Generated from the table above rather than written twice, so adding a mood
-    means adding one line here and nothing anywhere else.
-    """
     out = []
     for mood, glyph in MOOD_BADGE.items():
         if not glyph:
-            # `animation:none` matters as much as the opacity: the badge's
-            # entrance animation ends on opacity 1, and an animation's final
-            # frame beats a plain declaration. Without this the "idle" mood
-            # shows an empty white disc instead of nothing at all.
             out.append(f'.coach-figure[data-mood="{mood}"] .coach-badge'
                        f'{{animation:none;opacity:0;transform:scale(.6);'
                        f'pointer-events:none}}')
@@ -247,9 +214,7 @@ if __name__ == "__main__":
     print(mood_badge_css())
 
 
-# ====================================================================
 # graze
-# ====================================================================
 
 LENGTHS = [15, 20]
 
@@ -262,9 +227,6 @@ KINDS = {
     "hulk": {"r": 26, "speed": 34, "pts": 80, "tone": "warn"},
 }
 
-# Per theme: the polygon each kind is drawn as, and what the world calls them.
-# A triangle in Terminal and a circle in Serenity are the same object doing the
-# same job; only the costume changes.
 THEMES = {
     "serenity": {
         "name": "Stillwater",
@@ -303,9 +265,6 @@ THEMES = {
     },
 }
 
-# Upgrades offered between waves. Deliberately all additive — nothing here
-# takes anything away, and nothing is a trap choice, because a wrong pick that
-# ruins a session is stress the screen is supposed to remove.
 UPGRADES = [
     {"id": "whisk", "n": "Wider sense", "d": "Graze from noticeably farther out.", "max": 4},
     {"id": "stat", "n": "Static coat", "d": "Each graze charges your ring 40% faster.", "max": 4},

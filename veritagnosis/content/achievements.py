@@ -1,35 +1,7 @@
-"""
-Checkpoints for the whole app, not just meditation.
-
-Same idea as the meditation roadmap and the same reason for living in content/
-rather than in the database: these are identical for every student, so only the
-*reaching* of one is stored per user. The list can be rewritten, reordered or
-extended and nothing needs migrating.
-
-What makes one of these good, and what the list is trying to avoid:
-
-  - Reward the work, not the app. "Opened the essay screen" is a participation
-    trophy and students see straight through it. "Got a draft past 300 words"
-    is a thing they actually did.
-  - The first ones have to be reachable in the first sitting, or the whole
-    board reads as locked and nobody comes back to it.
-  - Nothing rewards volume for its own sake. There is no achievement for
-    adding twenty colleges to a list, because adding twenty colleges to a list
-    is not progress — it is avoidance, and the app should not applaud it.
-  - The largest rewards are for the things that are genuinely hard and
-    genuinely matter: asking a teacher in person, finishing a real draft,
-    submitting an application.
-
-`requires` is checked against the stats dict built by
-services/achievements.gather(). Adding an achievement means adding one entry
-here and nothing else.
-"""
 
 from __future__ import annotations
 
-# ---------------------------------------------------------------------------
 # Categories, in the order they appear on screen.
-# ---------------------------------------------------------------------------
 CATEGORIES = [
     ("start", "Getting going"),
     ("writing", "Writing"),
@@ -39,32 +11,6 @@ CATEGORIES = [
     ("money", "Paying for it"),
 ]
 
-# stat keys available to `requires` — see services/achievements.gather():
-#   essays            drafts started
-#   essay_words       total words written across all drafts
-#   essay_sentences   finished sentences (3+ words, end punctuation) across drafts
-#   essay_best        best coach score on any draft
-#   essay_polished    drafts scoring 70 or better
-#   essay_finished    drafts marked done
-#   schools           colleges on the list
-#   schools_started   colleges past the "just listed" stage
-#   schools_ready     colleges at 80% or more
-#   schools_submitted colleges actually sent
-#   deadlines         colleges with a deadline recorded
-#   recs_asked        teachers asked
-#   recs_agreed       teachers who said yes
-#   recs_submitted    letters sent
-#   med_sessions      finished breathing sessions
-#   med_minutes       total minutes sat
-#   med_streak        current day streak
-#   avatar            1 once the character has been customised
-#   level             current level
-#   aid_steps         financial aid checklist steps ticked
-#   scholarships      scholarships being tracked
-#   scholarships_sent scholarship applications submitted
-#   priced            colleges with a cost recorded
-#   break_minutes     minutes spent on the game or the tap screen
-#   break_sessions    finished sessions on either
 ACHIEVEMENTS = [
     # ---- getting going ---------------------------------------------------
     {"key": "a_avatar", "cat": "start", "title": "Made yourself",

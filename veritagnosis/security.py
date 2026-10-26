@@ -1,9 +1,3 @@
-"""
-Who you are and what you did: sessions, login, the audit trail, and the
-response headers the browser is told to enforce.
-
-Depends on models; crypto deliberately does not (see crypto.py).
-"""
 
 from __future__ import annotations
 
@@ -29,30 +23,17 @@ GENERIC_LOGIN_ERROR = "That username and password combination doesn't match."
 
 
 def _hash_token(token: str) -> str:
-    """Plain SHA-256, not Argon2, deliberately.
-
-    Slow hashing exists to make guessing *low-entropy* human passwords
-    expensive. A 256-bit random token has nothing to guess, and every request
-    would pay the cost. Hashing it at all is so a database leak cannot be
-    replayed."""
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-# --------------------------------------------------------------- registration
 class RegistrationError(Exception):
     pass
 
 
-# A deliberately permissive address check. The real test of an address is
-# whether a code sent to it comes back, which is exactly what signup now does —
-# so this only needs to catch typing errors, not adjudicate RFC 5322.
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(?:\.[^@\s.]+)+$")
 
 
 def _and_list(items: list[str]) -> str:
-    """"a, b and c". Joining five rules with "and" five times reads like a
-    machine; a student skimming an error message should be able to take it
-    in at a glance."""
     if len(items) <= 1:
         return "".join(items)
     return ", ".join(items[:-1]) + " and " + items[-1]
@@ -71,9 +52,6 @@ def register(session: Session, username: str, password: str, *,
     if problems:
         raise RegistrationError("Password needs " + _and_list(problems) + ".")
 
-    # Signing in always needs a code, and a code needs somewhere to go. An
-    # account without an address could be created and then never entered, so
-    # the address is required here rather than discovered at the first login.
     email = (email or "").strip()
     if not email:
         raise RegistrationError(
@@ -81,21 +59,8 @@ def register(session: Session, username: str, password: str, *,
     if len(email) > 254 or not _EMAIL_RE.match(email):
         raise RegistrationError("That email address doesn't look right.")
 
-    # One address, as many accounts as it likes. A counsellor setting up
-    # accounts for a family, or a student with a school login and a personal
-    # one, both end up at the same inbox; the account is identified by its
-    # username, never by its address. Nothing downstream needs the address to
-    # be unique: a sign-in code is addressed to one specific user's row.
-
     if session.exec(select(User).where(
             func.lower(User.username) == username.lower())).first():
-        # Case-insensitively, because "Sri" and "sri" are the same name to
-        # everybody except a database. Two accounts a letter's capitalisation
-        # apart are two accounts a student will mix up, sign in to the wrong
-        # one, and reasonably report as the app losing their work.
-        #
-        # Signup is the one place enumeration cannot be avoided — the user has
-        # to be told the name is taken. Login stays generic to compensate.
         raise RegistrationError("That username is taken.")
 
     user = User(
@@ -112,22 +77,6 @@ def register(session: Session, username: str, password: str, *,
     record(session, "register", user_id=user.id)
     session.commit()
     return user
-# --------------------------------------------------------------------- login
-#
-# Two factors, every time.
-#
-# The old flow verified an email address once, set a flag, and from then on a
-# password alone opened the account. That is email confirmation, not two-factor
-# authentication: after day one there was exactly one secret between a stranger
-# and a student's essays, and it was a secret the student very likely reused
-# somewhere that has since been breached.
-#
-# Now a correct password is never, on its own, a session. It buys a challenge —
-# a row that knows which account is half-way in and nothing else — and the
-# session is minted only when the code sent to the registered address comes
-# back. `login()` therefore has no success path that returns a token. There is
-# no flag anywhere that can switch this off, because a second factor you can
-# turn off is a second factor an attacker can turn off.
 
 CHALLENGE_TTL_MINUTES = 10
 MAX_CODE_ATTEMPTS = 5
@@ -139,9 +88,6 @@ class SecondFactorRequired(PermissionError):
     def __init__(self, challenge: str, code: str, email: str | None, user_id: int):
         super().__init__("We emailed you a six-digit code.")
         self.challenge = challenge        # opaque handle, for the browser
-        # The code travels on the exception because the caller has to put it in
-        # an email. It is a server-side control-flow object and is never
-        # serialised to the client — unlike a State var, which would be.
         self.code = code
         self.email = email or ""          # for the server to address the mail
         self.user_id = user_id
@@ -154,12 +100,6 @@ EmailNotVerified = SecondFactorRequired
 
 def begin_challenge(session: Session, user: User, *,
                     user_agent: str | None = None) -> tuple[str, str]:
-    """Open a second-factor challenge. Returns (handle, code).
-
-    The handle goes to the browser and the code goes to the inbox, and neither
-    is any use without the other. Any earlier challenge for this user is
-    retired first, so a code read over someone's shoulder yesterday is dead.
-    """
     for old in session.exec(
         select(LoginChallenge).where(LoginChallenge.user_id == user.id,
                                      LoginChallenge.used == False)  # noqa: E712
@@ -185,17 +125,6 @@ def begin_challenge(session: Session, user: User, *,
 
 def login(session: Session, username: str, password: str, *,
           user_agent: str | None = None) -> tuple[str, User]:
-    """Check the password and open a second-factor challenge.
-
-    Never returns a session. On success it raises SecondFactorRequired, which
-    carries the challenge handle; the caller mails the code and sends the user
-    to the verify step. Every other failure raises PermissionError with the
-    same generic message, so nothing here reveals which usernames exist.
-    """
-    # Matched without regard to case, the same way the name was checked for
-    # uniqueness when the account was made. Someone whose phone capitalises
-    # the first letter of every field should not be told their password is
-    # wrong.
     user = session.exec(select(User).where(
         func.lower(User.username) == username.strip().lower())).first()
 
@@ -226,9 +155,6 @@ def login(session: Session, username: str, password: str, *,
         session.commit()
         raise PermissionError(GENERIC_LOGIN_ERROR)
 
-    # An account with no registered address has no second factor and therefore
-    # no way in. Registration refuses to create one; this is the guard for rows
-    # that predate that rule.
     if not user.email:
         record(session, "login", user_id=user.id, ok=False,
                detail="no address for second factor")
@@ -253,11 +179,6 @@ def login(session: Session, username: str, password: str, *,
 
 def complete_login(session: Session, handle: str, code: str, *,
                    user_agent: str | None = None) -> tuple[str, User]:
-    """Second step. Returns (raw_token, user) — the only place a session is made.
-
-    Every failure says the same thing. Distinguishing "expired" from "wrong"
-    would tell someone holding a stolen handle whether they were close.
-    """
     bad = PermissionError("That code isn't right, or it has expired. "
                           "Sign in again for a fresh one.")
     if not handle or not code:
@@ -308,11 +229,6 @@ def complete_login(session: Session, handle: str, code: str, *,
 
 
 def resend_code(session: Session, handle: str) -> tuple[str, str, str] | None:
-    """Retire a challenge and open a fresh one. Returns (handle, code, email).
-
-    The handle changes too. Keeping it would mean the attempt counter survived
-    a resend, so anyone could reset their five guesses by asking for a new code.
-    """
     row = session.exec(
         select(LoginChallenge).where(
             LoginChallenge.handle_hash == _hash_token(handle))
@@ -383,7 +299,6 @@ def logout_everywhere(session: Session, user_id: int) -> int:
     return len(rows)
 
 
-# ------------------------------------------------------------ email verifying
 MAX_CODE_ATTEMPTS = 5
 
 
@@ -446,26 +361,6 @@ def change_password(session: Session, user: User, old: str, new: str) -> None:
 
 
 def delete_account(session: Session, user: User, password: str) -> None:
-    """Delete the account and everything that belongs to it. No undo.
-
-    The password is required. A signed-in laptop left open on a library desk
-    is the ordinary case this guards against: closing the account is the one
-    action in the app that cannot be taken back, so it asks for the one thing
-    a passer-by does not have.
-
-    What gets deleted is worked out from the schema rather than from a list
-    kept here. Every table carrying a user_id is cleared for this user, in
-    child-before-parent order, so a feature added later — a new kind of log,
-    a new kind of plan — is covered the day it is added rather than the day
-    someone remembers to update this function. A list would be wrong exactly
-    once, silently, and would leave a deleted student's work in the file.
-
-    The audit trail is the one deliberate exception, and it is emptied too:
-    those rows say when this person signed in and from what, which is the
-    last thing a deleted account should leave behind. A single row survives,
-    recording that an account was deleted and belonging to nobody — the
-    event, without the person.
-    """
     ok, _ = passwords.verify_password(user.password_hash, password)
     if not ok:
         record(session, "account_delete", user_id=user.id, ok=False)
@@ -478,9 +373,6 @@ def delete_account(session: Session, user: User, password: str) -> None:
     from veritagnosis import models  # noqa: F401  (registers every table)
 
     uid = user.id
-    # sorted_tables is parents-first, so children are deleted first in
-    # reverse. With PRAGMA foreign_keys=ON that order is not a nicety — the
-    # delete of the user row fails outright while anything still points at it.
     for table in reversed(SQLModel.metadata.sorted_tables):
         if table.name == "user" or "user_id" not in table.c:
             continue
@@ -492,17 +384,11 @@ def delete_account(session: Session, user: User, password: str) -> None:
     session.commit()
 
 
-# ====================================================================
 # audit
-# ====================================================================
 
 ACTIONS = {
     "register", "login", "logout", "login_locked", "password_change",
     "email_verify", "session_expired", "data_export", "account_delete",
-    # The two halves of a sign-in are recorded separately, so the log can tell
-    # "someone knows this password" apart from "someone got in". A run of
-    # login_password_ok with no matching login is exactly what a stolen
-    # password looks like, and it is invisible if you only log the success.
     "login_password_ok", "second_factor", "second_factor_resend",
 }
 
@@ -521,18 +407,12 @@ def record(session: Session, action: str, *, user_id: int | None = None,
     ))
 
 
-# ====================================================================
 # headers
-# ====================================================================
 
 CSP = "; ".join([
     "default-src 'self'",
     # Reflex inlines hydration script and Radix inlines style.
     "script-src 'self' 'unsafe-inline'",
-    # fonts.googleapis.com serves the @font-face stylesheet for the five theme
-    # typefaces. Omitting it here silently killed every one of them and dropped
-    # the whole app to system sans — a CSP failure looks like a design change,
-    # which is what makes it such an easy one to ship by accident.
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob:",
     # ...and gstatic serves the actual font files that stylesheet points at.

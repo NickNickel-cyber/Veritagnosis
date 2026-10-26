@@ -1,10 +1,3 @@
-"""
-What the student's data adds up to: readiness across five
-dimensions, fit against colleges' published intake, and the
-profile that feeds both.
-
-Merged from: readiness, fit, profile.
-"""
 from __future__ import annotations
 
 import dataclasses
@@ -31,9 +24,7 @@ from sqlmodel import Session
 from veritagnosis.models import User, utcnow
 
 
-# ====================================================================
 # readiness
-# ====================================================================
 
 @dataclasses.dataclass
 class ReadinessResult:
@@ -105,9 +96,6 @@ def assess(uid: int) -> ReadinessResult:
     next_steps = _rank_next_steps(academic, extracurricular, college_fit, app_progress,
                                   financial, _activity_rows(user))
 
-    # Whole numbers, always. One of the scorers works in fractions, and a
-    # float leaking out of here reached an int field on the profile screen
-    # ("Expected field 'readiness_overall' to receive type int, got 51.0").
     return ReadinessResult(
         academic=int(round(academic)),
         extracurricular=int(round(extracurricular)),
@@ -120,9 +108,7 @@ def assess(uid: int) -> ReadinessResult:
     )
 
 
-# ============================================================================
 # DIMENSION SCORING
-# ============================================================================
 
 
 def _assess_academic(user: User, scores: list[TestScore]) -> int:
@@ -143,12 +129,6 @@ def _assess_academic(user: User, scores: list[TestScore]) -> int:
     # ACT 34+ = 90, 32 = 80, 30 = 70, below 28 = 40
     if scores:
         test_points = 50  # Start neutral if we have scores
-        # The BEST score counts, not the last one the database happened to
-        # return. Assigning inside this loop (as this once did) meant a student
-        # with a 1550 SAT and a weak practice ACT was scored on whichever row
-        # came back second — and since the query has no ORDER BY, two calls on
-        # identical data could disagree, which broke the determinism this
-        # module promises.
         for score in scores:
             if not score.score:
                 continue
@@ -183,29 +163,10 @@ def _activity_rows(user: User) -> list[dict]:
 def _assess_extracurricular(
     user: User, recs: list[Recommender], checkpoints: list[CheckpointProgress]
 ) -> int:
-    """The student's activities: intensity, years, leadership, and what the
-    names say about them. See services/activities.py for every rule.
-
-    This used to be recommenders and app checkpoints, which measured how much
-    of this app had been used rather than anything a college would read.
-    `recs` and `checkpoints` are still accepted so callers need not change;
-    recommenders count under Applications instead.
-    """
     return activities.score(_activity_rows(user))
 
 
 def _assess_college_fit(schools: list[School]) -> int:
-    """Number of colleges, tier distribution, research depth.
-
-    Scoring:
-      - 0 colleges = 0
-      - 1-3 colleges = 25 + (count * 15)
-      - 4-6 colleges = 50 + (count * 8)
-      - 7-10 colleges = 80 + (count * 2)
-      - 11+ = 95-100
-      - Tier distribution: -10 if all safety, -10 if all reach, balanced = +10
-      - Notes present = research depth: +5 per college with notes
-    """
     if not schools:
         return 0
 
@@ -241,18 +202,6 @@ def _assess_college_fit(schools: list[School]) -> int:
 def _assess_application_progress(
     schools: list[School], essays: list[Essay], recs: list[Recommender]
 ) -> int:
-    """Essays written, recommendations collected, applications submitted.
-
-    Scoring based on typical timeline:
-      - Essays: expect 4 total (Common App + 3 supplemental)
-        1 essay = 25%, 2 = 50%, 3 = 75%, 4+ = 100%
-      - Recommendations: expect 2-3
-        1 rec = 25%, 2 = 60%, 3 = 90%
-      - Applications: expect 5-8
-        1 submitted = 20%, 2 = 40%, 3 = 60%, 5 = 80%, 8+ = 100%
-
-    Default assumption (if no schools): generous credit for any essay/rec work
-    """
     essay_score = 0
     if essays:
         # Done essays: only count if done=True
@@ -261,11 +210,6 @@ def _assess_application_progress(
 
     rec_score = 0
     if recs:
-        # "agreed" is the real status for a teacher who has said yes; there is
-        # no "accepted" anywhere in the app's vocabulary (see
-        # services/recommenders.py STATUS_FLOW), so the old check matched
-        # nothing and told students with every letter lined up that they had
-        # none.
         ready_count = sum(1 for r in recs if r.status in ("agreed", "submitted"))
         rec_score = min(100, (ready_count / 2) * 100)
 
@@ -280,14 +224,6 @@ def _assess_application_progress(
 
 
 def _assess_financial_readiness(user: User, schools: list[School]) -> int:
-    """Aid form submission, cost understanding, affordability planning.
-
-    Scoring:
-      - FAFSA started: 30pts (future: check profile.fafsa_status)
-      - Colleges with costs entered: 20pts each, capped at 60
-      - Colleges with affordability analysis: 10pts each, capped at 30
-      - Default: 40 (some thought given)
-    """
     # For now: heuristic from schools
     # Schools with net_cost or sticker = student looked at costs
     cost_count = sum(1 for s in schools if s.sticker or s.net_cost)
@@ -301,9 +237,7 @@ def _assess_financial_readiness(user: User, schools: list[School]) -> int:
     return min(100, base + cost_points + aid_points)
 
 
-# ============================================================================
 # EXPLANATIONS
-# ============================================================================
 
 
 def _plural(n: int, word: str) -> str:
@@ -325,9 +259,6 @@ def _explain_academic(user: User, scores: list[TestScore]) -> str:
         return ("No GPA or test scores yet. Add them so each college can be "
                 "compared with your numbers.")
 
-    # No verdict on whether the numbers are good: that depends entirely on
-    # which colleges they are being held up against, and the fit cards below
-    # say exactly that, college by college.
     return "Your numbers so far: " + ", ".join(parts) + "."
 
 
@@ -402,22 +333,12 @@ def _explain_financial_readiness(user: User, schools: list[School]) -> str:
     return msg
 
 
-# ============================================================================
 # BLIND SPOT DETECTION
-# ============================================================================
 
 
 def _detect_blind_spots(
     user: User, schools: list[School], essays: list[Essay], recs: list[Recommender]
 ) -> list[dict]:
-    """Identify what the student hasn't considered yet.
-
-    Returns list of {title, why, action} sorted by importance.
-
-    None of these quote what "most students" do. Those figures vary by school,
-    by year and by who is counting, and a number the app cannot source is a
-    number it should not be showing a seventeen-year-old as fact.
-    """
     spots = []
 
     # Blind spot 1: Not enough colleges researched
@@ -511,24 +432,13 @@ def _detect_blind_spots(
     return spots
 
 
-# ============================================================================
 # NEXT STEPS RANKING
-# ============================================================================
 
 
 def _rank_next_steps(
     academic: int, extracurricular: int, college_fit: int, app_progress: int, financial: int,
     activity_rows: list[dict] | None = None,
 ) -> list[str]:
-    """Rank next steps by impact on readiness.
-
-    Strategy: Work on the lowest-scoring dimension first (biggest impact),
-    but don't ignore multiple dimensions (spreads work).
-
-    These used to end in a points promise ("→ +15 Academic"). The scores are
-    worked out from the student's own rows, so no fixed number was ever true;
-    each step now says only what to do.
-    """
     dims = [
         ("academic", academic),
         ("extracurricular", extracurricular),
@@ -575,9 +485,7 @@ def _rank_next_steps(
     return steps[:3]  # Top 3 next steps
 
 
-# ====================================================================
 # fit
-# ====================================================================
 
 NEVER_SAFE_BELOW = 20.0
 REACH_FLOOR = 10.0
@@ -644,12 +552,6 @@ def _n(v: float) -> str:
 
 
 def student_stats(uid: int) -> dict:
-    """The student's own numbers, best available of each kind.
-
-    Both GPA and scores are encrypted at rest and arrive as strings, and a
-    student may have typed anything at all into them. Everything that will not
-    parse is dropped rather than guessed at.
-    """
     out: dict = {"gpa": None, "sat": None, "act": None}
     with db.get_session() as s:
         user = s.get(User, uid)
@@ -690,12 +592,6 @@ def _standings(college: dict, stats: dict) -> list[Standing]:
 
 
 def classify(college: dict, stats: dict) -> tuple[str | None, str]:
-    """Reach / target / safety from the published data, with the reasoning.
-
-    Selectivity sets a floor that a strong applicant cannot argue their way
-    below, because at these admit rates the published bands stop being
-    predictive — most rejected applicants are inside them too.
-    """
     rate = college.get("accept_rate")
     if rate is None:
         return None, "No published admit rate for this college yet."
@@ -718,11 +614,6 @@ def classify(college: dict, stats: dict) -> tuple[str | None, str]:
         return tier, f"Based on its {rate}% admit rate alone. {hint}"
 
     if place == "below":
-        # Below the band means below most admitted students — but at a college
-        # taking nearly half its applicants that is a long way from unlikely.
-        # Treating every below-band college as a reach regardless of admit rate
-        # would flatten the list into one undifferentiated wall of red and make
-        # the genuinely long shots impossible to pick out.
         if rate >= 40:
             return "target", (
                 f"{stand[0].sentence} They admit {rate}% though, so this is "
@@ -756,15 +647,6 @@ def classify(college: dict, stats: dict) -> tuple[str | None, str]:
 
 
 def for_school(school: School, stats: dict, session: Session | None = None) -> Fit:
-    """Measure one school on the student's list.
-
-    `session` is optional so the two dozen curated colleges still work with no
-    database at all (and so the existing tests keep calling this with two
-    arguments). When it is supplied, a school that is not in the curated file
-    is looked up in the imported College Scorecard catalogue instead of being
-    reported as "no data" — which, before the import existed, was the answer
-    for almost every school a real student actually types.
-    """
     entry = catalog.lookup(session, school.name or "")
     student_tier = school.tier.value if hasattr(school.tier, "value") else str(school.tier)
 
@@ -807,12 +689,6 @@ def for_school(school: School, stats: dict, session: Session | None = None) -> F
 
 
 def review(uid: int) -> dict:
-    """The whole list, measured.
-
-    Returns the per-college fits plus the two list-level facts that matter more
-    than any single college: whether anything on the list is actually within
-    reach, and where the student's own labels disagree with the data.
-    """
     stats = student_stats(uid)
     with db.get_session() as s:
         # Nicknames saved before names were checked become full names first,
@@ -830,20 +706,6 @@ def review(uid: int) -> dict:
 
     warnings: list[str] = []
 
-    # What this block used to be, and why it is short now.
-    #
-    # It carried four paragraphs. The longest explained, at length, that the
-    # app could not judge safety coverage "because every college loaded here
-    # admits under half its applicants — this is a gap in our data, not a
-    # verdict on your list", and another recited how many universities were
-    # loaded and what range of admit rates they spanned.
-    #
-    # Both were honest and both were written for a catalogue of two dozen
-    # colleges. With the Scorecard import there are thousands, including plenty
-    # of genuinely accessible ones, so the gap those paragraphs apologised for
-    # is gone — and a student reading a statistics box does not want a
-    # paragraph about the provenance of the dataset. What is left is only the
-    # lines that tell them to do something.
     if known and by_tier["safety"] == 0 and by_tier["target"] == 0:
         warnings.append((("Everything on your list is a reach, so try adding one where your "
                           "numbers are above the usual range.")))
@@ -865,9 +727,7 @@ def review(uid: int) -> dict:
     }
 
 
-# ====================================================================
 # profile
-# ====================================================================
 
 XP_PER_LEVEL = 500
 
@@ -891,12 +751,6 @@ def award_xp(session: Session, user: User, amount: int) -> tuple[int, bool]:
 
 
 def touch_streak(session: Session, user: User) -> int:
-    """Call once per day of activity.
-
-    Same day: nothing. Yesterday: extend. Longer ago: reset to 1. Keeping this
-    in one function is what stops the streak being counted twice by two
-    different screens on the same day.
-    """
     today = utcnow().date()
     last = user.last_active.date() if user.last_active else None
     if last == today:

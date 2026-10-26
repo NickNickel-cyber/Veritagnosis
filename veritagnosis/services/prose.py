@@ -1,38 +1,3 @@
-"""
-The writing engine.
-
-What it is
-----------
-This reads a draft and finds specific problems in specific places. Not "your
-essay could be stronger" — but "the word 'very' at character 412 is doing
-nothing, delete it", with a button that deletes it.
-
-Everything here runs on your own computer with no internet and no AI service.
-It is a few hundred rules about how English actually behaves, written down
-carefully. That has two real advantages over sending the essay somewhere: an
-extremely personal piece of writing never leaves the machine, and the advice is
-the same every time, so a student can learn the patterns rather than chasing a
-mood.
-
-What it is not: it does not understand meaning. It cannot tell you your story
-is boring. It catches the mechanical things that make good stories read badly —
-and there are a lot of those, they are what separates a first draft from a
-final one, and they are exactly the things a tired seventeen-year-old at 1am
-cannot see in their own writing any more.
-
-How a check works
------------------
-Every check returns `Finding` objects. A finding knows where it is (character
-offsets into the draft), what is wrong, why that matters in plain English, and
-what to put there instead. Because it knows the offsets and the replacement,
-the interface can offer a one-tap fix — and because each finding declares
-whether it is `auto`, "Polish everything" can apply the safe ones in bulk and
-leave the judgement calls to the writer.
-
-Confidence is respected. A rule that is certain (a doubled space, "in order to")
-fixes itself. A rule that needs a human (passive voice, an abstract claim)
-explains itself and waits.
-"""
 
 from __future__ import annotations
 
@@ -41,9 +6,7 @@ import math
 import re
 from collections import Counter
 
-# --------------------------------------------------------------------------
 # The finding
-# --------------------------------------------------------------------------
 
 
 @dataclasses.dataclass
@@ -69,13 +32,8 @@ class Finding:
 SEVERITY_RANK = {"high": 0, "med": 1, "low": 2}
 
 
-# --------------------------------------------------------------------------
 # Splitting text up
-# --------------------------------------------------------------------------
 
-# Abbreviations that end in a period but do not end a sentence. Without this
-# list, "Dr. Chen said" is treated as two sentences and every rhythm number is
-# wrong.
 _ABBREV = {"mr", "mrs", "ms", "dr", "prof", "sr", "jr", "st", "mt", "vs",
            "etc", "eg", "ie", "approx", "dept", "univ", "inc", "co", "u.s",
            "a.m", "p.m", "ph.d", "b.a", "m.a"}
@@ -137,13 +95,6 @@ def paragraphs(text: str) -> list[str]:
     return [p.strip() for p in re.split(r"\n\s*\n", text or "") if p.strip()]
 
 
-# --------------------------------------------------------------------------
-# Word lists
-#
-# These are the heart of the engine. Each entry pairs a pattern with the reason
-# it is a problem, so the advice is never "this is bad" without a "because".
-# --------------------------------------------------------------------------
-
 # Words that add length and subtract force. Deleting them never changes the
 # meaning of a sentence, which is what makes them safe to auto-fix.
 FILLER = {
@@ -177,11 +128,6 @@ FILLER = {
     "it should be noted that": "Note it, then.",
 }
 
-# Vague phrases that are worth pointing at but must NOT be deleted
-# automatically, because removing them changes what the sentence says.
-# "I went to a lot of the meetings" and "I went to the meetings" are different
-# claims, and it is not this program's business to decide which one is true.
-# They are shown with an explanation and no fix button.
 VAGUE_QUANTITY = {
     "a lot of": ("Vague. A number is more convincing. 'A lot of meetings' could be "
                  "four or forty, and readers assume four."),
@@ -196,9 +142,6 @@ VAGUE_QUANTITY = {
     "tons of": "Vague quantity, and conversational.",
 }
 
-# Phrases that hedge. In a personal essay these are especially costly: the
-# admissions reader wants to know what you think, and a hedge says you are not
-# sure you are allowed to say it.
 HEDGES = {
     "i think": "You are the writer; the reader already knows it is your view. "
                "Stating it flat is more convincing.",
@@ -449,9 +392,7 @@ SENSORY = {
 }
 
 
-# --------------------------------------------------------------------------
 # Helpers
-# --------------------------------------------------------------------------
 
 def _match_case(original: str, replacement: str) -> str:
     """Keep the shape of the original word so a fix does not break a sentence
@@ -477,9 +418,7 @@ def _iter(pattern: str, text: str):
     return re.finditer(pattern, text, re.IGNORECASE)
 
 
-# --------------------------------------------------------------------------
 # The checks
-# --------------------------------------------------------------------------
 
 def _check_filler(text: str) -> list[Finding]:
     out = []
@@ -495,12 +434,6 @@ def _check_filler(text: str) -> list[Finding]:
 
 
 def _check_vague_quantity(text: str) -> list[Finding]:
-    """Point at fuzzy amounts, but never edit them.
-
-    Deleting "a lot of" would turn a true sentence into a different one, so
-    these carry no fix — the button is missing on purpose, and the explanation
-    asks for the number instead.
-    """
     out = []
     for phrase, why in VAGUE_QUANTITY.items():
         pat = r"\b" + re.escape(phrase).replace(r"\ ", r"\s+") + r"\b"
@@ -608,13 +541,6 @@ _PARTICIPLES = (
 
 
 def _check_passive(text: str) -> list[Finding]:
-    """Be-verb plus past participle.
-
-    Deliberately advisory: "I was tired" matches the same shape as "I was
-    chosen", and telling them apart needs meaning, which this engine does not
-    have. So it points and explains rather than rewriting — and it skips the
-    forms most likely to be a plain adjective.
-    """
     out = []
     skip = {"was tired", "were tired", "was excited", "were excited",
             "was scared", "were scared", "was worried", "were worried",
@@ -636,12 +562,6 @@ def _check_passive(text: str) -> list[Finding]:
 
 
 def _check_adverbs(text: str) -> list[Finding]:
-    """-ly adverbs, flagged only where they pile up.
-
-    One adverb is a choice. Four in a paragraph is a habit, and the habit is
-    what costs the writing its force, so this only speaks when the density is
-    high enough to be worth mentioning.
-    """
     out = []
     keep = {"only", "family", "early", "likely", "lonely", "friendly", "ugly",
             "daily", "weekly", "monthly", "yearly", "holy", "reply", "supply",
@@ -780,9 +700,7 @@ def _check_echo(text: str) -> list[Finding]:
     return out
 
 
-# --------------------------------------------------------------------------
 # Numbers
-# --------------------------------------------------------------------------
 
 _VOWELS = "aeiouy"
 
@@ -819,12 +737,6 @@ def readability(text: str) -> dict:
 
 
 def rhythm(text: str) -> dict:
-    """How much the sentence lengths vary.
-
-    Uniform sentence length is the most common reason a technically correct
-    essay reads as flat. A human ear notices it immediately and cannot say why,
-    so putting a number on it is genuinely useful.
-    """
     lens = [len(words(seg)) for _, _, seg in sentences(text)]
     if len(lens) < 3:
         return {"variety": 0, "shortest": min(lens) if lens else 0,
@@ -848,11 +760,6 @@ def rhythm(text: str) -> dict:
 
 
 def strengths(text: str, findings: list[Finding]) -> list[str]:
-    """What the draft is already doing right.
-
-    A tool that only lists faults gets closed. These are all measured, not
-    flattery — each one is a real property of the text.
-    """
     out = []
     ws = [w.lower() for w in words(text)]
     if not ws:
@@ -882,9 +789,7 @@ def strengths(text: str, findings: list[Finding]) -> list[str]:
     return out[:4]
 
 
-# --------------------------------------------------------------------------
 # Putting it together
-# --------------------------------------------------------------------------
 
 CHECKS = [
     _check_confusables,      # first: highest confidence
@@ -905,27 +810,10 @@ CHECKS = [
 ]
 
 
-# Findings that describe a whole sentence or passage rather than a few words.
-# They are allowed to overlap word-level findings, because "this sentence is 63
-# words long" and "the word 'basically' inside it is filler" are both true and
-# both worth acting on.
 STRUCTURAL = {"long", "rhythm"}
 
 
 def _dedupe(findings: list[Finding]) -> list[Finding]:
-    """Keep one finding per stretch of text.
-
-    Two rules often fire on the same words — "I am really passionate about" is a
-    cliché, a filler word and a telling-not-showing claim all at once. Showing
-    all three is noise, and applying all three would corrupt the text, because
-    the second edit's offsets are computed against a string the first edit
-    already changed. So overlaps are resolved once, here: the rule that ran
-    earlier (higher confidence) wins.
-
-    Structural findings are exempt. They span a whole sentence, so letting them
-    take part in the overlap rule would silence every word-level fix inside a
-    long sentence — which is precisely the sentence most in need of them.
-    """
     inline = [f for f in findings if f.kind not in STRUCTURAL]
     structural = [f for f in findings if f.kind in STRUCTURAL]
 
@@ -1007,49 +895,10 @@ def _grade_note(read: dict) -> str:
             f"are hiding your voice, so shorten both.")
 
 
-# ==========================================================================
-# Readiness, the story map, and the real score
-# ==========================================================================
-#
-# Why this section exists.
-#
-# The first version of this engine started scoring at twenty-five words.
-# Twenty-five words is one sentence. Putting a number out of a hundred next to
-# one sentence is theatre: there is nothing for the variety check to compare,
-# nothing for the structure check to read, and the number lurches ten points on
-# every keystroke. A student who types their opening line and is told "34/100"
-# learns one thing only, which is that the app is guessing.
-#
-# So nothing is scored until there is enough writing to score. Below the floor
-# the screen says what it is waiting for instead of inventing a number. Between
-# the floor and the full mark the score is real but explicitly provisional, and
-# it is pulled toward the middle in proportion to how little evidence there is —
-# regression toward the mean, which is the honest way to report a measurement
-# taken from a small sample.
-#
-# And the score itself is no longer a single deduction from a hundred. Counting
-# only faults means a four-line essay with no faults scores the same as a
-# finished one, which is exactly backwards. The score is a weighted composite of
-# five things that can each be measured from the text.
-
 WORDS_NO_SCORE = 60        # under this there is no score at all
 WORDS_PROVISIONAL = 175    # under this the score is shown as provisional
 WORDS_FULL = 325           # here every dimension has enough text to read
 
-
-# --------------------------------------------------------------------------
-# The story map
-# --------------------------------------------------------------------------
-#
-# A personal essay that works almost always does five things: puts us somewhere
-# specific, has the writer *do* something, turns, thinks about the turn, and
-# says why it still matters. Named that way the shape is obvious; unnamed, it is
-# the single most common thing missing from a draft that "feels like it is not
-# about anything".
-#
-# These are cue detectors, not comprehension. They find the language that marks
-# each move. That is enough to tell a writer "there is no turn in here", which is
-# a true and useful thing to say, without pretending to understand the story.
 
 _STORY_CUES: dict[str, str] = {
     "situation": r"\b(?:when i was|back when|last (?:summer|winter|spring|fall|autumn|year|month)|"
@@ -1088,10 +937,6 @@ _STORY_CUES: dict[str, str] = {
               r"i carry|it is why|that is why|which is why)\b",
 }
 
-# Verbs that follow "I" without describing an action: auxiliaries, and the
-# verbs of thinking, feeling and perceiving. Those are the reflection move, not
-# the action move, and counting them as action would mark every introspective
-# draft as full of doing.
 _NOT_ACTION = {
     "was", "were", "am", "is", "are", "be", "been", "being", "had", "have",
     "has", "will", "would", "could", "should", "can", "may", "might", "must",
@@ -1133,11 +978,6 @@ STORY_STEPS: list[tuple[str, str, str]] = [
 
 
 def story_map(text: str) -> list[dict]:
-    """Which of the five moves are in the draft, and where.
-
-    Returns one entry per move, always all five and always in order, so the
-    interface can draw the gaps as well as the hits.
-    """
     text = text or ""
     paras = paragraphs(text)
     # Character offset at which each paragraph starts, for locating a hit.
@@ -1163,10 +1003,6 @@ def story_map(text: str) -> list[dict]:
                 if b <= first:
                     where = i
 
-        # Strength: one cue means the move is present, which is most of what
-        # matters; further cues confirm it. Nothing saturates off a single hit,
-        # and in a long essay one lone cue is thinner evidence than in a short
-        # one, so it is marked down.
         base = {0: 0, 1: 55, 2: 72, 3: 84}.get(n, 92)
         if n and total_words > 300:
             base -= min(18, int((total_words - 300) // 150) * 6)
@@ -1184,9 +1020,7 @@ def story_map(text: str) -> list[dict]:
     return out
 
 
-# --------------------------------------------------------------------------
 # The five dimensions
-# --------------------------------------------------------------------------
 
 _ABSTRACT_SUFFIX = re.compile(
     r"^\w{6,}(?:tion|sion|ment|ness|ity|ance|ence|ship|ism)$", re.I)
@@ -1205,12 +1039,6 @@ _CONTRACTION_RE = re.compile(r"\b\w+['’](?:t|s|re|ve|ll|d|m)\b", re.I)
 
 
 def _dim_craft(findings: list[Finding], n_words: int) -> float:
-    """How clean the prose is, as a density rather than a count.
-
-    Density, not raw count: a 650-word essay with six problems is in better
-    shape than a 90-word one with four, and a measure that ignored length would
-    punish a student for writing more.
-    """
     if n_words <= 0:
         return 0.0
     weight = {"high": 3.0, "med": 1.6, "low": 0.45}
@@ -1220,14 +1048,6 @@ def _dim_craft(findings: list[Finding], n_words: int) -> float:
 
 
 def _dim_rhythm(text: str) -> float:
-    """Sentence-length variety. Flat rhythm is the commonest reason a correct
-    essay reads as lifeless.
-
-    With one guard: the variety statistic is a standard deviation, so a single
-    sixty-word sentence in an otherwise uniform draft sends it to the top of the
-    scale. That is not rhythm, it is a runaway sentence, and it is already a
-    high-severity finding. Length outliers are subtracted back out.
-    """
     lens = [len(words(seg)) for _, _, seg in sentences(text)]
     if len(lens) < 3:
         return 0.0
@@ -1239,11 +1059,6 @@ def _dim_rhythm(text: str) -> float:
 
 
 def _dim_concrete(text: str, ws: list[str]) -> float:
-    """Specific things versus abstract nouns.
-
-    The difference between an essay about a Tuesday and an essay about
-    perseverance. Almost everything that makes a draft forgettable shows up here.
-    """
     n = len(ws)
     if n < 20:
         return 0.0
@@ -1342,12 +1157,6 @@ DIMENSIONS: list[tuple[str, str, float, str]] = [
 
 def score_detail(text: str, findings: list[Finding] | None = None,
                  smap: list[dict] | None = None) -> dict:
-    """The score, and everything behind it.
-
-    Always returns the same shape. `ready` is the field the interface should
-    branch on: when it is False there is no number to show and `needed` says how
-    many more words it is waiting for.
-    """
     text = text or ""
     if findings is None:
         findings = _dedupe([f for c in CHECKS for f in c(text)])
@@ -1379,13 +1188,6 @@ def score_detail(text: str, findings: list[Finding] | None = None,
     }
     composite = sum(raw[key] * w for key, _, w, _ in DIMENSIONS)
 
-    # Confidence, and the regression that goes with it.
-    #
-    # A measurement from 70 words is a real measurement taken from a small
-    # sample. Reporting it at full strength would be overclaiming, so it is
-    # pulled toward the middle of the range in proportion to how little text
-    # there is. As the draft grows the pull disappears on its own, and the score
-    # stops jumping around, because the sample stopped being small.
     if n >= WORDS_FULL:
         conf = 1.0
     else:
@@ -1430,9 +1232,7 @@ def band(value: int) -> str:
     return "early days"
 
 
-# --------------------------------------------------------------------------
 # Applying fixes
-# --------------------------------------------------------------------------
 
 def apply_one(text: str, finding: Finding) -> str:
     """Apply a single fix. Offsets are checked against the current text first,
@@ -1445,11 +1245,6 @@ def apply_one(text: str, finding: Finding) -> str:
 
 
 def apply_all(text: str, findings: list[Finding] | None = None) -> tuple[str, int]:
-    """Apply every safe fix at once. Returns (new_text, how_many).
-
-    Applied back to front so that each edit's offsets are still valid: changing
-    the length of an earlier span would shift everything after it.
-    """
     if findings is None:
         findings = analyse(text)["findings"]
     safe = [f for f in findings if f.auto and f.has_fix]

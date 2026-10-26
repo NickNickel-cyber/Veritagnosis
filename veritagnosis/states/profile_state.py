@@ -1,15 +1,3 @@
-"""
-Profile state: career interest, major, extracurriculars, timeline.
-
-This is the personalisation foundation. What a student says here feeds the
-readiness engine (services/readiness.py) and, later, the college and essay
-screens — so it is stored on the user row rather than held in the session.
-
-Everything lives in one JSON column (`User.profile_data`) on purpose. These
-fields are read and written together, always for one user, and never queried
-or sorted across users. A table per shape would be five migrations for no
-gain; the day one of these needs an index, it earns its own column then.
-"""
 
 from __future__ import annotations
 
@@ -26,14 +14,8 @@ from veritagnosis.services import insight as fit_svc
 from veritagnosis.services import insight as readiness_svc
 from veritagnosis.states.base import FeatureState
 
-# Fixed scales, so a band drawn for one college is directly comparable to the
-# band drawn for the next. Scaling each bar to its own college would make a
-# narrow band look as wide as a broad one.
 SCALES = {"SAT": (400, 1600), "ACT": (1, 36)}
 
-# Plain module constants, not state vars. Reflex ships every state var to the
-# browser on each update; this list never changes, so it belongs in the
-# compiled page, not in the state payload.
 CAREER_OPTIONS = [
     "Computer Science", "Medicine", "Business", "Engineering", "Law",
     "Education", "Psychology", "Biology", "Chemistry", "Physics",
@@ -52,9 +34,6 @@ MAJOR_OPTIONS = [
 
 INTENSITIES = ["light", "moderate", "intense"]
 
-# Event handlers are reachable over the websocket directly, so what the UI
-# offers is not a constraint on what arrives. Anything free-text is capped
-# here; anything that should be one of a fixed set is checked against it.
 MAX_FIELD = 80
 MAX_ACTIVITIES = 30
 
@@ -62,17 +41,6 @@ MAX_ACTIVITIES = 30
 class ProfileState(FeatureState, rx.State):
     """Student profile: background, interests, goals, timeline."""
 
-    # Your own numbers.
-    #
-    # The scoring engine has read these since it was written — student_stats()
-    # parses user.gpa and the TestScore rows, the fit bands compare them
-    # against each college's published percentiles, and the readiness score
-    # weights them. There was simply nowhere in the app to type them, so every
-    # student got the same answer: "you have not entered an SAT or ACT score".
-    #
-    # Held as strings because that is what a text input gives, and because a
-    # half-typed "14" must not be stored as a real score. Parsing and range
-    # checks happen on save.
     gpa_input: str = ""
     sat_input: str = ""
     act_input: str = ""
@@ -81,16 +49,10 @@ class ProfileState(FeatureState, rx.State):
     career_interest: str = ""
     major_preference: str = ""
 
-    # One row per activity: {name, intensity, years, leadership}.
-    # Held as a typed list so rx.foreach can walk it in the page; it is
-    # serialised into the JSON column on save.
     extracurriculars: list[dict[str, str]] = []
 
     @rx.var(deps=["extracurriculars"])
     def ec_rows(self) -> list[dict[str, str]]:
-        """The activities as the page shows them, each with what it scored
-        and why ("intense +15 · 3 years +6 · “captain” +10"), so a student can
-        see exactly which words and choices moved their readiness."""
         out = []
         for r in self.extracurriculars:
             sc = activity_svc.score_one(r)
@@ -110,18 +72,8 @@ class ProfileState(FeatureState, rx.State):
     saved_msg: str = ""
     load_error: str = ""
 
-    # Bumped only when a field is deliberately cleared or reloaded. It feeds
-    # the inputs' React `key`, and that is the whole point: a key built from
-    # the field's own value changes on every keystroke, which remounts the
-    # input and throws away the caret after a single character. Typing into
-    # the box then appears to do nothing. Tying the key to an explicit counter
-    # means the input is only ever rebuilt when we actually mean to reset it.
     form_epoch: int = 0
 
-    # ---- computed on load, read-only on the page -------------------------
-    # Held as plain strings because Reflex ships state to the browser and a
-    # typed list var will not take mixed types. The engines return rich
-    # objects; they are flattened here rather than in the template.
     readiness_overall: int = 0
     readiness_dims: list[dict[str, str]] = []
     blind_spots: list[dict[str, str]] = []
@@ -137,10 +89,6 @@ class ProfileState(FeatureState, rx.State):
     def profile_complete(self) -> bool:
         """Enough to personalise anything at all."""
         return bool(self.career_interest or self.major_preference)
-
-    # -- simple setters ----------------------------------------------------
-    # Each clears saved_msg so the "Saved ✓" tick never lingers over an edit
-    # that has not been written yet.
 
     @rx.event
     def set_career_interest(self, value: str):
@@ -165,9 +113,6 @@ class ProfileState(FeatureState, rx.State):
 
     @rx.event
     def set_target_schools_count(self, value: float):
-        """Annotated float because that is what Reflex sends from an
-        <input type=number>. It can still arrive empty mid-typing, which is
-        not an error worth showing anyone — the old value just stands."""
         try:
             n = int(value)
         except (TypeError, ValueError):
@@ -248,10 +193,6 @@ class ProfileState(FeatureState, rx.State):
 
     @rx.event
     async def store_activities(self):
-        """Activities save the moment they change, and the readiness numbers
-        above move with them. Waiting for "Save profile" meant adding a
-        captaincy did nothing visible, which reads as the feature not working.
-        """
         uid = await self._user_id()
         if uid is None:
             return rx.redirect("/login")
@@ -265,11 +206,6 @@ class ProfileState(FeatureState, rx.State):
         if uid is None:
             return rx.redirect("/login")
 
-        # The decrypt happens here, inside the ORM read, so it has to be
-        # guarded: an unreadable profile_data must not take the whole screen
-        # down with it. Unlike an essay, everything in this blob is a handful
-        # of choices the student can simply pick again, so an empty form with
-        # an explanation beats a page that will not open.
         raw = None
         try:
             with db.get_session() as s:
@@ -282,11 +218,6 @@ class ProfileState(FeatureState, rx.State):
             )
             raw = None
 
-        # The GPA and the scores live in their own columns and rows, not in
-        # profile_data, so they are read separately and survive an unreadable
-        # blob. Guarded for the same reason the read above is: this screen must
-        # open even when one stored value cannot be read, because everything on
-        # it can simply be entered again.
         try:
             with db.get_session() as s:
                 self._load_scores(s, uid)
@@ -304,9 +235,6 @@ class ProfileState(FeatureState, rx.State):
             self.target_schools_count = p.get("target_schools_count", 5)
             self.priority = p.get("priority", "balanced")
 
-            # Coerce every field to str: these came out of JSON that an older
-            # version of this screen may have written with ints and bools, and
-            # a typed list var will not accept mixed types.
             rows = []
             for ec in p.get("extracurriculars", []) or []:
                 if not isinstance(ec, dict):
@@ -325,12 +253,6 @@ class ProfileState(FeatureState, rx.State):
         self.loading = False
 
     def _analyse(self, uid: int) -> None:
-        """Run both engines and flatten them for the page.
-
-        Wrapped because a student with a half-filled profile is the normal
-        case, not an error: if either engine raises, the screen still renders
-        with whatever the other produced rather than showing a stack trace to
-        a seventeen-year-old."""
         try:
             r = readiness_svc.assess(uid)
             self.readiness_overall = int(round(r.overall))
@@ -377,10 +299,6 @@ class ProfileState(FeatureState, rx.State):
 
     @staticmethod
     def _flatten_fit(f) -> dict[str, str]:
-        """One college, reduced to strings and CSS percentages.
-
-        The bar geometry is worked out here rather than in the browser so the
-        template stays declarative and the numbers can be tested."""
         st = f.standings[0] if f.standings else None
         row = {
             "name": f.school_name,
@@ -420,10 +338,6 @@ class ProfileState(FeatureState, rx.State):
 
     @rx.event
     async def rename_school(self, school_id: str, name: str):
-        """Replace a name the catalogue did not recognise with a full one.
-
-        Only the student's own row, and only a name the catalogue resolves,
-        so this cannot be used to write an arbitrary string."""
         uid = await self._user_id()
         if uid is None:
             return rx.redirect("/login")
@@ -442,12 +356,6 @@ class ProfileState(FeatureState, rx.State):
         self._analyse(uid)
 
     def _load_scores(self, session, uid: int) -> None:
-        """Fill the inputs from what is stored.
-
-        Without this the form is blank on every visit and a student retypes
-        their GPA each time — which also makes it impossible to tell "I have
-        not entered this" from "the form forgot".
-        """
         user = session.get(User, uid)
         try:
             self.gpa_input = str(user.gpa or "") if user else ""
@@ -525,12 +433,6 @@ class ProfileState(FeatureState, rx.State):
 
     @rx.event
     async def save_scores(self):
-        """Store the GPA and scores, then re-run the analysis immediately.
-
-        Out-of-range values are refused rather than stored, because the engine
-        drops what it cannot parse — so a typo would otherwise look saved and
-        change nothing, which is the worst of both.
-        """
         uid = await self._user_id()
         if uid is None:
             return rx.redirect("/login")

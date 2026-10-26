@@ -1,9 +1,3 @@
-"""
-Getting in and out: the splash screen, sign-up, log-in, email
-verification, and account settings.
-
-Merged from: splash, login, signup, verify, settings.
-"""
 from __future__ import annotations
 
 import reflex as rx
@@ -17,18 +11,12 @@ from veritagnosis.ui.theme import btn, error_box, shell
 from veritagnosis.ui.theme import shell, theme_picker
 
 
-# ====================================================================
 # splash
-# ====================================================================
 
 def splash() -> rx.Component:
     return shell(
         rx.box(
             rx.box(
-                # The crest, not a letter. alt is empty on purpose: the
-                # wordmark underneath already says Veritagnosis, and a
-                # screen reader announcing the name twice in a row is
-                # noise rather than information.
                 rx.image(src="/logo.png", alt="", class_name="emblem"),
                 rx.heading("Veritagnosis", class_name="wordmark"),
                 rx.text("College applications, one quest at a time.",
@@ -58,21 +46,11 @@ def splash() -> rx.Component:
     )
 
 
-# ====================================================================
 # login
-# ====================================================================
 
 def login() -> rx.Component:
     return shell(
         rx.box(
-            # "College app tips or inspiring quotes" from the wireframe, drawn
-            # from the active theme's pool.
-            # The banner drifts and the line changes on its own. It is the
-            # only thing alive on a screen somebody is typing a remembered
-            # password into, and a static card there reads as a screenshot.
-            # `key` is the quote itself, so React tears the node down and
-            # rebuilds it on every change and the entrance animation replays
-            # instead of the text swapping silently underneath.
             rx.box(
                 rx.box(
                     rx.text(ThemeState.quote_text, class_name="kinetic"),
@@ -129,9 +107,7 @@ def login() -> rx.Component:
     )
 
 
-# ====================================================================
 # signup
-# ====================================================================
 
 def _quote_strip() -> rx.Component:
     return rx.box(
@@ -193,12 +169,6 @@ def signup() -> rx.Component:
                         field("Password", "password",
                               "a phrase is easier to remember than a word",
                               type_="password", required=True, min_length=8),
-                        # Ticked off live by motion.js as they are met. The
-                        # rules are listed rather than discovered by failing:
-                        # a student should not have to press the button to
-                        # learn what the button wants. The server checks the
-                        # same five rules again — this is the preview, not the
-                        # gate.
                         rx.el.ul(
                             rx.el.li("8 characters or more",
                                      custom_attrs={"data-rule": "len"}),
@@ -225,12 +195,6 @@ def signup() -> rx.Component:
                         2,
                         rx.box(
                             rx.el.label("Age"),
-                            # No default. This box used to arrive pre-filled
-                            # with 17, so a student who skipped past it had an
-                            # age recorded that they never entered — and age is
-                            # one of the encrypted columns, stored because it
-                            # is personal. A placeholder shows the format
-                            # without asserting anything about them.
                             rx.el.input(class_name="input", name="age", type="number",
                                         min=MIN_AGE, max=MAX_AGE,
                                         placeholder="17"),
@@ -288,9 +252,7 @@ def signup() -> rx.Component:
     )
 
 
-# ====================================================================
 # verify
-# ====================================================================
 
 def _box(i: int) -> rx.Component:
     return rx.box(
@@ -377,9 +339,7 @@ def verify() -> rx.Component:
     )
 
 
-# ====================================================================
 # settings
-# ====================================================================
 
 def settings_page() -> rx.Component:
     return shell(
@@ -418,9 +378,6 @@ def settings_page() -> rx.Component:
                 class_name="card",
             ),
 
-            # Closing the account. Last on the screen and in its own card,
-            # because the one thing that must never happen here is a student
-            # reaching for "Sign out" and finding this instead.
             rx.box(
                 rx.text("Delete my account", class_name="step-label"),
                 rx.cond(

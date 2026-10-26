@@ -1,9 +1,3 @@
-"""
-The application screens: the school list, the essay coach,
-and recommenders.
-
-Merged from: schools_state, essay_state, recs_state.
-"""
 from __future__ import annotations
 
 import dataclasses
@@ -25,9 +19,7 @@ from veritagnosis.content import copy as asking
 from veritagnosis.models import Recommender, School, User, utcnow
 
 
-# ====================================================================
 # schools_state
-# ====================================================================
 
 @dataclasses.dataclass
 class Step:
@@ -120,7 +112,6 @@ class SchoolsState(FeatureState, rx.State):
         if not self.next_name:
             return "No deadlines recorded yet."
         return f"{self.next_name} is next — {self.next_when}"
-    # ---------------------------------------------------------------- load
     @rx.event
     async def load(self):
         uid = await self._user_id()
@@ -202,7 +193,6 @@ class SchoolsState(FeatureState, rx.State):
             letters=(f"{got} of {need} letters" if need else "no letters needed"),
         )
 
-    # -------------------------------------------------------------- editing
     @rx.event
     async def add_school(self, form: dict):
         uid = await self._user_id()
@@ -376,9 +366,7 @@ class SchoolsState(FeatureState, rx.State):
         self.just_earned = ""
 
 
-# ====================================================================
 # essay_state
-# ====================================================================
 
 MAX_SHOWN = 14
 
@@ -461,14 +449,6 @@ class VersionRow:
 
 @dataclasses.dataclass
 class PromptRow:
-    """One prompt in the chooser.
-
-    `short` used to be the only thing rendered — the first 78 characters of a
-    prompt, followed by an ellipsis. A student cannot choose between eleven
-    essay prompts by reading the first 78 characters of each, which is most of
-    why the old picker was useless as well as ugly. The full text and the
-    coaching note are both carried now, and the chooser shows them.
-    """
 
     key: str
     text: str
@@ -563,10 +543,6 @@ class EssayState(FeatureState, rx.State):
     dirty: bool = False
     saved_at: str = ""
     just_earned: str = ""
-    # Where this draft stood the last time checkpoints were checked: (has a
-    # finished sentence, how many writing thresholds it has passed). Checked
-    # again only when that changes, so typing does not run the whole
-    # achievement scan on every autosave.
     _writing_mark: str = ""
 
     versions: list[VersionRow] = []
@@ -575,12 +551,6 @@ class EssayState(FeatureState, rx.State):
     coach_tab: str = "overview"
     coach_open: bool = False      # the drawer, on a narrow screen
 
-    # ---- scoring readiness ----------------------------------------------
-    #
-    # `score_ready` is the flag the screen branches on. Until it is true there
-    # is no number anywhere on the page — not greyed out, not a zero, nothing.
-    # A score invented from forty words is the thing that made the old screen
-    # feel fake, and the fix is not a smaller number, it is no number.
     score_ready: bool = False
     score_provisional: bool = False
     score_stage: str = "blank"
@@ -600,18 +570,6 @@ class EssayState(FeatureState, rx.State):
 
     journey: list[JourneyPoint] = []
 
-    # The cursor fix.
-    #
-    # The writing box used to be a *controlled* input: the server held the text
-    # and pushed it back on every keystroke. React then re-set the box's value,
-    # and re-setting a textarea's value puts the caret at the end — so clicking
-    # into the middle of a word to fix a typo threw you to the bottom of the
-    # essay on the very next character.
-    #
-    # Now the browser owns the text while you type. This number is the box's
-    # React key, so bumping it rebuilds the box with new text. It is bumped
-    # ONLY when the app deliberately changes the draft — loading, applying a
-    # fix, polishing, undoing, restoring. Never while typing.
     doc_version: int = 0
 
     # Backend-only: never leaves the server.
@@ -628,15 +586,8 @@ class EssayState(FeatureState, rx.State):
                   "sentence on purpose. It usually gets you moving again."),
     }
 
-    # ------------------------------------------------------------ the coach
     @rx.var(deps=["score", "stat_words", "high_issues", "last_applied", "dirty"])
     def coach_mood(self) -> str:
-        """What the character on screen is doing.
-
-        Tied to the state of the draft rather than picked at random, so the
-        figure is feedback and not decoration: it looks pleased when the writing
-        gets better and concerned when there is a lot to fix.
-        """
         if self.stat_words < 5:
             return "sleepy"
         if self.last_applied:
@@ -663,7 +614,6 @@ class EssayState(FeatureState, rx.State):
             return "Tap the same button again to go back to the step."
         return DONE["hint"] if self.done else STEPS[min(self.step, len(STEPS) - 1)]["hint"]
 
-    # ------------------------------------------------------------- numbers
     @rx.var
     def words(self) -> int:
         return len([w for w in self.body.split() if w.strip()])
@@ -746,7 +696,6 @@ class EssayState(FeatureState, rx.State):
         p = promptlib.find(self.prompt)
         return f"{p['words']}-word limit" if p else ""
 
-    # --------------------------------------------------- the coach panel
     @rx.event
     def set_coach_tab(self, key: str):
         self.coach_tab = key
@@ -793,7 +742,6 @@ class EssayState(FeatureState, rx.State):
                 f"{'one' if missing == 1 else missing} will help more than all the "
                 f"small fixes combined.")
 
-    # ------------------------------------------------------- the analysis
     def _build_dims(self, detail: dict) -> None:
         self.dims = [
             Dim(key=d["key"], name=d["name"], value=d["value"], note=d["note"],
@@ -824,13 +772,6 @@ class EssayState(FeatureState, rx.State):
         self.story_done = done
 
     def _build_next_edit(self) -> None:
-        """The single highest-leverage thing to do next.
-
-        Ranked by how much it actually changes the essay, which is not the same
-        as how easy it is to detect. A missing turn outranks every filler word in
-        the draft, and telling a student to delete "very" while their essay has no
-        story in it is the kind of advice that makes a tool feel useless.
-        """
         # 1. Not enough writing to advise on.
         if self.stat_words < prose.WORDS_NO_SCORE:
             left = max(0, prose.WORDS_NO_SCORE - self.stat_words)
@@ -926,12 +867,6 @@ class EssayState(FeatureState, rx.State):
         self.nbe_idx = -1
 
     def _build_journey(self) -> None:
-        """Saved versions plus where the draft stands now, as a small chart.
-
-        The point is not the individual numbers. It is that a student who has
-        been rewriting for three hours can see that it is in fact getting better,
-        which is not something you can feel from inside the draft.
-        """
         pts: list[JourneyPoint] = []
         rows = list(reversed(self.versions))      # oldest first
         for i, v in enumerate(rows):
@@ -948,7 +883,6 @@ class EssayState(FeatureState, rx.State):
             current=True, scored=self.score_ready))
         self.journey = pts[-10:]
 
-    # ---------------------------------------------------------------- load
     @rx.event
     async def load(self):
         uid = await self._user_id()
@@ -981,14 +915,7 @@ class EssayState(FeatureState, rx.State):
         self.doc_version += 1      # the draft came from the server: rebuild the box
         self.loading = False
 
-    # ------------------------------------------------------------ analysis
     def _analyse(self) -> None:
-        """Read the draft and rebuild everything the screen shows.
-
-        A plain method rather than an event handler: several handlers finish by
-        re-reading the draft, and in Reflex an event handler cannot call
-        another one.
-        """
         text = self.body or ""
         result = prose.analyse(text)
         found = result["findings"]
@@ -1054,9 +981,6 @@ class EssayState(FeatureState, rx.State):
         ]
 
     def _build_chunks(self) -> None:
-        """Split the essay into plain and marked runs for the review pane.
-        Only inline findings mark text — a whole-sentence finding would swallow
-        the paragraph and make the highlighting useless."""
         text = self.body or ""
         if not text:
             self.chunks = []
@@ -1080,12 +1004,6 @@ class EssayState(FeatureState, rx.State):
         self.chunks = out[:600]
 
     def _build_outline(self, text: str) -> None:
-        """The shape of the essay at a glance.
-
-        Paragraph length is the thing writers cannot see in their own work. A
-        700-word wall or five one-line stubs are both obvious from three feet
-        away and invisible while you are inside them.
-        """
         paras = prose.paragraphs(text)
         total = sum(len(prose.words(p)) for p in paras) or 1
         out = []
@@ -1109,28 +1027,12 @@ class EssayState(FeatureState, rx.State):
 
     @rx.event
     async def set_body(self, value: str):
-        """The browser sends what you typed; nothing is sent back.
-
-        Re-reading the whole essay on every keystroke would be wasteful, so the
-        analysis refreshes once the draft has moved by a sentence's worth of
-        typing — often enough to feel alive, rarely enough to stay cheap.
-
-        And the same beat writes it to the database. Leaving the box used to
-        be the only thing that saved: close the lid, lose the tab, let the
-        laptop sleep, and an hour of writing was gone — the one kind of bug a
-        student never forgives. A row update of a few kilobytes every
-        sentence or so costs nothing next to that, so the draft is never more
-        than a sentence away from being on disk.
-        """
         self.body = value
         self.flash = ""
         self.last_applied = ""
         self.dirty = True
         if abs(len(value) - self.analysed_len) >= 40 or self._crossed_mark(value):
             self._analyse()
-            # A failure here is a sign-out mid-draft. Say nothing and leave
-            # dirty set: the blur handler and the Save button both try again,
-            # and the text is still in the box either way.
             if await self._persist():
                 await self._check_writing_checkpoints(value)
 
@@ -1145,9 +1047,6 @@ class EssayState(FeatureState, rx.State):
         return f"{int(has_sentence)}:{passed}"
 
     def _crossed_mark(self, text: str) -> bool:
-        """True the moment a sentence is finished or a word mark is passed,
-        even if fewer than 40 characters were typed since the last save.
-        The cheap test only runs when the text just ended a sentence."""
         if not text or text.rstrip()[-1:] not in ".!?":
             return False
         return self._mark_for(text) != self._writing_mark
@@ -1165,16 +1064,8 @@ class EssayState(FeatureState, rx.State):
         if new:
             self.just_earned = new[0]["title"]
 
-    # ---------------------------------------------------------------- fixes
     @rx.event
     async def apply_fix(self, idx: int):
-        """Apply one suggestion.
-
-        Nothing is trusted: the index is range-checked, and prose.apply_one
-        re-reads the characters at the recorded offsets and refuses if they are
-        not still exactly what the analysis saw. A stale tap is a no-op, never
-        a mangled sentence.
-        """
         if not (0 <= idx < len(self._findings)):
             return
         f = self._findings[idx]
@@ -1201,13 +1092,6 @@ class EssayState(FeatureState, rx.State):
 
     @rx.event
     async def polish(self):
-        """Apply every high-confidence fix in one go.
-
-        Only the ones marked `auto` in the engine — the mechanical corrections
-        where there is no judgement call. Anything about voice or structure is
-        left for the writer, because those are the decisions that make the
-        essay theirs.
-        """
         if not self.auto_count:
             return
         before = self.body
@@ -1277,7 +1161,6 @@ class EssayState(FeatureState, rx.State):
         if self.outline_mode:
             self._analyse()
 
-    # -------------------------------------------------------------- prompts
     @rx.event
     def toggle_prompts(self):
         self.show_prompts = not self.show_prompts
@@ -1304,7 +1187,6 @@ class EssayState(FeatureState, rx.State):
         if not await self._persist():
             return rx.redirect("/login")
 
-    # ------------------------------------------------------------- versions
     def _load_versions(self, session, uid: int) -> None:
         rows = list(session.exec(
             select(EssayVersion)
@@ -1327,12 +1209,6 @@ class EssayState(FeatureState, rx.State):
 
     @rx.event
     async def snapshot(self):
-        """Keep this draft so you can come back to it.
-
-        Undo covers the last change. This covers the other kind of regret: the
-        one where you rewrote the whole middle section yesterday and now want
-        the old version back.
-        """
         uid = await self._user_id()
         if uid is None:
             return rx.redirect("/login")
@@ -1390,7 +1266,6 @@ class EssayState(FeatureState, rx.State):
     def toggle_versions(self):
         self.show_versions = not self.show_versions
 
-    # -------------------------------------------------------------- saving
     @rx.event
     async def react(self, kind: str):
         self.reaction = "" if self.reaction == kind else kind
@@ -1454,9 +1329,7 @@ class EssayState(FeatureState, rx.State):
         self.just_earned = ""
 
 
-# ====================================================================
 # recs_state
-# ====================================================================
 
 @dataclasses.dataclass
 class SchoolPick:
@@ -1488,9 +1361,6 @@ class RecRow:
 
 
 def _ids(raw: str | None) -> set[int]:
-    """Read the comma-separated school id list. Junk is ignored rather than
-    raising — this string is only ever written by us, but a corrupted row must
-    not take the screen down."""
     out = set()
     for part in (raw or "").split(","):
         part = part.strip()
@@ -1568,7 +1438,6 @@ class RecsState(FeatureState, rx.State):
     @rx.var(deps=["tab"])
     def reason_hint(self) -> str:
         return asking.TEMPLATES[self.tab]["reason_hint"]
-    # ---------------------------------------------------------------- load
     @rx.event
     async def load(self):
         uid = await self._user_id()
@@ -1651,9 +1520,6 @@ class RecsState(FeatureState, rx.State):
                 if not need:
                     continue
                 got = sum(1 for r in secured if sc.id in _ids(r.school_ids))
-                # A letter with no colleges assigned is assumed to go
-                # everywhere, which is what actually happens with a general
-                # teacher recommendation.
                 got += sum(1 for r in secured if not _ids(r.school_ids))
                 if got < need:
                     short.append(f"{sc.name} ({got}/{need})")
@@ -1668,7 +1534,6 @@ class RecsState(FeatureState, rx.State):
             new = achievements.award(s, uid, stats)
             self.just_earned = new[0]["title"] if new else ""
 
-    # -------------------------------------------------------------- editing
     @rx.event
     async def add(self, form: dict):
         uid = await self._user_id()
@@ -1754,7 +1619,6 @@ class RecsState(FeatureState, rx.State):
             self.open_id = 0
         self._refresh(uid)
 
-    # ------------------------------------------------------- the ask itself
     @rx.event
     async def start_draft(self, rec_id: int):
         """Write the message for them. This is the point of the screen."""

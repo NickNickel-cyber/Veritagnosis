@@ -1,9 +1,3 @@
-"""
-The home screen and the two things reached straight from it —
-the checkpoint board and the avatar.
-
-Merged from: home, achievements, avatar.
-"""
 from __future__ import annotations
 
 import reflex as rx
@@ -16,16 +10,8 @@ from veritagnosis.states.play_state import AvatarState
 from veritagnosis.ui.avatar import CATEGORIES
 
 
-# ====================================================================
 # home
-# ====================================================================
 
-# (icon, name, subtitle, route, and optionally "this is the main one").
-#
-# My profile is the tile the whole app is built around — the interests, the
-# activities and the timeline are what every other screen reads — so it is
-# drawn slightly larger than its neighbours rather than being one of nine
-# identical squares a student has to read their way through.
 TILES = [
     ("🧑‍🎨", "My avatar", "Customize your look", "/avatar"),
     ("🧭", "My profile", "Interests, activities, timeline", "/profile", True),
@@ -71,9 +57,6 @@ def home() -> rx.Component:
             rx.box(
                 rx.box(rx.html(AuthState.avatar_svg), class_name="who"),
                 rx.box(
-                    # data-pulse: motion.js watches the text and beats it once
-                    # when it changes, so levelling up is something you see
-                    # happen rather than something you notice later.
                     rx.box("Level ",
                            rx.el.span(AuthState.level,
                                       custom_attrs={"data-pulse": "1"}),
@@ -104,9 +87,6 @@ def home() -> rx.Component:
                 class_name="task-box",
             ),
 
-            # 4 — checkpoints. A strip rather than a seventh tile: the sketch
-            # has six tiles and this is a status line, not another destination
-            # of equal weight.
             rx.cond(
                 AuthState.ach_total > 0,
                 rx.link(
@@ -152,9 +132,7 @@ def home() -> rx.Component:
     )
 
 
-# ====================================================================
 # achievements
-# ====================================================================
 
 def _badge(b) -> rx.Component:
     return rx.box(
@@ -270,9 +248,7 @@ def achievements_page() -> rx.Component:
     )
 
 
-# ====================================================================
 # avatar
-# ====================================================================
 
 def _avatar_tile(o) -> rx.Component:
     return rx.el.button(

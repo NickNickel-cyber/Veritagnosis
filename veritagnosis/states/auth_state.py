@@ -1,16 +1,3 @@
-"""
-Signup, login, verification, and the logged-in user.
-
-Two rules this file exists to honour:
-
-  1. Passwords never enter State. Forms submit straight to an event handler and
-     the value lives only in that handler's local scope. A password in a regular
-     State var would be synchronised to the browser.
-  2. The session token is a backend-only var (underscore) plus a LocalStorage
-     var. Reflex does not sync underscore vars to the client, and the
-     LocalStorage copy is the browser's own cookie-equivalent, not something the
-     server echoes back into the page.
-"""
 
 from __future__ import annotations
 
@@ -42,74 +29,26 @@ class AuthState(rx.State):
     essays_left: int = 0
     schools_count: int = 0
 
-    # Today's task, as chosen by services.apply.next_task from this student's
-    # real schools and essays. Held as plain vars rather than computed, because
-    # working it out reads several tables and that belongs in one deliberate
-    # call on load, not in a @rx.var that re-runs on every render.
     task_title_v: str = 'Loading…'
     task_meta_v: str = ""
     task_route_v: str = "/home"
 
-    # Which user the display vars above describe. A Reflex state outlives a
-    # login — it belongs to the browser session — so without this stamp the
-    # previous student's avatar and XP stay on screen after someone else signs
-    # in. Checked every time a user is loaded.
     owner_id: int = 0
 
     error: str = ""
     busy: bool = False
 
-    # Proof-of-life for the connection watchdog in motion.js.
-    #
-    # When the websocket to the Python side dies — the laptop slept, the wifi
-    # dropped, the server restarted — the page looks completely normal and does
-    # nothing at all. Buttons still light up, and no error appears anywhere.
-    # That silent version of broken is what "if the app is open too long, it
-    # breaks" actually was. Every few minutes the browser asks for this number
-    # to go up; if it does not, the page knows the connection is gone and says
-    # so instead of pretending to work.
     beat: int = 0
 
-    # Signup is paced across three panels. All three live inside ONE form, so
-    # the browser holds the values and the password is never assigned to a
-    # State var — which would sync it to the client.
     step: int = 0
     STEPS: int = 3
     emailed: bool = False
     verified_just_now: bool = False
 
-    # ---------------------------------------------------------- second factor
-    #
-    # What the browser is allowed to remember between the two steps.
-    #
-    # Previously this was the user id and the full email address, both in local
-    # storage. That is a plain-text record of exactly who is signing in, sitting
-    # on the disk of whatever machine they used — a shared library computer, a
-    # sibling's laptop — long after they have gone. It was also trusted on the
-    # way back in, so the verify step could be pointed at any account by editing
-    # one value in the developer console.
-    #
-    # Now the browser holds one opaque handle. It is 256 random bits, it means
-    # nothing without the server's row, it expires in ten minutes, and it says
-    # nothing about whose login it belongs to. The masked address is rebuilt
-    # from the server each time the page opens, so even that never persists.
     pending_challenge: str = rx.LocalStorage("", name="vg_challenge")
     masked_email: str = ""
     code: str = ""
 
-    # Demo mode.
-    #
-    # With no mail server configured there is no way to receive a code, and an
-    # app nobody can sign into is no use to someone evaluating it. So in that
-    # one configuration the code is shown on screen.
-    #
-    # This is a real reduction in security and it is treated as one: it is
-    # never a setting, only a consequence of having no mail set up; it is
-    # announced in a banner on every screen that matters; and it is populated
-    # ONLY when the mailer reports it is unconfigured. A send that was attempted
-    # and failed leaves this empty, because that is a broken mail server rather
-    # than an absent one, and leaking the code to the browser there would turn
-    # an outage into a vulnerability.
     demo_code: str = ""
 
     # deps spelled out: the body calls a helper, so Reflex cannot infer them.
@@ -140,16 +79,6 @@ class AuthState(rx.State):
 
     @property
     def _task(self) -> tuple[str, str, str]:
-        """Today's one task — read from this student's own rows.
-
-        Deliberately one thing. The whole point of the screen is that a student
-        opening it at 11pm sees a single next action, not a backlog.
-
-        The work of choosing it is in services.apply.next_task, next to the
-        deadline and milestone helpers it needs. These three vars are filled by
-        load_home; the defaults below are what shows for the half-second before
-        that returns, so they promise nothing.
-        """
         return (self.task_title_v, self.task_meta_v, self.task_route_v)
 
     @rx.var
@@ -168,12 +97,8 @@ class AuthState(rx.State):
     def xp_percent(self) -> int:
         return min(100, int(100 * self.xp / self.xp_needed)) if self.xp_needed else 0
 
-    # ------------------------------------------------------------ signup
     @rx.event
     def next_step(self):
-        """Advance one panel. Nothing is validated here on purpose — stopping
-        someone mid-flow to scold them is exactly the pressure we're removing.
-        Everything is checked once, on submit."""
         self.error = ""
         if self.step < self.STEPS - 1:
             self.step += 1
@@ -207,9 +132,6 @@ class AuthState(rx.State):
                     age=form.get("age") or None,
                     gender=form.get("gender") or None,
                 )
-                # The same two-step flow as a normal sign-in. Confirming the
-                # address and completing the second factor are the same act, so
-                # there is no separate "verify your email" state to get stuck in.
                 handle, code = auth.begin_challenge(s, user)
                 self.pending_challenge = handle
                 self.masked_email = _mask(email)
@@ -233,23 +155,14 @@ class AuthState(rx.State):
 
         self.busy = False
         yield rx.redirect("/verify")
-    # ------------------------------------------------------------- login
     @rx.event
     async def handle_login(self, form: dict):
-        """Step one of two. A correct password here does not sign anyone in.
-
-        `auth.login` has no success return: it raises SecondFactorRequired and
-        hands back a challenge. Anything else that comes out of it is a failure.
-        """
         self.error = ""
         self.busy = True
         yield
         try:
             with db.get_session() as s:
                 auth.login(s, form.get("username", ""), form.get("password", ""))
-            # Unreachable: login never returns. If a future edit gives it a
-            # success path, refuse to proceed rather than silently skipping the
-            # second factor.
             self.busy = False
             self.error = "We couldn't sign you in. Please try again."
             return
@@ -270,23 +183,12 @@ class AuthState(rx.State):
         yield rx.redirect("/verify")
 
     async def _send_code(self, email: str, code: str | None) -> None:
-        """Mail the code, and say nothing about it anywhere else.
-
-        The code is never stored on the state and never printed when the mail
-        goes through — it is a second factor, and a second factor in a log file
-        is not a second factor. The one exception is a send that fails: without
-        the fallback the account would be unreachable, and the terminal belongs
-        to whoever is running the app.
-        """
         self.demo_code = ""
         if not code:
             self.emailed = False
             return
         configured = mailer.is_configured()
         try:
-            # The lifetime is passed, not assumed: the mailer's own default is
-            # 15 minutes and the challenge dies at 10, so leaving it out told
-            # students the code was good for five minutes after it had expired.
             self.emailed = await asyncio.to_thread(
                 mailer.send_verification_code, email, code,
                 auth.CHALLENGE_TTL_MINUTES)
@@ -300,7 +202,6 @@ class AuthState(rx.State):
         if not self.emailed and not configured:
             self.demo_code = code
 
-    # ------------------------------------------------------ verification
     @rx.var
     def demo_mode(self) -> bool:
         """True when no mail server is configured, so codes appear on screen."""
@@ -313,12 +214,6 @@ class AuthState(rx.State):
 
     @rx.event
     def load_verify(self):
-        """Runs when /verify opens.
-
-        The masked address is fetched from the server against the handle rather
-        than read out of browser storage, so a stale or forged handle shows
-        nothing at all.
-        """
         self.error = ""
         self.code = ""
         self.masked_email = ""
@@ -365,11 +260,6 @@ class AuthState(rx.State):
 
     @rx.event
     async def resend_code(self):
-        """A fresh code, and a fresh handle with it.
-
-        Reusing the handle would carry the attempt counter across, which would
-        turn "resend" into a way to reset your five guesses.
-        """
         if not self.pending_challenge:
             self.error = "Sign in again and we'll send you a new code."
             return
@@ -386,11 +276,6 @@ class AuthState(rx.State):
         self.error = ""
         await self._send_code(email, code)
 
-    # ------------------------------------------------------- home summary
-    # Checkpoint numbers for the strip on the home screen. Loaded by their own
-    # event rather than in _load_user, because working them out reads every
-    # essay and scores it — worth doing once on the home screen, wasteful on
-    # every single page.
     ach_reached: int = 0
     ach_total: int = 0
     ach_next: str = ""
@@ -405,20 +290,6 @@ class AuthState(rx.State):
             return 'No checkpoints yet. The first few take about a minute.'
         return f"{self.ach_reached} of {self.ach_total} checkpoints reached"
 
-    # ------------------------------------------------------------ greeting
-    #
-    # The hour comes from the student's own browser, not the server. On a
-    # laptop they are the same clock; once the app is hosted somewhere else
-    # they are not, and "Good morning" at 9pm is exactly the kind of thing
-    # that makes an app feel like it is not paying attention.
-    #
-    # How the hour gets here matters. rx.call_script runs its code with eval(),
-    # and the app's Content-Security-Policy (security.CSP) rightly forbids
-    # eval — so that route threw "EvalError ... 'unsafe-eval' is not an
-    # allowed source" on every visit to the home screen. Instead the greeting
-    # heading's on_mount passes BROWSER_HOUR as an ordinary event argument:
-    # that expression is compiled into the page's own JavaScript bundle, which
-    # the CSP allows, and nothing is ever evaluated from a string.
     hour: int = -1
 
     @rx.event
@@ -481,20 +352,10 @@ class AuthState(rx.State):
 
     @rx.event
     def heartbeat(self):
-        """Answer the watchdog. Deliberately the cheapest possible handler —
-        it touches no database and no session, because its only job is to prove
-        that messages are still getting through."""
         self.beat = (self.beat + 1) % 1000000
 
-    # ------------------------------------------------------------ session
     @rx.event
     def check_session(self):
-        """Runs on_load for protected pages.
-
-        `@require_login`-style page guards only redirect — the page source still
-        ships. Anything private has to be fetched here, after the token is
-        checked, and only then assigned to a var.
-        """
         with db.get_session() as s:
             user = auth.session_user(s, self.token)
             if user is None:
@@ -505,19 +366,6 @@ class AuthState(rx.State):
             self._load_user(user)
 
     async def _forget_everything(self) -> None:
-        """Empty this state and every screen's state. Not an event.
-
-        Clearing the token is not enough on its own. Every screen keeps its own
-        state object — the draft essay, the school board, the meditation
-        streak, the avatar being edited — and those objects belong to the
-        browser session, not to the login. Left alone they would still be
-        holding this student's data when the next person signs in on the same
-        computer, which is exactly the "it forgets whose account is whose"
-        problem. So every one of them is emptied here, explicitly.
-
-        Signing out and deleting the account both need this and event handlers
-        cannot call one another, so it lives here and both await it.
-        """
         self.token = ""
         self.pending_challenge = ""
         self.masked_email = ""
@@ -548,11 +396,6 @@ class AuthState(rx.State):
         await self._forget_everything()
         return rx.redirect("/")
 
-    # ------------------------------------------------- closing the account
-    #
-    # Behind a confirmation step rather than a button on its own, because the
-    # row below it on the settings screen is "Sign out" and a misread tap
-    # there would be unrecoverable.
     confirm_delete: bool = False
     delete_error: str = ""
 
@@ -607,9 +450,6 @@ class AuthState(rx.State):
         self.error = ""
 
     def _load_user(self, user) -> None:
-        # A different person than the state currently describes: drop the old
-        # values first so nothing from the previous account can survive a field
-        # that happens not to be overwritten below.
         if self.owner_id and self.owner_id != user.id:
             self._clear_profile()
         self.owner_id = user.id
@@ -641,9 +481,6 @@ BROWSER_HOUR = rx.Var(_js_expr="(new Date()).getHours()", _var_type=int)
 
 
 def greeting_for(hour: int) -> str:
-    """Morning until noon, afternoon until five, evening after that. The small
-    hours count as evening: "Good morning" at 2am reads like a joke. Before the
-    browser has reported its clock, a plain hello."""
     if not 0 <= hour <= 23:
         return "Hello"
     if 5 <= hour < 12:

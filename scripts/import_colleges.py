@@ -82,11 +82,6 @@ def _int(raw: str | None) -> int | None:
 
 
 def _sat_total(row: dict) -> tuple[int | None, int | None]:
-    """The Scorecard publishes reading and maths separately.
-
-    A composite is their sum, which is how the 1600 scale works and how every
-    college quotes it. If either half is missing the composite is not guessed.
-    """
     lo = _num(row.get("SATVR25")), _num(row.get("SATMT25"))
     hi = _num(row.get("SATVR75")), _num(row.get("SATMT75"))
     p25 = int(lo[0] + lo[1]) if None not in lo else None
@@ -171,9 +166,6 @@ def run(path: str, data_year: str = "", echo=print) -> int:
             return -1
 
         with db.get_session() as s:
-            # One query for the ids already present, so a re-import updates in
-            # place instead of doubling the table. A select of one column
-            # yields plain scalars.
             existing: set[int] = set(s.exec(select(College.unitid)).all())
 
             for row in reader:

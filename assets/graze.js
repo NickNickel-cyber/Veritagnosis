@@ -38,9 +38,6 @@
       dim: g('--text-dim', '#5f8394'),
       surface3: g('--surface-3', 'rgba(120,140,160,.25)'),
       bg: g('--bg', '#06121a'),
-      /* The words drawn on the canvas are text the player reads, so they wear
-         the theme's face like everything else. Canvas takes a CSS font
-         shorthand, and the token is already a full family list. */
       font: g('--font-ui', 'system-ui, sans-serif'),
       fontDisplay: g('--font-display', g('--font-ui', 'system-ui, sans-serif')),
     };
@@ -52,13 +49,6 @@
     C.wipe = C.dark ? 0.30 : 0.55;
     C.wipeSlow = C.dark ? 0.34 : 0.60;
   }
-  /* How light the stage background is.
-     The game draws with additive blending ('lighter'), which is what gives the
-     glow on the dark themes — and which turns a light theme into a white
-     rectangle, because adding light to something already near white just makes
-     white. So the blend mode follows the background instead of being assumed.
-     Measured by painting the colour into a 1x1 canvas: the tokens can be hex,
-     rgb() or color-mix(), and this reads all of them without a parser. */
   function luminance(col) {
     try {
       var c = document.createElement('canvas');
@@ -92,7 +82,6 @@
                    z: rand(.2, 1), a: rand(0, TAU) });
   }
 
-  /* ============ STATE ============ */
   var S, stacks, mode = 'idle';     /* idle | playing | draft | respawn | done */
   var player, enemies, bits, rings, pops, drops, splinters, bullets, drones, boss;
   var score, runScore, combo, bestCombo, comboT, charge, wave, waveT;
@@ -128,7 +117,6 @@
     paintHud();
   }
 
-  /* ============ HUD (DOM, not canvas) ============ */
   function txt(id, v) {
     var n = el(id);
     if (n && n.textContent !== String(v)) n.textContent = String(v);
@@ -167,7 +155,6 @@
     return left;
   }
 
-  /* ============ EFFECTS ============ */
   function spark(x, y, col, n, spd, size) {
     if (reduced) n = Math.min(n, 6);
     for (var i = 0; i < n; i++) {
@@ -186,7 +173,6 @@
     pops.push({ x: W / 2, y: H * .32, text: text, col: col, life: 1.6, banner: true });
   }
 
-  /* ============ SPAWNING ============ */
   function sidesFor(type) {
     var s = C.theme.sides || {};
     return s[type] === undefined ? 4 : s[type];
@@ -221,7 +207,6 @@
              shootT: 1.6, addT: 2.2, grazeCd: 0, hurt: 0 };
   }
 
-  /* ============ SCORING ============ */
   function reward(base, x, y, col, label) {
     var g = Math.round(base * combo * S.mul * (overdrive ? 2 : 1));
     score += g; runScore += g;
@@ -272,7 +257,6 @@
     paintHud();
   }
 
-  /* ============ ACTIONS ============ */
   function fireBurst() {
     if (mode !== 'playing' || charge < 100) return;
     charge = 0; shake = reduced ? 0 : 15; hitStop = .06; flash = .28;
@@ -327,7 +311,6 @@
     }
   }
 
-  /* ============ DRAFT ============ */
   function openDraft() {
     mode = 'draft';
     enemies.length = 0; bullets.length = 0;
@@ -386,7 +369,6 @@
     startWave(wave + 1);
   }
 
-  /* ============ UPDATE ============ */
   function update(dt, real) {
     for (var si = 0; si < stars.length; si++) {
       var st = stars[si];
@@ -640,7 +622,6 @@
     paintHud();
   }
 
-  /* ============ RENDER ============ */
   function shape(x, y, r, sides, rot) {
     if (!sides) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); return; }
     ctx.beginPath();
@@ -798,7 +779,6 @@
     }
   }
 
-  /* ============ LOOP ============ */
   var last = performance.now(), running = false;
   var frameErrors = 0;
   function frame(now) {
@@ -812,10 +792,6 @@
     else if (slow > 0 && S) dt *= S.slowP;
 
     if (sessionEnd && paintClock() <= 0) { finishSession(); return; }
-    /* One bad frame must never kill the screen for good. Without this a single
-       exception breaks the requestAnimationFrame chain and the game is dead
-       until a reload — which is exactly how a game looks when it "doesn't
-       start". */
     try {
       update(dt, real);
       render();
@@ -826,7 +802,6 @@
     requestAnimationFrame(frame);
   }
 
-  /* ============ SESSION ============ */
   function startSession(minutes) {
     bind();
     if (!cvs || !ctx) return false;
@@ -845,12 +820,6 @@
     return true;
   }
 
-  /* ---- starting is asynchronous, because the canvas does not exist yet ----
-     The Start button carries both this hook and a Reflex event. The Reflex
-     event is what swaps the menu for the stage, and that round-trips to the
-     server, so at the instant of the click there is no canvas to draw on.
-     Asking for a start therefore records the wish and keeps checking until the
-     stage is really on screen and has a size. */
   var wantMin = 0, wantSince = 0;
 
   function stageReady() {
@@ -908,7 +877,6 @@
     if (stage) stage.removeAttribute('data-live');
   }
 
-  /* ============ INPUT — scoped to the stage ============ */
   function bind() {
     cvs = el('gz-canvas');
     if (!cvs || cvs.__bound) return;

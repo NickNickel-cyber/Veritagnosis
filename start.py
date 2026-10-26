@@ -1,42 +1,4 @@
 #!/usr/bin/env python3
-"""
-Veritagnosis — one command to run the whole app.
-
-    python start.py
-
-That is the entire install procedure. This script needs nothing but Python
-itself; it builds its own private environment, installs the pinned
-dependencies into it, creates the secret keys and the database on first run,
-and starts the app. Running it again is safe and is the normal way to start
-the app every day.
-
-    python start.py            start the app
-    python start.py --dev      start with hot reload (for editing the code)
-    python start.py --reset    rebuild the web frontend from scratch
-    python start.py --check    set everything up, verify it, and stop
-
-Most people never type this. Double-clicking Veritagnosis.bat on Windows or
-Veritagnosis.command on macOS runs exactly the same thing.
-
-Why this file exists
---------------------
-Nothing here is clever. It exists because the two ways this app has actually
-broken were both environment problems rather than code problems:
-
-  1. `reflex run` was typed in a terminal where the project's virtual
-     environment was not active, so a *different* Python ran — one with a
-     half-installed copy of Reflex — and the app died inside Reflex's own
-     imports. Nothing in the traceback pointed at this project. This script
-     removes the possibility: it always runs the app with the interpreter
-     inside .venv, whatever interpreter was used to launch it.
-
-  2. Dependencies drifted, because they were specified as ranges. They are
-     pinned now, and this script verifies that the environment can actually
-     import Reflex before trying to start, repairing it if it cannot.
-
-So: if something is wrong with the environment, this tells you in one
-sentence instead of forty lines of someone else's stack trace.
-"""
 
 from __future__ import annotations
 
@@ -55,8 +17,6 @@ MIN_PYTHON = (3, 11)
 # Bumped whenever requirements change, so an existing .venv knows to reinstall.
 STAMP = VENV / ".vg-deps-stamp"
 
-
-# ---------------------------------------------------------------- presentation
 
 def say(msg: str = "") -> None:
     print(msg, flush=True)
@@ -82,8 +42,6 @@ def die(msg: str, *fix: str) -> "NoReturn":  # noqa: F821
     raise SystemExit(1)
 
 
-# ---------------------------------------------------------------- environment
-
 def venv_python() -> Path:
     """The interpreter inside .venv, which is the only one that runs the app."""
     if platform.system() == "Windows":
@@ -92,17 +50,6 @@ def venv_python() -> Path:
 
 
 def ensure_launcher_executable() -> None:
-    """Keep Veritagnosis.command double-clickable on macOS and Linux.
-
-    macOS runs a .command file when it is double-clicked only if the execute
-    bit is set; without it, Finder opens the file in TextEdit instead, which
-    looks like the app is broken. Git records the bit, so a clone is fine — but
-    a zip made on Windows, or one unpacked by a tool that drops permissions,
-    arrives without it.
-
-    Repairing it here means that once the app has started by any route, the
-    double-click works from then on.
-    """
     if platform.system() == "Windows":
         return
     launcher = ROOT / "Veritagnosis.command"
@@ -156,12 +103,6 @@ def pip_install(*args: str) -> bool:
 
 
 def reflex_imports() -> bool:
-    """Can the environment actually import the app framework?
-
-    This is the check that would have caught the startup crash. A package can
-    be listed as installed and still be unimportable — an interrupted install,
-    a partially upgraded plugin — and the only reliable test is to import it.
-    """
     probe = "import reflex, reflex.app, reflex_components_lucide.icon"
     return subprocess.run(
         [str(venv_python()), "-c", probe],
@@ -196,8 +137,6 @@ def ensure_deps() -> None:
     STAMP.write_text(want, encoding="utf-8")
 
 
-# ---------------------------------------------------------------- first-run data
-
 def manage(*args: str) -> bool:
     return subprocess.run(
         [str(venv_python()), str(ROOT / "scripts" / "manage.py"), *args],
@@ -217,13 +156,6 @@ def ensure_keys_and_db() -> None:
 
 
 def clear_stale_state() -> None:
-    """Reflex pickles each browser session's screen state into .states/.
-
-    Those pickles describe the state classes as they were when written, so
-    after the app's code changes they can describe a shape that no longer
-    exists. They are a cache — accounts, essays and progress are all in the
-    database — so the safe move is to drop them on every start.
-    """
     states = ROOT / ".states"
     if states.is_dir():
         for f in states.glob("*.pkl"):
@@ -233,22 +165,12 @@ def clear_stale_state() -> None:
                 pass
 
 
-# ---------------------------------------------------------------- running
-
 def run_env() -> dict:
     env = os.environ.copy()
 
-    # Reflex builds the web frontend with Bun by default. Bun's process.env is
-    # a special object missing .hasOwnProperty, and React Router calls exactly
-    # that, so the build dies with "process.env.hasOwnProperty is not a
-    # function". Where npm exists, use it. Where it does not, let Reflex use
-    # its own bundled toolchain and say what to do if the build fails.
     if shutil.which("npm"):
         env["REFLEX_USE_NPM"] = "1"
 
-    # react-router's dev server appends a flag to NODE_OPTIONS and relaunches
-    # itself once. If the flag is already there it relaunches twice and throws
-    # "the process has already been restarted". Start from empty.
     env["NODE_OPTIONS"] = ""
 
     # npm audit can hang for minutes on a slow connection.
@@ -279,8 +201,6 @@ def start_app(dev: bool) -> int:
     except KeyboardInterrupt:
         return 0
 
-
-# ---------------------------------------------------------------- entry
 
 def main() -> int:
     args = {a.lstrip("-").lower() for a in sys.argv[1:]}

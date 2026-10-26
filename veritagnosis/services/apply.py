@@ -1,9 +1,3 @@
-"""
-The application itself: progress across schools, the school list,
-essays, and recommenders.
-
-Merged from: progress, schools, essays, recommenders.
-"""
 from __future__ import annotations
 
 import dataclasses
@@ -19,9 +13,7 @@ from veritagnosis.models import Essay, User, utcnow
 from veritagnosis.models import Recommender, User, utcnow
 
 
-# ====================================================================
 # progress
-# ====================================================================
 
 @dataclasses.dataclass
 class Milestone:
@@ -36,9 +28,6 @@ class Milestone:
     detail: str = ""    # progress within this milestone, e.g. "1 of 2 letters"
 
 
-# How much each part of an application is worth. Essays are the largest share
-# because they are the largest amount of work and the part students put off
-# longest; the small ones are quick wins that make the ring move early.
 WEIGHTS = {
     "listed": 5,
     "deadline": 10,
@@ -50,9 +39,6 @@ WEIGHTS = {
     "submit": 5,
 }
 
-# A draft counts as "drafted" at this fraction of the word target. Not 100%:
-# a 650-word essay at 400 words is genuinely a draft, and telling someone they
-# have made no progress until the last word is both wrong and demoralising.
 DRAFT_FRACTION = 0.6
 
 # The essay score at which a draft stops being a draft.
@@ -151,12 +137,6 @@ def percent(ms: list[Milestone]) -> int:
 
 
 def next_step(ms: list[Milestone]) -> Milestone | None:
-    """The single most valuable unfinished thing.
-
-    Heaviest first, so the answer to "what should I do about Michigan" is the
-    thing that actually moves the needle, not whichever box happens to be
-    nearest the top.
-    """
     todo = [m for m in ms if not m.done and m.hint]
     return max(todo, key=lambda m: m.weight) if todo else None
 
@@ -189,9 +169,7 @@ def recompute_all(session: Session, user_id: int) -> None:
     session.commit()
 
 
-# --------------------------------------------------------------------------
 # Deadlines
-# --------------------------------------------------------------------------
 
 def days_left(school: School) -> int | None:
     if school.deadline is None:
@@ -259,9 +237,7 @@ def summary(session: Session, user_id: int) -> dict:
     }
 
 
-# ====================================================================
 # schools
-# ====================================================================
 
 COLUMNS = [("safety", "Safety"), ("reach", "Reach")]
 
@@ -329,17 +305,7 @@ def next_deadline(session: Session, user_id: int) -> School | None:
     return min(rows, key=lambda s: s.deadline) if rows else None
 
 
-# Removed: seed_starter_list(), which filled a new account with six schools
-# from the wireframe (NYU, UMich, UCLA, UMD, ASU, CMU). Nothing called it, and
-# it should not be called: a student's list is the one thing on this screen
-# that is unambiguously theirs, and pre-filling it with somebody else's
-# aspirations is both confusing and a little insulting. An empty list now
-# earns an honest "Add your first college" from next_task() instead.
-
-
-# ====================================================================
 # essays
-# ====================================================================
 
 COACH_STEPS = [
     ("Start with a moment, not a summary.",
@@ -415,9 +381,7 @@ def step_text(step: int) -> tuple[str, str]:
     return COACH_STEPS[min(step, len(COACH_STEPS) - 1)]
 
 
-# ====================================================================
 # recommenders
-# ====================================================================
 
 ROLES = [("teacher", "Teacher recs"), ("guidance", "Guidance")]
 
@@ -434,27 +398,6 @@ _ORDER = [k for k, _, _ in LADDER]
 
 
 
-# --------------------------------------------------------------------------
-# Today's one task
-# --------------------------------------------------------------------------
-#
-# This replaces a hardcoded string. The home screen used to say
-#
-#     "Start essay draft for NYU application"   /   "Due in 3 steps  ~47 xp"
-#
-# to everybody, forever. NYU was a name from the wireframe, "3 steps" was
-# invented, and the branch that produced it fired whenever an unfinished essay
-# row existed — which is always, because opening the essay screen creates one.
-# A student whose list is Rutgers and TCNJ was told to work on NYU.
-#
-# That is worse than showing nothing. The entire promise of the screen is "here
-# is the one thing to do next", and a student who catches it naming a school
-# they never typed has no reason to believe the next thing it says either.
-#
-# So every field below is read from that student's own rows, and when there is
-# genuinely nothing to point at, it says so instead of inventing something.
-
-
 @dataclasses.dataclass
 class Task:
     """The one thing on the home screen."""
@@ -465,12 +408,6 @@ class Task:
 
 
 def next_task(session: Session, user_id: int) -> Task:
-    """The most useful real thing this student could do next.
-
-    Ordered by what actually matters at eleven at night in October: a deadline
-    that is about to pass, then an essay that does not exist yet, then an essay
-    that is short, then the letters nobody asks for until it is too late.
-    """
     schools = list(session.exec(
         select(School).where(School.user_id == user_id)).all())
 
@@ -495,13 +432,6 @@ def next_task(session: Session, user_id: int) -> Task:
                     step.hint if step else f"{s.progress}% done. See what's left",
                     step.route if step else "/applications")
 
-    # 3 and 4 read the essay a school actually gets, by the same rule as
-    # milestones(): its own essay if it has one, otherwise the general draft.
-    #
-    # This used to look only at essays linked to a school. The Essay Lab
-    # writes one general draft with no school attached, so every school
-    # counted as unstarted forever: the home screen said "Blank page" to a
-    # student with four hundred words written.
     essays = list(session.exec(
         select(Essay).where(Essay.user_id == user_id)).all())
     by_school = {e.school_id: e for e in essays if e.school_id}
@@ -533,9 +463,6 @@ def next_task(session: Session, user_id: int) -> Task:
             return Task(f"Start {label(s)}",
                         "Blank page. Just get something down" + due, "/essays")
 
-    # 4. An essay that is under its own word target. One task per essay, not
-    # per school: the general draft is one piece of writing however many
-    # schools it goes to.
     short = []
     counted: set[int] = set()
     for s in by_deadline:

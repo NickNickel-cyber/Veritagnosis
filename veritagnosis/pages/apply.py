@@ -1,9 +1,3 @@
-"""
-The application work: the school list, the essay coach, and
-recommenders.
-
-Merged from: applications, essays, recommendations.
-"""
 from __future__ import annotations
 
 import reflex as rx
@@ -18,9 +12,7 @@ from veritagnosis.states.apply_state import RecsState
 from veritagnosis.services import prose
 
 
-# ====================================================================
 # applications
-# ====================================================================
 
 def _ring(pct, dash) -> rx.Component:
     """The progress ring. An SVG arc rather than a bar because a school is a
@@ -362,9 +354,7 @@ def applications_page() -> rx.Component:
     )
 
 
-# ====================================================================
 # essays
-# ====================================================================
 
 REACTIONS = [("💡", "idea", "I had an idea"),
              ("❤️", "love", "I like this part"),
@@ -475,12 +465,6 @@ def _version(v) -> rx.Component:
 
 
 def _prompt_row(p) -> rx.Component:
-    """One prompt, readable.
-
-    The whole prompt, the word limit, and the one line of advice about what
-    that prompt tends to do to a draft. A student choosing between eleven of
-    these is making a real decision and needs the actual words to make it.
-    """
     return rx.el.button(
         rx.box(
             rx.el.span(p.words, " words", class_name="pr-words"),
@@ -498,19 +482,6 @@ def _prompt_row(p) -> rx.Component:
 
 
 def _prompt_picker() -> rx.Component:
-    """The chooser, as a modal.
-
-    It used to be an inline list that unrolled underneath everything else:
-    click "change prompt" and eleven truncated rows appeared below the fold,
-    pushing the page down, with no indication that was what the click did. On a
-    narrow screen the coach panel is stacked under the editor, so they appeared
-    at the very bottom — which is how this was reported, and fairly.
-
-    A modal is the right shape because choosing a prompt is modal in the real
-    sense: it is one decision, it is the only thing you are doing while you do
-    it, and it ends. The backdrop is a sibling rather than a parent so that
-    clicking the dialog cannot bubble up and dismiss it.
-    """
     return rx.cond(
         EssayState.show_prompts,
         rx.fragment(
@@ -551,11 +522,6 @@ def _toolbar() -> rx.Component:
         rx.el.button(rx.el.span("◱ Focus", class_name="lbl"),
                      type="button", id="vg-focus", class_name="btn btn-ghost",
                      title="Hide everything but your writing. Press Esc to exit."),
-        # "Save version" and "Versions" used to live here. They are about the
-        # history of the draft, not about writing it, and the Draft Journey
-        # section below already has both — so this toolbar went from seven
-        # controls to four. Fifteen buttons around a text box is the reason a
-        # student does not start typing.
         rx.spacer(),
         rx.el.span("Sprint", class_name="faint tiny"),
         *[
@@ -621,19 +587,6 @@ def _editor() -> rx.Component:
                     ),
                     class_name="editor review",
                 ),
-                # UNCONTROLLED on purpose — this is the cursor fix.
-                #
-                # `default_value` instead of `value` means React sets the text
-                # once when the box appears and then leaves it alone. The
-                # browser owns the caret from that point on, so clicking into
-                # the middle of a sentence to fix a typo behaves the way it
-                # does in every other text box in the world.
-                #
-                # `key` is how the app takes control back when it needs to. It
-                # only changes when the draft is deliberately replaced —
-                # loaded, fixed, polished, undone, restored — and a changed key
-                # rebuilds the box with the new text. Typing never changes it,
-                # so typing never moves the caret.
                 rx.el.textarea(
                     default_value=EssayState.body,
                     key=EssayState.doc_version.to_string(),
@@ -650,28 +603,7 @@ def _editor() -> rx.Component:
     )
 
 
-# ====================================================================
-# the essay lab
-# ====================================================================
-#
-# The old screen was a report with a text box in the middle of it: score,
-# statistics, buttons, the writing, then four more cards of findings below the
-# fold. Everything was equally loud and the thing you were supposed to be doing
-# — writing — had the least room on the page.
-#
-# This is a workspace. The draft gets the left column and keeps it. Everything
-# the engine has to say lives in one panel on the right, behind tabs, so it is
-# available without being in the way. And the panel leads with the single next
-# thing to do rather than with a list of twenty.
-
-
 def _dial() -> rx.Component:
-    """The score. A conic gradient driven by one custom property, so the number
-    sweeps from the old score to the new one when a fix lands.
-
-    Shown only when there is enough draft to score. Below that floor the same
-    ring fills with progress toward the floor instead, which is honest about
-    what it is measuring — words written, not quality."""
     return rx.cond(
         EssayState.score_ready,
         rx.box(
@@ -707,11 +639,6 @@ def _stat(value, label: str) -> rx.Component:
 
 
 def _dim(d) -> rx.Component:
-    """One of the five things the score is made of, with its weight on show.
-
-    A single number tells a student nothing they can act on. Five numbers with
-    names tell them which part of the draft is the problem, and the weight tells
-    them whether it is worth their evening."""
     return rx.box(
         rx.box(
             rx.el.span(d.name, class_name="dim-name"),
@@ -778,11 +705,6 @@ def _journey_point(j) -> rx.Component:
 
 
 def _next_best_edit() -> rx.Component:
-    """One thing. Not a list.
-
-    A student at one in the morning with twenty findings on screen closes the
-    tab. A student with one sentence telling them what to do next, why it is
-    the thing that matters, and how to start, does the thing."""
     return rx.box(
         rx.box(
             rx.el.span("Next best edit", class_name="nbe-tag"),
@@ -985,12 +907,6 @@ def _pane_structure() -> rx.Component:
 
 
 def _pane_prompt() -> rx.Component:
-    """What you are answering, and the advice that comes with it.
-
-    The chooser is a modal (see _prompt_picker) rather than a list that unrolls
-    inside this panel — eleven prompts pushed everything else off the screen,
-    and on a narrow layout they landed at the very bottom of the page.
-    """
     return rx.box(
         rx.box(
             rx.el.span("You're answering", class_name="pane-h"),
@@ -1028,9 +944,6 @@ def _coach_panel() -> rx.Component:
             rx.box(
                 rx.text(EssayState.coach_says, class_name="says"),
                 rx.text(EssayState.coach_hint, class_name="hint"),
-                # These two walk the six writing tips. They belong here, beside
-                # the tip, rather than beside Save where the forward one looked
-                # like "I have finished my essay".
                 rx.box(
                     rx.el.button("←", type="button", class_name="tip-nav",
                                  custom_attrs={"aria-label": "Previous tip"},
@@ -1079,11 +992,6 @@ def _coach_panel() -> rx.Component:
 
 
 def _journey() -> rx.Component:
-    """Where the draft has been.
-
-    Three hours into a rewrite you cannot tell whether it is getting better.
-    This is the only place in the app that can answer that, because it is the
-    only place that remembers."""
     return rx.cond(
         EssayState.journey.length() > 1,
         rx.box(
@@ -1169,10 +1077,6 @@ def essays_page() -> rx.Component:
                     _sprint_bar(),
                     _editor(),
                     rx.box(
-                        # Filled by lab.js on every keystroke. The server's own
-                        # count lags a sentence behind on purpose, which is
-                        # right for the analysis and wrong for a number sitting
-                        # next to the cursor.
                         rx.el.span(
                             id="vg-live", class_name="vg-live",
                             custom_attrs={
@@ -1180,11 +1084,6 @@ def essays_page() -> rx.Component:
                                 "data-target": EssayState.word_target.to_string(),
                             }),
                         rx.spacer(),
-                        # The step buttons used to be here, and the forward one
-                        # was labelled "I'm done!". It does not finish the
-                        # essay — it advances a coaching tip — but sitting
-                        # beside Save it read as submitting the thing. Moved
-                        # next to the tip it actually controls.
                         rx.el.button("Save", class_name="btn btn-primary",
                                      type="button", id="vg-save",
                                      on_click=EssayState.save),
@@ -1206,9 +1105,7 @@ def essays_page() -> rx.Component:
     )
 
 
-# ====================================================================
 # recommendations
-# ====================================================================
 
 STAGES = [("not_asked", "Not asked"), ("asked", "Asked"),
           ("agreed", "Said yes"), ("submitted", "Letter sent")]

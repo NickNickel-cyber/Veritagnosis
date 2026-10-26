@@ -2,12 +2,6 @@
 (function () {
   'use strict';
 
-  /* ---- 1. ONE INSTANCE ------------------------------------------------
-     Reflex re-evaluates this script on every navigation. Without this guard
-     each visit starts another player, and several players writing different
-     numbers into the same countdown is exactly what "the countdown keeps
-     glitching" looked like. It is also the slow leak that made the app get
-     worse the longer it stayed open. */
   if (window.__vgBreathing) return;
   window.__vgBreathing = true;
 
@@ -51,9 +45,6 @@
   };
   var stage = function () { return document.querySelector('.breath-stage'); };
 
-  /* Where the breath is right now, in seconds into the current cycle. Two
-     clocks on purpose: switching technique restarts the cycle without
-     restarting the sitting. */
   function pos() {
     if (!S.cycleT0) return 0;
     var secs = S.running
@@ -62,11 +53,6 @@
     return secs % cycle(pattern());
   }
 
-  /* ---- text writing --------------------------------------------------
-     Every write checks the DOM first. React can re-render these nodes back to
-     their server-rendered text at any moment; comparing against a cached
-     variable would leave the wrong number on screen until the next whole
-     second. Comparing against the DOM repairs it on the very next frame. */
   function setText(node, value, popClass, reallyChanged) {
     if (!node) return;
     var want = String(value);
@@ -78,8 +64,6 @@
       node.classList.add(popClass);
     }
   }
-
-  /* ------------------------------------------------------------------ draw */
 
   var RING = '<circle class="b-ring-track" cx="100" cy="100" r="94" fill="none" ' +
              'stroke="var(--surface-3)" stroke-width="3" opacity=".7"/>' +
@@ -144,14 +128,9 @@
       ring.style.strokeDasharray = S.ringLen;
       ring.style.strokeDashoffset = S.ringLen;
     }
-    /* Redraw at the position the breath is ACTUALLY at. The old code called
-       apply(0) here, which snapped the countdown back to the top of the cycle
-       every time the figure was rebuilt. */
     apply(pos());
     return true;
   }
-
-  /* --------------------------------------------------------------- timing */
 
   function phaseAt(sec) {
     var ph = pattern().phases, acc = 0;
@@ -225,8 +204,6 @@
       }
     }
   }
-
-  /* ---------------------------------------------------------------- frame */
 
   function frame(now) {
     if (!S.running) return;
@@ -308,8 +285,6 @@
     if (span.textContent !== text) span.textContent = text;
   }
 
-  /* ----------------------------------------------------------- delegation */
-
   /* One listener, on document, for the life of the page. React can replace the
      buttons as often as it likes; this never has to be re-attached. */
   document.addEventListener('click', function (e) {
@@ -317,9 +292,6 @@
     if (!t || !t.closest) return;
     if (t.closest('#breath-play')) { S.running ? stop() : start(); return; }
     if (t.closest('#breath-reset')) { reset(); return; }
-    /* Changing technique restarts the breathing cycle but leaves the sitting
-       running. The attribute arrives from the server a moment later, so the
-       cycle clock is reset here and sync() picks up the new figure. */
     if (t.closest('.stack-row')) {
       S.cyclePaused = 0;
       S.cycleT0 = performance.now();
@@ -333,11 +305,6 @@
     if (document.hidden && S.running) stop();
   });
 
-  /* -------------------------------------------------------------- syncing */
-
-  /* Cheap poll instead of a MutationObserver. Everything it calls is guarded
-     by a comparison, so when nothing has changed this costs a few string
-     compares and cannot feed back into itself. */
   function sync() {
     if (!el('breath-figure')) {         /* not on the meditation screen */
       if (S.running) stop();

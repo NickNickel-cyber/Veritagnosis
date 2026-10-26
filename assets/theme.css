@@ -1,27 +1,9 @@
-/* ============================================================
-   VERITAGNOSIS — scales, components.
-   Colors come from the generated token blocks; nothing here
-   hardcodes a hex value.
-   ============================================================ */
 
-/* ======================================================================
-   [hidden] MUST WIN.
-   The browser hides [hidden] elements with a UA rule, and ANY author rule
-   that sets display beats a UA rule regardless of specificity. So
-   `.sprint{display:flex}` on an element marked hidden left it permanently on
-   screen — which is exactly what happened to the writing sprint bar, the
-   connection banner and the game's upgrade panel, all of which were visible
-   the whole time and should not have been. One rule fixes the class of bug.
-   ====================================================================== */
 [hidden]{display:none!important}
 :root{
   --font-fallback:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   --font-ui:var(--font-fallback);   /* each theme overrides this */
   --font-display:var(--font-fallback);
-  /* xs was 11px and sm was 13px. Those are caption sizes, and whole
-     paragraphs were being set in them -- the aid screen explains FAFSA
-     entirely in sm. Two points each is barely visible as a design change
-     and is the difference between skimmable and squinting. */
   --fs-xs:12px; --fs-sm:14px; --fs-base:15px; --fs-lg:18px;
   --fs-xl:22px; --fs-2xl:28px; --fs-3xl:38px;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
@@ -31,50 +13,6 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 
-/* ======================================================================
-   RADIX'S OWN FONT VARIABLES.
-
-   This is why headings were in the wrong font.
-
-   Reflex builds its components on Radix Themes, and Radix sets the font on a
-   CLASS rather than on the element:
-
-       .rt-Heading { font-family: var(--heading-font-family) }
-       --heading-font-family: var(--default-font-family);
-       --default-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", …
-
-   A class selector beats a bare element selector regardless of what order the
-   two rules appear in, so the project's own `h1,h2,h3 { font-family:
-   var(--font-display) }` below never applied to anything rx.heading() rendered
-   — which is every heading on every screen. The theme's display face was being
-   used for hand-written markup and ignored for the components.
-
-   Chasing the individual classes (.rt-Heading, .rt-Text, .rt-Strong, …) would
-   be a losing game as Radix adds more. Redefining the six variables they all
-   read from fixes the lot, including components not written yet.
-
-   Two of these were quietly worse than the headings: --em-font-family and
-   --quote-font-family are Times New Roman in Radix's defaults, so every
-   italic and every blockquote was rendering in Times regardless of theme.
-
-   --code-font-family is deliberately left alone. Monospace is a meaning there,
-   not a default.
-   ====================================================================== */
-/* html and body, which Reflex's own reset gets wrong.
- *
- * .web/styles/__reflex_style_reset.css is generated, and it writes:
- *
- *     html, :host { font-family: --default-font-family, ui-sans-serif, … }
- *
- * with no var(). A bare custom-property token in a font-family list is not a
- * variable reference — it parses as a FAMILY NAME, the browser finds no font
- * called "--default-font-family", and falls through to ui-sans-serif. So the
- * document's base font was the system sans on every theme, and any text not
- * inside .vg-app stayed that way.
- *
- * That file is regenerated on build so it cannot be edited. This sets the
- * base explicitly, from the theme, for html and body both.
- */
 html,body{font-family:var(--font-ui)}
 
 .radix-themes,
@@ -86,22 +24,6 @@ html,body{font-family:var(--font-ui)}
   --quote-font-family:var(--font-display);
 }
 
-/* ======================================================================
-   THE THEME'S FONTS, EVERYWHERE.
-
-   Text inherits font-family, so setting it once on .vg-app dresses ordinary
-   prose in the theme. Form controls are the exception, in every browser:
-   buttons, inputs, dropdowns and text boxes ignore what they inherit and use
-   the operating system's own font instead. That is a rule of the platform,
-   not an oversight in one stylesheet, and it cannot be fixed by inheritance —
-   the element types have to be named. Which is why the fonts looked right in
-   headings and paragraphs and wrong the moment you reached a button.
-
-   Headings take the display face; h4 to h6 were missing it. Everything that
-   is deliberately monospaced — code, the original of a suggested edit, the
-   terminal theme's log — sets its own family through a class, and a class
-   always beats a bare element selector, so those are untouched.
-   ====================================================================== */
 button,input,select,textarea,optgroup,option,fieldset,legend,
 label,output,progress,meter,summary,details,dialog,
 table,th,td,caption,li,dt,dd,figcaption,blockquote,cite,address{
@@ -137,7 +59,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .muted{color:var(--text-dim)}
 .faint{color:var(--text-faint);font-size:var(--fs-sm)}
 
-/* ---------- Hero: the theme's scene artwork ---------- */
 .hero{
   position:relative; border-radius:var(--r-lg); overflow:hidden;
   border:1px solid var(--border); box-shadow:var(--shadow);
@@ -146,10 +67,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   min-height:270px; display:flex; align-items:flex-end;
   padding:var(--s4); cursor:pointer;
 }
-/* The quote sits on its own frosted plate rather than a gradient scrim. The
-   scene stays fully visible, and the text stays readable no matter what the
-   artwork is doing behind it — which a scrim cannot guarantee across five
-   very different illustrations. */
 .hero-plate{
   background:color-mix(in srgb, var(--surface) 86%, transparent);
   backdrop-filter:blur(10px) saturate(1.2);
@@ -162,7 +79,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .hero-quote{font-family:var(--font-display);font-size:var(--fs-xl);line-height:1.3}
 .hero-by{color:var(--text-dim);font-size:var(--fs-sm);margin-top:var(--s2)}
 
-/* ---------- Theme switcher ---------- */
 .switcher{
   position:sticky;top:0;z-index:50;
   backdrop-filter:blur(14px) saturate(1.4);
@@ -321,15 +237,10 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
     transition-duration:.01ms!important}
 }
 
-/* ============================================================
-   SCREEN COMPONENTS — avatar builder, breathing player, signup
-   ============================================================ */
-
 .screen{max-width:520px;margin:0 auto}
 .screen-title{font-family:var(--font-display);font-size:var(--fs-2xl);margin-bottom:var(--s1)}
 .screen-sub{color:var(--text-dim);font-size:var(--fs-sm);margin-bottom:var(--s5)}
 
-/* ---------- segmented control ---------- */
 .seg{display:flex;gap:4px;padding:4px;background:var(--surface-2);
   border:1px solid var(--border);border-radius:var(--r-full);flex-wrap:wrap}
 .seg button{flex:1;min-width:72px;font-family:inherit;font-size:var(--fs-sm);font-weight:650;
@@ -339,7 +250,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-text);
   box-shadow:var(--glow)}
 
-/* ---------- avatar builder ---------- */
 .avatar-stage{display:flex;justify-content:center;padding:var(--s4);
   background:var(--surface-2);border:1px solid var(--border);
   border-radius:var(--r-lg);position:relative;overflow:hidden}
@@ -375,7 +285,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .color-dot:hover{transform:scale(1.08)}
 .color-dot[aria-pressed="true"]{border-color:var(--accent);box-shadow:var(--glow),inset 0 0 0 1px #0002}
 
-/* ---------- breathing player ---------- */
 .breath-stage{position:relative;display:flex;flex-direction:column;align-items:center;
   gap:var(--s3);padding:var(--s5);background:var(--surface-2);border:1px solid var(--border);
   border-radius:var(--r-lg);overflow:hidden}
@@ -402,7 +311,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   border-radius:var(--r-full);transition:width 240ms linear}
 .pattern-blurb{font-size:var(--fs-sm);color:var(--text-dim);margin-top:var(--s3)}
 
-/* ---------- eligibility notes ---------- */
 .note{display:flex;gap:var(--s3);padding:var(--s3) var(--s4);border-radius:var(--r-md);
   background:var(--accent-soft);border:1px solid var(--border);margin-bottom:var(--s2)}
 .note .ni{font-size:20px;flex:none;line-height:1.3}
@@ -418,10 +326,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .age-row{display:flex;gap:var(--s3);align-items:flex-end}
 .age-row .field{flex:1}
 
-/* ============================================================
-   ONBOARDING + HOME
-   ============================================================ */
-
 .auth-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;
   justify-content:center;padding:var(--s5);gap:var(--s4)}
 .auth-card{width:100%;max-width:460px;background:var(--surface);
@@ -432,11 +336,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .auth-err{background:var(--danger-soft);color:var(--danger-ink);border:1px solid var(--danger);
   border-radius:var(--r-md);padding:var(--s3) var(--s4);font-size:var(--fs-sm);font-weight:600}
 
-/* splash emblem — the crest.
-   A cream disc behind it, in the artwork's own background colour, so the
-   square it is drawn on never shows as a pale box against the two dark
-   themes. contain, not cover: the laurel tips reach the edge of the square
-   and cropping to fill would cut them off. */
 .emblem{width:clamp(132px,22vw,168px);height:clamp(132px,22vw,168px);
   border-radius:26%;overflow:hidden;display:block;
   object-fit:contain;background:#FDFBF7;box-shadow:var(--glow);
@@ -499,26 +398,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .nav-tile .tn{font-weight:700;font-size:var(--fs-sm)}
 .nav-tile .td{font-size:var(--fs-xs);color:var(--text-faint)}
 
-/* The one tile that is not like the others.
-   It grows into the gap instead of spanning a second column: the nine tiles
-   stay a tidy 3 x 3 and the 8px it takes on each side leaves 4 of the 12px
-   gutter, so it is visibly bigger without touching a neighbour.
-
-   Negative margins rather than transform:scale(), which is what this was
-   first. The tile already carries three hover transforms from three
-   different rules — the base lift, the ambient pass, and a per-theme one —
-   and a static scale that has to be repeated in every one of them loses to
-   whichever fires last. A margin is laid out, not composited: nothing can
-   animate it away, and the number is the same in every theme and at every
-   motion setting.
-
-   The accent border, the larger icon and the accent-coloured name do the
-   rest — a few extra pixels on their own read as a rendering slip rather
-   than as emphasis. */
-/* Bigger again: the grid gap is 12px, and -12px fills it exactly, so the tile
-   grows into the gutter on every side without covering its neighbours. The
-   accent wash is an inset shadow rather than a background, because several
-   themes set the tile background with rules this one would lose to. */
 .nav-tile.featured{margin:-12px;z-index:1;
   border-color:var(--accent);border-width:3px;
   box-shadow:inset 0 0 0 100vmax var(--accent-soft),var(--glow),var(--shadow)}
@@ -546,16 +425,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .unmatched-q{font-weight:600;color:var(--warn-ink)}
 
 
-/* ============================================================
-   THE SCENE — you are inside the place.
-
-   Three layers of art at different depths, fixed behind everything and
-   drifting at different speeds. Parallax from motion alone: the far layer
-   barely moves, the near layer moves most, and the difference is what the
-   eye reads as depth.
-
-   All of it sits behind content and ignores the pointer.
-   ============================================================ */
 .scene{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .scene .lyr{
   position:absolute;inset:-8% -6%;
@@ -617,7 +486,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 /* Content sits above the scene. */
 .vg-content{position:relative;z-index:1;min-height:100vh}
 
-/* ---------- staged signup ---------- */
 .steps{display:flex;gap:8px;align-items:center;margin-bottom:var(--s5)}
 .step-dot{height:5px;flex:1;border-radius:3px;background:var(--surface-3);
   transition:background var(--dur) var(--ease)}
@@ -636,10 +504,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 @media (prefers-reduced-motion:reduce){.step-panel{animation:none}}
 
 
-/* ---------- content resting on the scene ----------
-   The splash has no card, so its text lands straight on the artwork. A frosted
-   panel gives it a surface: the scene stays fully visible around it, and the
-   words stay readable no matter what is behind them. */
 .glass{
   background:color-mix(in srgb, var(--surface) 78%, transparent);
   backdrop-filter:blur(20px) saturate(1.3);
@@ -658,19 +522,11 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .glass .wordmark{margin:0}
 .glass .tswatch{background:color-mix(in srgb, var(--surface) 88%, transparent)}
 
-/* ============================================================
-   SCREEN LAYOUTS — built to match the wireframe, row for row.
-   ============================================================ */
-
 .screen-wrap{max-width:760px;margin:0 auto;padding:var(--s5) var(--s4) var(--s7)}
 .screen-head{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s5)}
 .screen-head h1{font-family:var(--font-display);font-size:var(--fs-2xl);margin:0}
 .screen-head .back{margin-left:auto}
 
-/* ---------- HOME: greeting | avatar+xp | task box | tile grid ---------- */
-/* wrap, so a long username does not get squeezed into a two-letter column
-   by the theme chips sitting next to it — on a phone the chips drop to
-   their own line instead. */
 .home-greet{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s5);
   flex-wrap:wrap}
 .home-greet h1{font-family:var(--font-display);font-size:var(--fs-xl);margin:0;
@@ -695,7 +551,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   margin-top:2px}
 .task-box .tb-meta{font-size:var(--fs-sm);color:var(--text-dim);margin-top:2px}
 
-/* ---------- AVATAR: big preview, underlined tabs, 3-col grid ---------- */
 .av-preview{border:1px solid var(--border);border-radius:var(--r-lg);
   padding:var(--s5);display:grid;place-items:center;margin-bottom:var(--s4);
   min-height:300px}
@@ -718,7 +573,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .item[aria-pressed="true"]{border-color:var(--accent);box-shadow:var(--glow)}
 .item svg{width:100%;height:100%}
 
-/* ---------- ESSAY: guide + bubble, then the writing panel ---------- */
 .coach{display:flex;gap:var(--s4);align-items:flex-start;margin-bottom:var(--s4)}
 .coach-figure{flex:none;width:84px;height:84px;border-radius:var(--r-full);
   background:var(--accent-soft);border:2px solid var(--accent);
@@ -749,7 +603,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .editor-bar{display:flex;align-items:center;gap:var(--s3);margin-top:var(--s3);
   font-size:var(--fs-sm);color:var(--text-dim);flex-wrap:wrap}
 
-/* ---------- MEDITATION: quote, stacked rows, roadmap ---------- */
 .med-quote{font-family:var(--font-display);font-size:var(--fs-lg);line-height:1.45;
   margin-bottom:var(--s2)}
 .stack-row{display:flex;align-items:center;gap:var(--s4);width:100%;
@@ -786,7 +639,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .cp-bar i{display:block;height:100%;background:var(--xp-grad);border-radius:3px}
 .cp-xp{font-size:var(--fs-xs);font-weight:800;color:var(--accent-ink);flex:none}
 
-/* ---------- RECOMMENDATIONS / APPLICATIONS shared list row ---------- */
 .list-row{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) var(--s4);
   border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:var(--s2);
   background:color-mix(in srgb,var(--surface) 78%,transparent)}
@@ -797,7 +649,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .list-row .lr-right{margin-left:auto;display:flex;align-items:center;gap:var(--s2);
   flex:none}
 
-/* ---------- APPLICATIONS: two columns, tier headings inside ---------- */
 .board{display:grid;grid-template-columns:1fr;gap:var(--s4)}
 @media (min-width:640px){.board{grid-template-columns:1fr 1fr}}
 .col{display:flex;flex-direction:column;gap:var(--s2)}
@@ -821,17 +672,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .add-row{display:flex;gap:var(--s2);flex-wrap:wrap;align-items:flex-end;
   margin-top:var(--s4)}
 .add-row .field{flex:1;min-width:150px}
-
-/* ============================================================
-   DESKTOP LAYOUT
-
-   Back to a desktop app, but keeping the wireframe's structure: every screen
-   is still one vertical column of the same blocks in the same order. It is
-   simply a comfortable reading width in the middle of the scene rather than a
-   phone-sized strip.
-
-   Last in the file on purpose, so it wins.
-   ============================================================ */
 
 .vg-content{
   width:100%;
@@ -895,10 +735,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 
 .reactions button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);
   box-shadow:var(--glow);transform:scale(1.06)}
-
-/* ======================================================================
-   ESSAY COACH — the report, the problem list, the review pane
-   ====================================================================== */
 
 /* the report card sitting between the prompt and the editor */
 .report{margin:var(--s4) 0 var(--s4)}
@@ -1003,9 +839,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   .iss{flex-wrap:wrap}
 }
 
-/* ======================================================================
-   CONNECTION WATCHDOG — shown only when the websocket has died
-   ====================================================================== */
 .conn-banner{position:fixed;left:50%;bottom:var(--s5);transform:translateX(-50%);
   z-index:999;display:flex;align-items:center;gap:var(--s3);
   padding:var(--s3) var(--s5);border-radius:var(--r-full);
@@ -1015,9 +848,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .conn-banner .conn-sub{opacity:.85;font-size:var(--fs-sm)}
 .conn-banner .btn{background:#fff;color:var(--danger);border-color:#fff;flex:none}
 
-/* ======================================================================
-   APPLICATIONS — the ring, the checklist, the panel
-   ====================================================================== */
 .ring60{width:60px;height:60px;flex:none}
 .ring60 .ring-num{font-family:var(--font-display);font-weight:800;font-size:17px;
   fill:var(--text)}
@@ -1062,9 +892,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .st-go{font-size:var(--fs-xs);font-weight:700;color:var(--accent-ink);
   white-space:nowrap}
 
-/* ======================================================================
-   RECOMMENDATIONS
-   ====================================================================== */
 .list-row.stack{display:block}
 .lr-top{display:flex;align-items:center;gap:var(--s3)}
 .lr-top > div:first-child{flex:1;min-width:0}
@@ -1075,9 +902,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .draft-box{min-height:240px;font-family:inherit;line-height:1.6;resize:vertical;
   margin-top:var(--s3);white-space:pre-wrap}
 
-/* ======================================================================
-   CHECKPOINTS
-   ====================================================================== */
 .bg-list{display:flex;flex-direction:column;gap:var(--s2);margin-top:var(--s4)}
 .bg{display:flex;gap:var(--s4);align-items:flex-start;padding:var(--s3) var(--s4);
   border:1px solid var(--border);border-radius:var(--r-md);
@@ -1103,9 +927,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .next-up{display:flex;gap:var(--s4);align-items:flex-start;
   margin-top:var(--s4);border-left:3px solid var(--accent)}
 
-/* ======================================================================
-   ESSAY — target, tools, sprint, outline, versions, prompts
-   ====================================================================== */
 .target{margin-top:var(--s5)}
 .tg-head{display:flex;align-items:baseline;gap:var(--s3);margin-bottom:6px}
 .tg-line{font-size:var(--fs-sm);color:var(--text-dim)}
@@ -1163,7 +984,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .pr-text{flex:1;font-size:var(--fs-sm);line-height:1.45}
 .pr-words{font-size:var(--fs-xs);color:var(--text-faint);flex:none}
 
-/* ---------- the coach: the student's own character ---------- */
 .coach-figure{position:relative;width:104px;height:104px;flex:none}
 .coach-av{width:100%;height:100%;display:grid;place-items:center;
   transform-origin:center bottom}
@@ -1184,16 +1004,12 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .coach-spark i:nth-child(4){left:16%;top:66%}
 .coach-spark i:nth-child(5){left:88%;top:58%}
 
-/* ---------- focus mode ---------- */
 .vg-app[data-focus] .report,
 .vg-app[data-focus] .coach,
 .vg-app[data-focus] .prompt-card,
 .vg-app[data-focus] .screen-head,
 .vg-app[data-focus] .card.good,
 .vg-app[data-focus] .card.note,
-/* The lab renamed these. Focus mode dims everything that counts your
-   mistakes, because you cannot write a first draft while something is
-   scoring it — so the coach panel and the journey go too. */
 .vg-app[data-focus] .lab-head,
 .vg-app[data-focus] .lab-prompt,
 .vg-app[data-focus] .lab-coach,
@@ -1212,7 +1028,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   .bg{gap:var(--s3)}
 }
 
-/* ---------- home: the checkpoint strip ---------- */
 .ach-strip{display:flex;align-items:center;gap:var(--s4);
   padding:var(--s3) var(--s4);margin:var(--s4) 0;
   border:1px solid var(--border);border-radius:var(--r-md);
@@ -1224,9 +1039,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .ach-next{font-size:var(--fs-xs);color:var(--text-dim);margin:2px 0 6px}
 .ach-go{font-size:24px;color:var(--text-faint);flex:none}
 
-/* ======================================================================
-   THE STRESS SCREENS — Graze and the tap screen
-   ====================================================================== */
 .gz-stage{position:relative;width:100%;height:min(62vh,560px);
   border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;
   background:var(--bg);margin-top:var(--s3);
@@ -1242,9 +1054,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .cm-count{font-family:var(--font-display);font-weight:800;
   font-size:var(--fs-xl);font-variant-numeric:tabular-nums;line-height:1}
 
-/* The HUD sits on top of a canvas whose colours change constantly, so it
-   carries its own plate. Text straight onto the game was legible about half
-   the time, which is worse than not showing it. */
 .gz-hud{position:absolute;top:10px;left:12px;right:12px;display:flex;
   align-items:center;gap:var(--s4);pointer-events:none;flex-wrap:wrap;
   font-size:var(--fs-sm);padding:6px 12px;border-radius:var(--r-full);
@@ -1303,9 +1112,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   .gz-hud{font-size:var(--fs-xs);gap:var(--s3)}
 }
 
-/* ======================================================================
-   PAYING FOR IT
-   ====================================================================== */
 .aid-phase{margin-top:var(--s5)}
 .st-btn{display:flex;gap:var(--s3);width:100%;text-align:left;cursor:pointer;
   background:none;border:0;padding:var(--s2) 0;font-family:inherit;
@@ -1317,10 +1123,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   margin-bottom:var(--s3)}
 .fm-head strong{font-family:var(--font-display);font-size:var(--fs-2xl);
   line-height:1.2}
-/* These four lines -- who needs the form, what it costs, when it is due, what
-   to watch out for -- are the entire reason the screen exists. They were set at
-   caption size in dimmed grey, so the one screen a family most needs to read
-   was the hardest to. They are body text now. */
 .fm-line{font-size:var(--fs-base);line-height:1.65;margin-top:var(--s3);
   color:var(--text)}
 .fm-line b{color:var(--accent-ink);font-weight:700}
@@ -1346,15 +1148,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .input.ro{display:block;background:var(--surface-3);color:var(--text-dim);
   cursor:default}
 
-/* ===================================================================
-   THE AID SIMULATOR
-   ===================================================================
-   A screen you play with rather than read. The layout has one job: keep
-   the dials and the answer visible at the same time, because the whole
-   lesson is watching the answer move when a dial does. On a wide screen
-   they sit side by side; on a phone the answer sticks to the top of the
-   viewport instead, for the same reason.
-   ------------------------------------------------------------------- */
 .sim-inputs{margin-top:var(--s4)}
 .sim-dial{margin-top:var(--s4)}
 .sim-dial:first-of-type{margin-top:var(--s2)}
@@ -1367,9 +1160,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .sim-dial-hint{font-size:var(--fs-sm);color:var(--text-faint);
   line-height:1.5;margin-top:var(--s1)}
 
-/* The track. Styled explicitly for both engines: range inputs share no
-   default appearance across browsers, and an unstyled one ignores the
-   theme completely. */
 .sim-range{-webkit-appearance:none;appearance:none;width:100%;height:22px;
   background:transparent;margin-top:var(--s2);cursor:pointer;display:block}
 .sim-range::-webkit-slider-runnable-track{height:6px;border-radius:3px;
@@ -1444,13 +1234,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .sim-exp-teaches{font-size:var(--fs-base);color:var(--text);line-height:1.6;
   margin-top:var(--s2);margin-bottom:var(--s3)}
 
-/* ===================================================================
-   LOCKED AVATAR ITEMS
-   ===================================================================
-   Locked tiles keep their preview and get dimmed, because wanting the
-   thing is the point. The padlock and the checkpoint name sit on a
-   scrim over the bottom of the tile rather than replacing the art.
-   ------------------------------------------------------------------- */
 .item{position:relative}
 .item.is-locked{cursor:not-allowed;border-style:dashed}
 .item.is-locked svg{filter:grayscale(1);opacity:.4;transition:opacity .2s ease}
@@ -1699,11 +1482,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   --scene-near:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDkwMCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iOTAwIiBmaWxsPSJub25lIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBzbGljZSI+PHRleHQgeD0iOTExIiB5PSIyMzIiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsbW9ub3NwYWNlIiBmb250LXNpemU9IjE1IiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIwLjA4IiB3cml0aW5nLW1vZGU9InRiIj4wMTAxMDEwMTwvdGV4dD48dGV4dCB4PSIxNTU2IiB5PSIyODAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsbW9ub3NwYWNlIiBmb250LXNpemU9IjE1IiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIwLjExIiB3cml0aW5nLW1vZGU9InRiIj4wMTAxMDEwMTA8L3RleHQ+PHRleHQgeD0iODg0IiB5PSI2NTAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsbW9ub3NwYWNlIiBmb250LXNpemU9IjE1IiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIwLjE0IiB3cml0aW5nLW1vZGU9InRiIj4wMTAxMDEwMTAxPC90ZXh0Pjx0ZXh0IHg9Ijk1NSIgeT0iODMwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iMC4xNyIgd3JpdGluZy1tb2RlPSJ0YiI+MDEwMTAxMDEwMTA8L3RleHQ+PHRleHQgeD0iMTExMiIgeT0iNTg0IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iMC4yMCIgd3JpdGluZy1tb2RlPSJ0YiI+MDEwMTAxMDEwMTAxPC90ZXh0Pjx0ZXh0IHg9IjgyOSIgeT0iNzg5IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iMC4wOCIgd3JpdGluZy1tb2RlPSJ0YiI+MDEwMTAxMDEwMTAxMDwvdGV4dD48dGV4dCB4PSIxNTY2IiB5PSI2NzEiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsbW9ub3NwYWNlIiBmb250LXNpemU9IjE1IiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIwLjExIiB3cml0aW5nLW1vZGU9InRiIj4wMTAxMDEwMTAxMDEwMTwvdGV4dD48dGV4dCB4PSIxMjE2IiB5PSIyODEiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsbW9ub3NwYWNlIiBmb250LXNpemU9IjE1IiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIwLjE0IiB3cml0aW5nLW1vZGU9InRiIj4wMTAxMDEwMTAxMDEwMTA8L3RleHQ+PHRleHQgeD0iMTMwNiIgeT0iMjQzIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iMC4xNyIgd3JpdGluZy1tb2RlPSJ0YiI+MDEwMTAxMDE8L3RleHQ+PHRleHQgeD0iMjc2IiB5PSI2NyIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSxtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTUiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9IjAuMjAiIHdyaXRpbmctbW9kZT0idGIiPjAxMDEwMTAxMDwvdGV4dD48dGV4dCB4PSI5NTIiIHk9IjE5NyIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSxtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTUiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9IjAuMDgiIHdyaXRpbmctbW9kZT0idGIiPjAxMDEwMTAxMDE8L3RleHQ+PHRleHQgeD0iMTU3MyIgeT0iNzI4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iMC4xMSIgd3JpdGluZy1tb2RlPSJ0YiI+MDEwMTAxMDEwMTA8L3RleHQ+PHRleHQgeD0iMTQxNyIgeT0iMTcwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iMC4xNCIgd3JpdGluZy1tb2RlPSJ0YiI+MDEwMTAxMDEwMTAxPC90ZXh0Pjx0ZXh0IHg9Ijg4MSIgeT0iMTkyIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iMC4xNyIgd3JpdGluZy1tb2RlPSJ0YiI+MDEwMTAxMDEwMTAxMDwvdGV4dD48dGV4dCB4PSIxNiIgeT0iMjY1IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iMC4yMCIgd3JpdGluZy1tb2RlPSJ0YiI+MDEwMTAxMDEwMTAxMDE8L3RleHQ+PHRleHQgeD0iMTU1NiIgeT0iMTY3IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iMC4wOCIgd3JpdGluZy1tb2RlPSJ0YiI+MDEwMTAxMDEwMTAxMDEwPC90ZXh0Pjx0ZXh0IHg9IjExMjciIHk9Ijg5MSIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSxtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTUiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9IjAuMTEiIHdyaXRpbmctbW9kZT0idGIiPjAxMDEwMTAxPC90ZXh0Pjx0ZXh0IHg9Ijg4NSIgeT0iMjM4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iMC4xNCIgd3JpdGluZy1tb2RlPSJ0YiI+MDEwMTAxMDEwPC90ZXh0Pjx0ZXh0IHg9IjI0MSIgeT0iNDAzIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iMC4xNyIgd3JpdGluZy1tb2RlPSJ0YiI+MDEwMTAxMDEwMTwvdGV4dD48dGV4dCB4PSI4NjMiIHk9IjEwMyIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSxtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTUiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9IjAuMjAiIHdyaXRpbmctbW9kZT0idGIiPjAxMDEwMTAxMDEwPC90ZXh0Pjx0ZXh0IHg9IjE1OTEiIHk9IjI1OCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSxtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTUiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9IjAuMDgiIHdyaXRpbmctbW9kZT0idGIiPjAxMDEwMTAxMDEwMTwvdGV4dD48dGV4dCB4PSIxMjkwIiB5PSIyMzAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsbW9ub3NwYWNlIiBmb250LXNpemU9IjE1IiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIwLjExIiB3cml0aW5nLW1vZGU9InRiIj4wMTAxMDEwMTAxMDEwPC90ZXh0Pjx0ZXh0IHg9IjgzOCIgeT0iNjExIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iMC4xNCIgd3JpdGluZy1tb2RlPSJ0YiI+MDEwMTAxMDEwMTAxMDE8L3RleHQ+PHRleHQgeD0iMzQ3IiB5PSIxMTgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsbW9ub3NwYWNlIiBmb250LXNpemU9IjE1IiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIwLjE3IiB3cml0aW5nLW1vZGU9InRiIj4wMTAxMDEwMTAxMDEwMTA8L3RleHQ+PHRleHQgeD0iNDgxIiB5PSIxMTYiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsbW9ub3NwYWNlIiBmb250LXNpemU9IjE1IiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIwLjIwIiB3cml0aW5nLW1vZGU9InRiIj4wMTAxMDEwMTwvdGV4dD48dGV4dCB4PSIxMDUiIHk9IjMxNSIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSxtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTUiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9IjAuMDgiIHdyaXRpbmctbW9kZT0idGIiPjAxMDEwMTAxMDwvdGV4dD48cmVjdCB5PSIwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIxMiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMTYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjIwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIyNCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMjgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjMyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIzNiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNDAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjQ0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI0OCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNTIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjU2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI2MCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNjQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjY4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI3MiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNzYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjgwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI4NCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iODgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjkyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI5NiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMTAwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIxMDQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjEwOCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMTEyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIxMTYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjEyMCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMTI0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIxMjgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjEzMiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMTM2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIxNDAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjE0NCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMTQ4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIxNTIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjE1NiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMTYwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIxNjQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjE2OCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMTcyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIxNzYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjE4MCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMTg0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIxODgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjE5MiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMTk2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIyMDAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjIwNCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMjA4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIyMTIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjIxNiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMjIwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIyMjQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjIyOCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMjMyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIyMzYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjI0MCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMjQ0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIyNDgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjI1MiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMjU2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIyNjAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjI2NCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMjY4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIyNzIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjI3NiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMjgwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIyODQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjI4OCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMjkyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIyOTYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjMwMCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMzA0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIzMDgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjMxMiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMzE2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIzMjAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjMyNCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMzI4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIzMzIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjMzNiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMzQwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIzNDQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjM0OCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMzUyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIzNTYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjM2MCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMzY0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIzNjgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjM3MiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMzc2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIzODAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjM4NCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iMzg4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSIzOTIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjM5NiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNDAwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI0MDQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjQwOCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNDEyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI0MTYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjQyMCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNDI0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI0MjgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjQzMiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNDM2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI0NDAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjQ0NCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNDQ4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI0NTIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjQ1NiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNDYwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI0NjQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjQ2OCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNDcyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI0NzYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjQ4MCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNDg0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI0ODgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjQ5MiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNDk2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI1MDAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjUwNCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNTA4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI1MTIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjUxNiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNTIwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI1MjQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjUyOCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNTMyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI1MzYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjU0MCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNTQ0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI1NDgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjU1MiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNTU2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI1NjAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjU2NCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNTY4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI1NzIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjU3NiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNTgwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI1ODQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjU4OCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNTkyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI1OTYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjYwMCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNjA0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI2MDgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjYxMiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNjE2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI2MjAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjYyNCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNjI4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI2MzIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjYzNiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNjQwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI2NDQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjY0OCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNjUyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI2NTYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjY2MCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNjY0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI2NjgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjY3MiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNjc2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI2ODAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjY4NCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNjg4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI2OTIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjY5NiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNzAwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI3MDQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjcwOCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNzEyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI3MTYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjcyMCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNzI0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI3MjgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjczMiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNzM2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI3NDAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9Ijc0NCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNzQ4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI3NTIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9Ijc1NiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNzYwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI3NjQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9Ijc2OCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNzcyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI3NzYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9Ijc4MCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNzg0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI3ODgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9Ijc5MiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iNzk2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI4MDAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjgwNCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iODA4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI4MTIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjgxNiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iODIwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI4MjQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9IjgyOCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iODMyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI4MzYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9Ijg0MCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iODQ0IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI4NDgiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9Ijg1MiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iODU2IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI4NjAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9Ijg2NCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iODY4IiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI4NzIiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9Ijg3NiIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iODgwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI4ODQiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjxyZWN0IHk9Ijg4OCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iMSIgZmlsbD0iIzI0QzQ2QSIgb3BhY2l0eT0iLjA1Ii8+PHJlY3QgeT0iODkyIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxIiBmaWxsPSIjMjRDNDZBIiBvcGFjaXR5PSIuMDUiLz48cmVjdCB5PSI4OTYiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjEiIGZpbGw9IiMyNEM0NkEiIG9wYWNpdHk9Ii4wNSIvPjwvc3ZnPg==");
 }
 
-/* ======================================================================
-   ANIMATIONS  —  generated by design/build_animations.py
-   Do not edit this file. Edit the generator and re-run build_all.py.
-   ====================================================================== */
-
 /* Motion defaults. Each theme overrides these; anything not overridden
    still moves sensibly. */
 :root{
@@ -1716,7 +1494,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   --mo-spin:24s;
 }
 
-/* ------------------------------------------------------------- keyframes */
 @keyframes vg-enter{
   from{opacity:0;transform:var(--mo-enter);filter:blur(var(--mo-blur))}
   to{opacity:1;transform:none;filter:blur(0)}
@@ -1777,19 +1554,8 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 }
 @keyframes vg-underline{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 
-/* =======================================================================
-   1. ENTERING — the screen changed
-   =====================================================================*/
-
-/* The whole screen arrives as one movement. .vg-content is remounted by the
-   router on every navigation, so the animation restarts by itself with no
-   JavaScript involved. */
 .vg-content{animation:vg-enter var(--mo-dur) var(--mo-ease) both}
 
-/* Then the blocks inside arrive one after another. A short stagger reads as
-   "here is the order to look at this in"; without it the eye has nowhere to
-   land first. Capped at 12 — past that the last item feels broken rather than
-   choreographed. */
 .screen-wrap > *{animation:vg-rise calc(var(--mo-dur) * .8) var(--mo-ease) both}
 .screen-wrap > *:nth-child(1){animation-delay:calc(var(--mo-stag) * 0)}
 .screen-wrap > *:nth-child(2){animation-delay:calc(var(--mo-stag) * 1)}
@@ -1814,10 +1580,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .nav-grid > *:nth-child(6),.road > *:nth-child(6),.iss-list > *:nth-child(6),.item-grid > *:nth-child(6){animation-delay:265ms}
 .nav-grid > *:nth-child(n+7),.road > *:nth-child(n+7),.iss-list > *:nth-child(n+7),.item-grid > *:nth-child(n+7){animation-delay:300ms}
 
-/* =======================================================================
-   2. OUTLINE — what you are about to act on
-   The per-theme treatments are further down; this is the shared scaffolding.
-   =====================================================================*/
 .card,.tile,.nav-tile,.stack-row,.iss,.cp,.cat-chip,.tswatch,.school,.list-row{
   position:relative;
   transition:transform 220ms var(--mo-ease),
@@ -1839,9 +1601,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .iss:hover::after,.cat-chip:hover::after,.cat-chip[aria-pressed="true"]::after,
 .school:hover::after{opacity:1}
 
-/* =======================================================================
-   3. PRESS — the tap registered
-   =====================================================================*/
 .btn{position:relative;overflow:hidden;
   transition:transform 130ms var(--mo-pop),box-shadow 200ms var(--mo-ease),
              background-color 180ms var(--mo-ease),filter 180ms var(--mo-ease)}
@@ -1860,9 +1619,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .did{animation:vg-land 420ms var(--mo-pop)}
 .nope{animation:vg-shake 380ms var(--mo-ease)}
 
-/* =======================================================================
-   4. PROGRESS — something is filling, not jumping
-   =====================================================================*/
 .xp-fill,.cp-bar i,.breath-progress i,.ring .fgc{
   transition:width 900ms var(--mo-ease),stroke-dashoffset 900ms var(--mo-ease)}
 
@@ -1873,9 +1629,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);
   animation:vg-sweep 2.4s var(--mo-ease) infinite}
 
-/* The score dial on the essay screen. The conic gradient is driven by one
-   custom property so the sweep from the old score to the new one is a single
-   smooth movement when a fix lands. */
 .dial{
   --p:0;
   width:104px;height:104px;flex:0 0 104px;border-radius:50%;
@@ -1893,9 +1646,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
    it the browser treats --p as a string and the dial would jump. */
 @property --p{syntax:'<number>';inherits:false;initial-value:0}
 
-/* =======================================================================
-   5. ARRIVAL — you earned something
-   =====================================================================*/
 .toast{animation:vg-pop 520ms var(--mo-pop) both}
 .toast .tic{display:inline-block;animation:vg-land 900ms var(--mo-pop) 200ms}
 
@@ -1907,10 +1657,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .cp.next .cp-dot{animation:vg-breathe 2.8s var(--mo-ease) infinite}
 .cp.reached .cp-dot{animation:vg-land 600ms var(--mo-pop)}
 
-/* =======================================================================
-   6. THE QUOTE — word by word
-   motion.js splits the line into .kw spans; the reveal is here.
-   =====================================================================*/
 .kinetic{display:block}
 .kinetic .kw{display:inline-block;white-space:pre}
 .kinetic .kw-i{display:inline-block;will-change:transform,opacity}
@@ -1951,23 +1697,13 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   100%{opacity:1;transform:none}
 }
 
-/* =======================================================================
-   7. MEDITATION — the screen that matters most
-   =====================================================================*/
 .breath-stage{position:relative;--breath:0;
   transition:filter 700ms var(--mo-ease)}
 
-/* The whole stage swells and settles with the breath. Kept modest: the figure
-   and the halo carry the movement, and a stage that moved as much would be
-   nauseating over ten minutes. */
 .breath-figure{
   transform:scale(calc(1 + var(--breath,0) * .06));
   transition:transform 120ms linear}
 
-/* A halo behind the figure that grows on the inhale and fades on the exhale.
-   This is the part you follow with your eyes half-closed — the whole point of
-   the exercise is that you should not have to read the numbers to know when to
-   breathe in, so the halo has to be big and unmissable rather than tasteful. */
 .breath-stage::before{
   content:"";position:absolute;left:50%;top:50%;
   width:min(78vw,380px);aspect-ratio:1;transform:translate(-50%,-50%)
@@ -2012,10 +1748,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 /* While it is running, the stage is lit. When it finishes, it celebrates. */
 .breath-stage[data-running]{filter:saturate(1.12)}
 .breath-stage[data-running] .b-ring-live{filter:drop-shadow(0 0 10px var(--accent))}
-/* Finishing a sitting: the outer ring pushes out twice, like a bell being
-   struck. It reuses the ring that was already there rather than adding another
-   element, so the transform has to re-state the centring — an animation
-   replaces the transform it is animating. */
 .breath-stage[data-done]{animation:vg-land 900ms var(--mo-pop)}
 .breath-stage[data-done]::after{
   border-width:3px;opacity:1;
@@ -2041,9 +1773,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   animation:vg-grow-line 1200ms var(--mo-ease) both}
 @keyframes vg-grow-line{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 
-/* =======================================================================
-   8. ESSAY COACH
-   =====================================================================*/
 .iss{animation:vg-rise 380ms var(--mo-ease) both}
 .iss-body{animation:vg-rise 300ms var(--mo-ease)}
 .rp-flash{animation:vg-flash-in 380ms var(--mo-pop)}
@@ -2060,12 +1789,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .says{animation:vg-fade 500ms var(--mo-ease)}
 
 
-/* =======================================================================
-   THE COACH — the student's own character, reacting to the draft
-   The moods come from EssayState.coach_mood. All of it is transform and
-   opacity so nothing here touches layout, and all of it stops under
-   prefers-reduced-motion like everything else.
-   =====================================================================*/
 @keyframes co-idle{
   0%,100%{transform:translateY(0) rotate(0)}
   50%{transform:translateY(-5px) rotate(-1deg)}
@@ -2141,9 +1864,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
   background:var(--success,var(--accent))}
 .coach-spark i:nth-child(5){--sx:20px;--sy:-24px;animation-delay:280ms}
 
-/* =======================================================================
-   THE NEW SCREENS
-   =====================================================================*/
 .ring-live{transition:stroke-dashoffset 900ms var(--mo-ease)}
 .school{animation:vg-rise 360ms var(--mo-ease) both}
 .s-panel{animation:vg-rise 300ms var(--mo-ease)}
@@ -2170,9 +1890,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
 .conn-banner{animation:vg-pop 400ms var(--mo-pop)}
 .target .cp-bar i{transition:width 700ms var(--mo-ease),background 400ms var(--mo-ease)}
 
-/* =======================================================================
-   9. FORMS
-   =====================================================================*/
 .input,.editor{transition:border-color 220ms var(--mo-ease),
                           box-shadow 220ms var(--mo-ease),
                           background-color 220ms var(--mo-ease)}
@@ -2188,9 +1905,6 @@ h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;line-height:1.2}
                      background-color 200ms var(--mo-ease)}
 .code-box.filled{animation:vg-land 380ms var(--mo-pop)}
 
-/* =======================================================================
-   10. NAVIGATION
-   =====================================================================*/
 a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 .tswatch:hover{transform:translateY(-2px) scale(1.05)}
 .tswatch[aria-pressed="true"]{animation:vg-land 460ms var(--mo-pop)}
@@ -2210,27 +1924,22 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 .coach-figure[data-mood="proud"] .coach-badge::after{content:"🌟"}
 .coach-figure[data-mood="worried"] .coach-badge::after{content:"😬"}
 .coach-figure[data-mood="sleepy"] .coach-badge::after{content:"💤"}
-/* ---------- serenity ---------- */
 [data-theme="serenity"]{--mo-dur:620ms;--mo-ease:cubic-bezier(.22,.61,.36,1);--mo-pop:cubic-bezier(.34,1.26,.64,1);--mo-enter:translateY(16px) scale(.985);--mo-blur:6px;--mo-stag:70ms;--mo-spin:26s;--kw-anim:kw-float;--kw-dur:720ms;--kw-stag:58ms}
 [data-theme="serenity"] .nav-tile::after,[data-theme="serenity"] .tile::after,[data-theme="serenity"] .stack-row::after,[data-theme="serenity"] .iss::after,[data-theme="serenity"] .cat-chip::after,[data-theme="serenity"] .school::after{box-shadow:0 0 0 3px var(--accent-soft),0 8px 30px -8px var(--accent);border-radius:inherit}
 [data-theme="serenity"] .nav-tile:hover,[data-theme="serenity"] .stack-row:hover{transform:translateY(-4px) scale(1.008)}
-/* ---------- superhero ---------- */
 [data-theme="superhero"]{--mo-dur:340ms;--mo-ease:cubic-bezier(.2,.9,.3,1.4);--mo-pop:cubic-bezier(.18,1.6,.42,1);--mo-enter:translateY(26px) scale(.9) rotate(-1.4deg);--mo-blur:0px;--mo-stag:44ms;--mo-spin:14s;--kw-anim:kw-pop;--kw-dur:560ms;--kw-stag:42ms}
 [data-theme="superhero"] .nav-tile::after,[data-theme="superhero"] .tile::after,[data-theme="superhero"] .stack-row::after,[data-theme="superhero"] .iss::after,[data-theme="superhero"] .cat-chip::after,[data-theme="superhero"] .school::after{box-shadow:0 0 0 3px var(--text),4px 4px 0 0 var(--accent);border-radius:inherit}
 [data-theme="superhero"] .nav-tile:hover,[data-theme="superhero"] .stack-row:hover{transform:translate(-2px,-4px) rotate(-.5deg)}
 [data-theme="superhero"] .btn:active:not(:disabled){transform:translate(2px,2px) scale(.96)}
 [data-theme="superhero"] .did{animation:vg-land 420ms cubic-bezier(.18,1.6,.42,1),vg-shake 300ms ease-out}
-/* ---------- cafe ---------- */
 [data-theme="cafe"]{--mo-dur:560ms;--mo-ease:cubic-bezier(.25,.46,.45,.94);--mo-pop:cubic-bezier(.34,1.3,.64,1);--mo-enter:translateY(20px) scale(.99);--mo-blur:3px;--mo-stag:64ms;--mo-spin:22s;--kw-anim:kw-steam;--kw-dur:640ms;--kw-stag:52ms}
 [data-theme="cafe"] .nav-tile::after,[data-theme="cafe"] .tile::after,[data-theme="cafe"] .stack-row::after,[data-theme="cafe"] .iss::after,[data-theme="cafe"] .cat-chip::after,[data-theme="cafe"] .school::after{box-shadow:inset 0 0 0 2px var(--accent),0 6px 18px -6px var(--shadow);border-radius:inherit}
 [data-theme="cafe"] .nav-tile:hover{transform:translateY(-3px) rotate(-.3deg)}
-/* ---------- astronomy ---------- */
 [data-theme="astronomy"]{--mo-dur:720ms;--mo-ease:cubic-bezier(.16,.8,.3,1);--mo-pop:cubic-bezier(.3,1.4,.5,1);--mo-enter:translateY(24px) scale(.97);--mo-blur:8px;--mo-stag:86ms;--mo-spin:34s;--kw-anim:kw-drift;--kw-dur:820ms;--kw-stag:66ms}
 [data-theme="astronomy"] .nav-tile::after,[data-theme="astronomy"] .tile::after,[data-theme="astronomy"] .stack-row::after,[data-theme="astronomy"] .iss::after,[data-theme="astronomy"] .cat-chip::after,[data-theme="astronomy"] .school::after{border-radius:inherit;box-shadow:0 0 0 2px var(--accent),0 0 26px -4px var(--accent),inset 0 0 20px -14px var(--accent);animation:vg-twinkle 3.2s var(--mo-ease) infinite}
 @keyframes vg-twinkle{0%,100%{opacity:1}50%{opacity:.55}}
 [data-theme="astronomy"] .nav-tile:hover{transform:translateY(-5px)}
 [data-theme="astronomy"] .coach-figure,[data-theme="astronomy"] .breath-figure{animation:vg-breathe 6s ease-in-out infinite}
-/* ---------- terminal ---------- */
 [data-theme="terminal"]{--mo-dur:200ms;--mo-ease:steps(6,end);--mo-pop:steps(4,end);--mo-enter:translateY(8px);--mo-blur:0px;--mo-stag:30ms;--mo-spin:10s;--kw-anim:kw-type;--kw-dur:90ms;--kw-stag:26ms}
 [data-theme="terminal"] .nav-tile::after,[data-theme="terminal"] .tile::after,[data-theme="terminal"] .stack-row::after,[data-theme="terminal"] .iss::after,[data-theme="terminal"] .cat-chip::after,[data-theme="terminal"] .school::after{box-shadow:0 0 0 1px var(--accent);border-radius:0;background:linear-gradient(var(--accent-soft),transparent 12%);opacity:0}
 [data-theme="terminal"] .nav-tile:hover::after,[data-theme="terminal"] .stack-row:hover::after,[data-theme="terminal"] .iss:hover::after,[data-theme="terminal"] .cat-chip:hover::after,[data-theme="terminal"] .school:hover::after{opacity:1}
@@ -2240,18 +1949,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 [data-theme="terminal"] .kinetic.go::after{content:"_";color:var(--accent);animation:vg-blink 1s steps(2,end) infinite}
 [data-theme="terminal"] .vg-content{animation:vg-fade 180ms steps(4,end) both}
 
-/* =======================================================================
-   REWARDS, AND THINGS THAT SHOULD NOT SIT STILL
-
-   Same rule as everything above: each of these has a job. The five jobs
-   are listed at the top of this file and nothing was added that did not
-   fit one of them.
-   =====================================================================*/
-
-/* ---- arrival: something you earned just landed -----------------------
-   The toast that announces a checkpoint. It drops in, settles, and throws
-   a ring outward once. The ring is a pseudo-element so it costs nothing
-   and cannot push the layout around. */
 .toast{animation:vg-land .5s cubic-bezier(.2,1.3,.4,1) both;position:relative}
 .toast::after{
   content:"";position:absolute;inset:-2px;border-radius:inherit;
@@ -2259,33 +1956,18 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
   animation:vg-ring-burst .9s ease-out .18s both}
 .toast .tic{animation:vg-pop .55s cubic-bezier(.2,1.5,.4,1) .1s both}
 
-/* An item that was locked last time you looked. The class is added by the
-   avatar screen only for things newly opened, so the reveal happens once
-   rather than every render. */
 .item.just-unlocked{animation:vg-pop .6s cubic-bezier(.2,1.5,.4,1) both}
 .item.just-unlocked::after{
   content:"";position:absolute;inset:0;border-radius:inherit;
   background:radial-gradient(circle at 50% 55%,var(--accent-soft),transparent 65%);
   opacity:0;animation:vg-burst .8s ease-out both;pointer-events:none}
 
-/* ---- the login banner ------------------------------------------------
-   A sign-in screen is looked at for longer than anyone admits, and it is
-   the one screen with nothing else happening on it. The card breathes on
-   a long cycle — slow enough that you notice it only if you look, which
-   is the difference between alive and restless. */
 .tip-banner.is-drifting{animation:vg-drift 9s ease-in-out infinite}
 .tip-banner.is-drifting:hover{animation-play-state:paused}
 
-/* ---- progress: a number that changed ---------------------------------
-   The aid simulator recomputes on every drag. Without this the figure
-   swaps silently and the connection between the dial and the answer is
-   lost, which is the entire lesson of that screen. */
 .sim-big{animation:vg-count .28s ease-out}
 .sim-part-amount,.ct-net{transition:color .2s ease}
 
-/* ---- ambient: the home grid -----------------------------------------
-   Tiles lift toward the pointer rather than on it, so the grid feels
-   like a surface rather than a list of links. */
 .nav-tile{transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
 .nav-tile:hover{transform:translateY(-3px) scale(1.012)}
 .nav-tile:active{transform:translateY(-1px) scale(.998)}
@@ -2306,12 +1988,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 }
 
 
-/* =======================================================================
-   REDUCED MOTION
-   Not a nicety. Vestibular disorders are common, and a breathing screen that
-   makes someone dizzy has failed at the one thing it exists to do. Everything
-   still changes state — it just stops moving to get there.
-   =====================================================================*/
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{
     animation-duration:.01ms!important;
@@ -2329,18 +2005,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
   .toast::after,.item.just-unlocked::after{animation:none!important;opacity:0!important}
   .nav-tile:hover,.sim-exp:hover{transform:none!important}
 }
-
-/* ---------------------------------------------------------------- profile
-   The readiness bars and the college band charts.
-
-   The band chart is the one piece of real data visualisation in the app: a
-   fixed 400-1600 (or 1-36) scale, the college's published middle-50% drawn as
-   a filled band on it, and the student's own score as a marker. The scale is
-   fixed rather than per-college so two colleges can be compared by eye.
-
-   Colour carries one meaning only — where the marker sits relative to the
-   band — and never decorates. Every state is also given a text label, because
-   a student who cannot distinguish the colours must still get the answer. */
 
 .rd-head{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;
   padding:var(--s4);border:1px solid var(--border);border-radius:var(--r-lg);
@@ -2416,22 +2080,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
   padding:var(--s2) 0;border-bottom:1px solid var(--border)}
 .step-n{font-weight:800;color:var(--accent-ink);min-width:1.4em}
 
-/* ======================================================================
-   THE ESSAY LAB
-
-   The old essay screen was a report with a text box in the middle of it.
-   Score, statistics, buttons, the writing, then four more cards of findings
-   below the fold — everything equally loud, and the one thing the student
-   was supposed to be doing had the least room on the page.
-
-   This is a workspace. The draft owns the left column and keeps it at every
-   width. Everything the engine has to say lives in one panel on the right,
-   behind tabs, so it is one glance away without ever being in the way. Below
-   1080px the panel becomes a slide-over, because at that width a second
-   column would squeeze the writing into a gutter — and the writing is the
-   point of the screen.
-   ====================================================================== */
-
 .screen-wrap.lab{max-width:1280px}
 
 /* ---- header ---------------------------------------------------------- */
@@ -2505,9 +2153,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
   .lab-coach{transition:none}
 }
 
-/* ---- next best edit -------------------------------------------------- */
-/* One thing, not a list. A student at 1am with twenty findings on screen
-   closes the tab; a student with one instruction does the thing. */
 .nbe{padding:var(--s4);border-radius:var(--r-md);
   background:var(--accent-soft);border:1px solid var(--accent)}
 .nbe-head{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s2)}
@@ -2533,19 +2178,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 .nbe[data-kind="done"]{background:var(--success-soft);border-color:var(--success)}
 .nbe[data-kind="done"] .nbe-tag{color:var(--success-ink)}
 
-/* ---- tabs ------------------------------------------------------------ */
-/* Five tabs that have to fit a column whose width is not ours to choose.
-   This was a flex row that scrolled sideways with the scrollbar hidden, so
-   on anything narrower than about 420px the last tabs were simply gone —
-   off the right edge, with nothing on screen to say they were there or that
-   the strip could be dragged.
-
-   A wrapping flex row instead, in two tidy rows: three tabs, then two. The
-   basis is a share of the width rather than a pixel count, so the split is
-   the same at every width the coach column is ever given — a pixel basis
-   re-flowed into 4 + 1, which put one tab alone on a row stretched across
-   the whole strip and looked like a mistake. Both rows fill the width,
-   nothing is hidden, and nothing has to be scrolled to be found. */
 .ct-row{display:flex;flex-wrap:wrap;gap:2px;padding:3px;
   border-radius:var(--r-md);background:var(--surface-3)}
 .ct{display:inline-flex;align-items:center;justify-content:center;gap:5px;
@@ -2554,9 +2186,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
   font-family:inherit;font-size:var(--fs-xs);font-weight:700;
   color:var(--text-dim);white-space:nowrap;
   transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
-/* The label gives way before the count does: a tab reading "Fix… 3" still
-   tells you both things, where one reading "Fixes" with the number clipped
-   off tells you half. */
 .ct-lbl{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .ct:hover{color:var(--text)}
 .ct[aria-pressed="true"]{background:var(--surface);color:var(--text);
@@ -2591,10 +2220,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 .dial-gate .dial-num{font-size:var(--fs-xl);color:var(--text-faint)}
 .dial-gate .dial-of{color:var(--text-faint)}
 
-/* ---- the five dimensions --------------------------------------------- */
-/* One number tells a student nothing they can act on. Five named numbers
-   tell them which part of the draft is the problem, and the weight beside
-   each tells them whether it is worth their evening. */
 .dims{display:flex;flex-direction:column;gap:var(--s3)}
 .dim{padding:var(--s3);border-radius:var(--r-sm);background:var(--surface-2);
   border:1px solid var(--border)}
@@ -2611,9 +2236,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 .dim[data-tone="weak"] .cp-bar i{background:var(--danger)}
 .dim[data-tone="weak"]{border-color:var(--danger)}
 
-/* ---- the story map --------------------------------------------------- */
-/* Five moves. Named, the shape is obvious; unnamed, it is the single most
-   common thing missing from a draft that "is not about anything". */
 .sm-list{display:flex;flex-direction:column;gap:var(--s2);margin-top:var(--s3)}
 .sm{display:flex;gap:var(--s3);padding:var(--s3);border-radius:var(--r-sm);
   background:var(--surface-2);border:1px solid var(--border);
@@ -2645,10 +2267,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 .sm[data-state="missing"] .sm-note{color:var(--text-dim)}
 .story-map .faint{font-size:var(--fs-sm);line-height:1.5}
 
-/* ---- draft journey --------------------------------------------------- */
-/* Three hours into a rewrite you cannot tell whether it is getting better.
-   This is the only part of the app that can answer that, because it is the
-   only part that remembers. */
 .journey{margin-top:var(--s5)}
 .jp-row{display:flex;align-items:flex-end;gap:var(--s3);overflow-x:auto;
   padding:var(--s4) 0 var(--s2);scrollbar-width:thin}
@@ -2697,14 +2315,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 .vg-live[data-state="early"]{color:var(--accent-ink)}
 .vg-live[data-state="over"]{color:var(--danger-ink)}
 
-/* ======================================================================
-   DEMO MODE
-
-   Shown only when no mail server is configured, which is the one state in
-   which a sign-in code has nowhere to go. It is a real reduction in
-   security, so it is styled as a warning and not as a hint: the whole
-   point is that nobody mistakes this build for a deployed one.
-   ====================================================================== */
 .demo-banner{margin-top:var(--s5);padding:var(--s4);border-radius:var(--r-md);
   border:2px dashed var(--warn);background:var(--warn-soft);text-align:center}
 .demo-tag{display:inline-block;padding:2px 10px;border-radius:var(--r-full);
@@ -2717,19 +2327,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
 .demo-banner.demo-slim{padding:var(--s3) var(--s4)}
 .demo-banner.demo-slim .demo-note{margin-top:var(--s2)}
 
-/* ======================================================================
-   THE PROMPT CHOOSER
-
-   Was an inline list that unrolled below the coach panel: eleven rows, each
-   truncated to 78 characters, appearing under the fold with no sign that
-   the click had done anything. On a stacked layout they landed at the very
-   bottom of the page.
-
-   Now a modal, because choosing a prompt is one decision that ends. The
-   backdrop is a SIBLING of the dialog, not its parent, so a click on the
-   dialog cannot bubble up and dismiss it — which is the usual bug in
-   hand-rolled modals.
-   ====================================================================== */
 .pp-backdrop{position:fixed;inset:0;z-index:90;
   background:color-mix(in srgb,var(--bg) 70%,transparent);
   backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
@@ -2795,12 +2392,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
   .pr{padding:var(--s3)}
 }
 
-/* ---- teen-usability pass on the Essay Lab -------------------------------
-   The page had roughly fifteen controls arranged around a text box, and the
-   most prominent of them said "I'm done!" while actually advancing a
-   coaching tip. These styles support moving that pair next to the tip, and
-   labelling the reaction strip so it stops looking like decoration. */
-
 /* the six writing tips, navigated where the tip is */
 .tip-row{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s3);
   padding-top:var(--s3);border-top:1px solid var(--border)}
@@ -2823,9 +2414,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
   .rx-label{writing-mode:horizontal-tb;transform:none;margin:0 0 4px}
 }
 
-/* ---- your numbers: GPA and test scores ---------------------------------
-   The engine has always read these; there was no form to type them into,
-   so every student was permanently told they had not entered a score. */
 .your-numbers{margin-bottom:var(--s5)}
 .num-head{margin-bottom:var(--s4)}
 .num-grid{display:grid;gap:var(--s4);
@@ -2843,11 +2431,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
   margin-top:var(--s5)}
 .num-saved{font-size:var(--fs-sm);font-weight:700;color:var(--success-ink)}
 
-/* ---- the password rules, ticked off as they are met --------------------
-   Five rules, shown before the student types rather than after they fail.
-   motion.js adds .ok to each item it is satisfied by; nothing here depends
-   on JavaScript having run, so with scripts off the list still reads as the
-   plain statement of the rule it is. */
 .pw-rules{list-style:none;margin:var(--s3) 0 0;padding:0;
   display:grid;gap:4px;font-size:var(--fs-xs);color:var(--text-faint)}
 .pw-rules li{display:flex;align-items:center;gap:var(--s2);line-height:1.4}
@@ -2859,10 +2442,6 @@ a,.tswatch{transition:color 200ms var(--mo-ease),transform 200ms var(--mo-pop)}
   .pw-rules li{transition:color .18s ease}
 }
 
-/* ---- closing the account ----------------------------------------------
-   Plain and unhurried on purpose. A red panel with a warning triangle
-   makes the step feel like an alarm to be dismissed; what it needs is to
-   be read. The only red is on the button that does it. */
 .danger-zone{display:grid;gap:var(--s3);margin-top:var(--s3)}
 .danger-zone .input{max-width:320px}
 .danger-actions{display:flex;gap:var(--s3);flex-wrap:wrap;margin-top:var(--s2)}

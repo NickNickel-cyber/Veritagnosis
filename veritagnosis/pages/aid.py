@@ -1,16 +1,3 @@
-"""
-Paying for college.
-
-Four tabs, in the order the year actually happens: the paperwork checklist,
-then what each college would really cost, then the scholarships, then the words
-nobody explains.
-
-The disclaimer at the top is not decoration and is not there to cover anyone.
-It is the honest limit: a program can hold the checklist and do the
-subtraction, and it cannot know a family's situation. Saying so plainly is more
-useful than pretending otherwise, and it points at the two people who can
-actually help — the school counsellor and the college's own aid office.
-"""
 
 from __future__ import annotations
 
@@ -300,12 +287,6 @@ def _sim_experiments() -> rx.Component:
 
 
 def _my_colleges() -> rx.Component:
-    """The same calculation, run against the list the student actually has.
-
-    Two figures per college rather than one: we have a cited sticker price for
-    each, but not its percent-of-need-met, and a single confident number built
-    on a guessed generosity is exactly the wrong thing to hand a family
-    working out whether they can afford this."""
     return rx.box(
         rx.heading("What your list would cost you", size="4",
                    style={"marginTop": "var(--s6)"}),
@@ -379,12 +360,6 @@ def _my_colleges() -> rx.Component:
 
 
 def _when() -> rx.Component:
-    """Where the student is in the FAFSA year.
-
-    Filing late is the most expensive ordinary mistake in this whole process,
-    because several states and many colleges award their own money until it
-    runs out. The app had no idea what month it was, so it could never say so
-    at the moment it mattered."""
     return rx.box(
         rx.box(
             rx.el.strong(AidState.fafsa_when["headline"]),

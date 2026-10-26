@@ -1,8 +1,3 @@
-"""
-Meditation and Graze — the two screens for stopping.
-
-Merged from: meditation, graze.
-"""
 from __future__ import annotations
 
 import reflex as rx
@@ -13,9 +8,7 @@ from veritagnosis.states.play_state import GrazeState
 from veritagnosis.ui import widgets as content
 
 
-# ====================================================================
 # meditation
-# ====================================================================
 
 def _technique_row(p: dict) -> rx.Component:
     """One of the stacked rows in the sketch — a whole technique per row."""
@@ -62,20 +55,7 @@ def meditation_page() -> rx.Component:
                 class_name="screen-head",
             ),
 
-            # Quotes about meditation. "kinetic" makes motion.js split the line
-            # into words so it assembles itself; tapping the card rerolls it,
-            # which replays the whole reveal.
             rx.box(
-                # `key` is the quote itself, and it is load-bearing.
-                #
-                # motion.js splits a .kinetic line into one span per word by
-                # rewriting the node's innerHTML. That node belongs to React,
-                # so when the text later changes React tries to patch a DOM
-                # that no longer matches the tree it remembers, and the line
-                # comes out empty — which is exactly what this card did.
-                # Keying on the text makes React discard the node and build a
-                # fresh one instead of patching, and motion.js then splits
-                # that. Remove this and the quote silently disappears.
                 rx.text(f'"{MeditationState.quote_text}"',
                         class_name="med-quote kinetic",
                         key=MeditationState.quote_text),
@@ -108,9 +88,6 @@ def meditation_page() -> rx.Component:
                 class_name="seg",
             ),
 
-            # the breathing stage. The animation is driven by a small script in
-            # assets/breathing.js — a timer that ticks 60 times a second belongs
-            # in the browser, not in round trips to the server.
             rx.box(
                 rx.box(class_name="breath-figure", id="breath-figure"),
                 rx.box(
@@ -134,9 +111,6 @@ def meditation_page() -> rx.Component:
                 style={"display": "flex", "gap": "var(--s2)",
                        "marginTop": "var(--s3)"},
             ),
-            # The browser script clicks this when the timer runs out. It is the
-            # handoff from the animation back to Python, where the sitting is
-            # logged and any checkpoint is awarded.
             rx.el.button(
                 "", id="breath-finish", type="button",
                 on_click=MeditationState.finish_session,
@@ -206,9 +180,7 @@ def meditation_page() -> rx.Component:
     )
 
 
-# ====================================================================
 # graze
-# ====================================================================
 
 THEME_BLURBS = [(k, v["name"], v["blurb"]) for k, v in content.THEMES.items()]
 

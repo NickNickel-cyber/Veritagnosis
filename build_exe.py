@@ -1,44 +1,4 @@
 #!/usr/bin/env python3
-"""
-Build Veritagnosis into one file your client double-clicks.
-
-    python build_exe.py
-
-Produces, depending on the machine you run it on:
-
-    Windows   dist/Veritagnosis.exe      one file, double-click it
-    macOS     dist/Veritagnosis.app      a normal Mac app, double-click it
-    Linux     dist/Veritagnosis          one file, run it
-
-The client needs nothing: no Python, no installing packages, no terminal. The
-result contains the interpreter, every dependency, the compiled web page and
-the college data. First launch creates their database and keys and opens their
-browser.
-
-Why there is no single file for both Windows and macOS
------------------------------------------------------
-There cannot be. A Windows executable is PE format and a macOS executable is
-Mach-O; no file is both. PyInstaller also bundles the interpreter it is run by,
-for the platform it is run on, and cannot cross-compile — so each platform's
-build must happen on that platform.
-
-You do not need a Mac for the Mac build. .github/workflows/build.yml runs this
-script on GitHub's own Windows and macOS runners and attaches both results to
-a release. Pushing a tag is the whole job.
-
-Caveats worth knowing
----------------------
-* The result is large (40-250MB) — a whole Python interpreter plus the frontend.
-* **Windows** warns on an unsigned exe the first time ("unknown publisher"):
-  More info -> Run anyway.
-* **macOS is stricter.** An unsigned, un-notarised app downloaded from the
-  internet is refused by Gatekeeper, and on Apple Silicon the wording is
-  "damaged and can't be opened" — which sounds like a corrupt download rather
-  than a policy decision. The user right-clicks the app and chooses Open, once.
-  Only an Apple Developer certificate removes that; the README spells it out.
-* Antivirus occasionally flags PyInstaller output on Windows. Set ONEFILE to
-  False for a folder build, which is misread less often.
-"""
 
 from __future__ import annotations
 
@@ -108,9 +68,6 @@ def main() -> int:
     if run([str(py), "-m", "pip", "install", "-q", "pyinstaller>=6.0"]) != 0:
         die("could not install PyInstaller.")
 
-    # ---- 2. the frontend ---------------------------------------------
-    # This is the step that needs Node, and the whole reason the client does
-    # not: the compiled frontend is baked into the exe.
     say("  [3/4] compiling the web frontend (a few minutes)")
     env = dict(os.environ)
     if shutil.which("npm"):
@@ -136,14 +93,6 @@ def main() -> int:
     args = [
         str(py), "-m", "PyInstaller", "--noconfirm", "--clean",
         "--name", NAME,
-        # macOS gets an .app bundle, which is a directory by definition and
-        # must be --windowed to be a real double-clickable app rather than
-        # something that opens a Terminal. Windows and Linux get one file with
-        # a console, because that console is where a startup error is readable
-        # and where the sign-in code appears when no email is configured.
-        #
-        # launch.py writes everything it says to veritagnosis.log as well, so
-        # the windowed Mac build is not silent when something goes wrong.
         *(["--onedir", "--windowed",
            "--osx-bundle-identifier", "app.veritagnosis.desktop"]
           if MAC else
@@ -152,10 +101,6 @@ def main() -> int:
         # under a web directory — launch.py points REFLEX_WEB_WORKDIR at it.
         f"--add-data={frontend}{sep}web/build/client",
         f"--add-data={ROOT / 'assets'}{sep}assets",
-        # rxconfig.py is read from the working directory at import time, so it
-        # has to be inside the bundle (launch.py chdir's there). Without it
-        # Reflex falls back to defaults and the CORS origins, db_url hook and
-        # Radix plugin configuration are all silently lost.
         f"--add-data={ROOT / 'rxconfig.py'}{sep}.",
         # Reflex and SQLModel find plenty at runtime that a static scan misses.
         "--collect-all", "reflex",
@@ -169,9 +114,6 @@ def main() -> int:
         "--hidden-import", "argon2",
         "--hidden-import", "cryptography",
     ]
-    # PyInstaller wants .icns on macOS and .ico on Windows; handed the wrong
-    # one it stops with an error rather than carrying on without an icon, so
-    # the platform picks and a missing file is simply skipped.
     icon = ROOT / "assets" / ("icon.icns" if platform.system() == "Darwin"
                               else "icon.ico")
     if icon.exists():

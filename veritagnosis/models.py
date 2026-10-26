@@ -1,21 +1,3 @@
-"""
-Database tables.
-
-Which columns are encrypted, and why:
-
-  encrypted   email, age, gender, gpa, test scores, school notes
-              Either legally sensitive (a minor's age and gender) or
-              embarrassing/competitively useful if a classmate read it.
-
-  plaintext   username, school names, application status, deadlines
-              Username has to be searchable and is semi-public anyway. School
-              names and deadlines are low-harm and are queried and sorted
-              constantly; encrypting them would mean decrypting every row to
-              sort by deadline, for very little gain.
-
-That line is a judgement call, and it is the one worth defending in a writeup:
-encrypt what would hurt, keep queryable what has to be queried.
-"""
 
 from __future__ import annotations
 
@@ -35,14 +17,6 @@ def utcnow() -> datetime:
 
 
 class UTCDateTime(TypeDecorator):
-    """Always store UTC, always read back timezone-aware.
-
-    SQLite has no datetime type — it stores a string and hands it back naive.
-    Comparing that to an aware `utcnow()` raises TypeError, and the tempting fix
-    (making everything naive) silently breaks the moment the app runs anywhere
-    but UTC. Normalising at the column boundary means no comparison anywhere
-    else has to think about it.
-    """
 
     impl = DateTime
     cache_ok = True
@@ -99,14 +73,6 @@ class User(SQLModel, table=True):
 
     theme: str = Field(default="serenity", max_length=20)
     avatar: str = Field(default="{}", max_length=512)   # JSON blob of part indexes
-    # Career, major, activities, deadline. Encrypted on the same rule as the
-    # rest: it is never queried or sorted across users, and what a student is
-    # into and how much of their life goes into it is exactly the sort of
-    # thing that would sting if a classmate read it.
-    # legacy_plaintext: this column shipped unencrypted and was encrypted
-    # afterwards, so databases created in between hold plaintext JSON here.
-    # Those rows are read as-is and re-encrypted on the next save.
-    # `python scripts/manage.py encrypt-profiles` converts them all at once.
     profile_data: str | None = Field(
         default=None,
         sa_column=Column(Encrypted("user.profile", legacy_plaintext=True)))
@@ -127,12 +93,6 @@ class User(SQLModel, table=True):
 
 
 class AuthSession(SQLModel, table=True):
-    """A logged-in session.
-
-    Only the SHA-256 of the token is stored, exactly like an API key: if the
-    database leaks, the rows cannot be replayed as valid sessions. The raw token
-    exists only in the user's cookie and briefly in memory at login.
-    """
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
@@ -156,10 +116,6 @@ class AuthSession(SQLModel, table=True):
 
 
 class EmailToken(SQLModel, table=True):
-    """Six-digit verification code from the wireframe.
-
-    Hashed, single-use, short-lived, and attempt-capped — otherwise a six-digit
-    code is a million guesses, which is nothing."""
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
@@ -170,18 +126,6 @@ class EmailToken(SQLModel, table=True):
 
 
 class LoginChallenge(SQLModel, table=True):
-    """A login that has passed the password and is waiting on the second factor.
-
-    This exists so that a correct password is never, on its own, a session.
-    Between the two steps the browser holds nothing but `handle` — 256 random
-    bits that mean nothing anywhere else. Notably it does NOT hold the user id:
-    the previous flow kept that in local storage, which told anyone reading the
-    browser's storage exactly whose account was part-way through signing in,
-    and let them point the verify step at any account they liked.
-
-    The row is single-use and attempt-capped, because six digits is only a
-    million guesses and an uncapped endpoint would exhaust that in an afternoon.
-    """
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
@@ -210,31 +154,6 @@ class LoginChallenge(SQLModel, table=True):
 
 
 class College(SQLModel, table=True):
-    """One institution, imported from the federal College Scorecard.
-
-    Why a table and not another Python list
-    ---------------------------------------
-    content/colleges.py holds two dozen colleges read by hand out of each
-    institution's own Common Data Set. That file is the right shape for data
-    somebody curates: it carries a source URL and a confidence per entry, and a
-    human can see the whole thing.
-
-    It is the wrong shape for every college in the country. There are about
-    6,500, a student's actual list is mostly not in the curated two dozen, and
-    nobody is going to hand-check six thousand entries — so those come from the
-    US Department of Education's College Scorecard and live here, where they can
-    be searched with a query instead of a linear scan through a module.
-
-    Both are kept. A lookup prefers the curated entry when one exists, because
-    a number read out of the institution's own CDS beats the same number
-    averaged into a federal release a year later. Scorecard rows are marked
-    `confidence="medium"` for exactly that reason, and they carry the real
-    Scorecard URL for the institution so the screen can still answer "where did
-    this come from".
-
-    Field names match the curated dicts on purpose, so insight.py and money.py
-    treat the two sources identically.
-    """
 
     id: int | None = Field(default=None, primary_key=True)
 
@@ -298,23 +217,13 @@ class School(SQLModel, table=True):
     status: AppStatus = Field(default=AppStatus.not_started)
     deadline: datetime | None = Field(default=None, sa_column=Column(UTCDateTime))
 
-    # 0-100, drives the ring. NOT typed in by the student any more — it is
-    # recomputed from the actual work (services/progress.py) every time the
-    # screen loads. Kept as a column so the home screen and the achievements
-    # can read a school's progress without re-running the whole calculation.
     progress: int = Field(default=0)
     notes: str | None = Field(default=None, sa_column=Column(Encrypted("school.notes")))
 
-    # What this particular college asks for. Different schools want different
-    # numbers of essays and letters, and the progress calculation has to know
-    # which, or "recommenders done" means nothing.
     essays_required: int = Field(default=1)
     recs_required: int = Field(default=2)
     submitted_at: datetime | None = Field(default=None, sa_column=Column(UTCDateTime))
 
-    # Which round. This is not cosmetic: Early Decision is binding, and a
-    # student holding two ED applications has a real problem the app should
-    # notice rather than a preference it should store quietly.
     round: str = Field(default="regular", max_length=12)   # ed | ed2 | ea | rea | regular | rolling
 
     # Money. Encrypted — what a family can afford is nobody else's business,
@@ -335,12 +244,6 @@ class TestScore(SQLModel, table=True):
 
 
 class Essay(SQLModel, table=True):
-    """A draft the student is writing, with the coach's position in it.
-
-    `body` is encrypted: an application essay is the most personal thing this
-    app holds. `step` is which piece of coaching they are on, so the guide
-    picks up where they left off instead of starting over.
-    """
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
@@ -358,11 +261,6 @@ class Essay(SQLModel, table=True):
 
 
 class Recommender(SQLModel, table=True):
-    """A teacher or counsellor being asked for a letter.
-
-    Name and note are encrypted — who a student asked, and what they said about
-    them, is gossip if it leaks.
-    """
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
@@ -375,9 +273,6 @@ class Recommender(SQLModel, table=True):
     # When the student decided to chase this one up. Set by hand or suggested
     # by the screen; nothing is emailed, it only surfaces on the list.
     follow_up_on: datetime | None = Field(default=None, sa_column=Column(UTCDateTime))
-    # The letter is due for these colleges. Stored as a comma-separated list of
-    # school ids: a join table for at most a handful of ids per person would be
-    # more machinery than the problem deserves.
     school_ids: str = Field(default="", max_length=200)
 
 
@@ -403,21 +298,7 @@ class AuditLog(SQLModel, table=True):
     ok: bool = Field(default=True)
 
 
-
-# ---------------------------------------------------------------------------
-# Roadmap progress. The checkpoints themselves are content, not data --
-# they live in content/meditation.py, the same for every student -- so only
-# the *reaching* of one is stored here. The roadmap can be rewritten or
-# reordered without a database migration.
-# ---------------------------------------------------------------------------
-
 class CheckpointProgress(SQLModel, table=True):
-    """Which roadmap checkpoints a student has reached.
-
-    The checkpoints themselves are content, not data — they live in
-    content/meditation.py and are the same for everyone. Only the *reaching* of
-    one is per-user, so only that is stored.
-    """
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
@@ -427,17 +308,6 @@ class CheckpointProgress(SQLModel, table=True):
 
 
 class EssayVersion(SQLModel, table=True):
-    """A saved snapshot of a draft.
-
-    Undo covers the last change. This covers the other kind of regret: the one
-    where you rewrote the whole middle section yesterday and now want the old
-    version back. Students edit their personal statement thirty or forty times
-    over three months, and without this there is no way back to a paragraph
-    they deleted in week two.
-
-    The body is encrypted exactly like the live draft, because a snapshot of a
-    personal essay is every bit as personal as the essay.
-    """
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
@@ -450,13 +320,6 @@ class EssayVersion(SQLModel, table=True):
 
 
 class Scholarship(SQLModel, table=True):
-    """One scholarship the student is chasing.
-
-    Separate from School because most scholarships are not attached to a
-    college — they are local, corporate, or from a foundation, and they are the
-    part of paying for college that students most often never get round to.
-    A named list with deadlines is most of the battle.
-    """
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
@@ -470,12 +333,6 @@ class Scholarship(SQLModel, table=True):
 
 
 class AidTask(SQLModel, table=True):
-    """A step in the financial aid paperwork, ticked off by the student.
-
-    The steps themselves are content (content/aid.py), the same for everyone,
-    so only the *doing* of one is stored — the same pattern as the meditation
-    roadmap and the checkpoints.
-    """
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)
@@ -484,12 +341,6 @@ class AidTask(SQLModel, table=True):
 
 
 class CalmLog(SQLModel, table=True):
-    """One finished session on a stress screen — the game or the tap screen.
-
-    Deliberately the same shape as MeditationLog rather than reusing it: these
-    are a different kind of break, and mixing them would corrupt the meditation
-    streak that several checkpoints depend on.
-    """
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)

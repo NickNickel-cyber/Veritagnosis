@@ -1,9 +1,3 @@
-"""
-Checkpoints, meditation and breaks — the parts of the app that
-are about the person rather than the application.
-
-Merged from: achievements, meditation, breaks.
-"""
 from __future__ import annotations
 
 import dataclasses
@@ -19,9 +13,7 @@ from veritagnosis.ui.widgets import PATTERNS
 from veritagnosis.models import CalmLog, User, utcnow
 
 
-# ====================================================================
 # achievements
-# ====================================================================
 
 @dataclasses.dataclass
 class Badge:
@@ -39,11 +31,6 @@ class Badge:
 
 
 def full_sentences(text: str) -> int:
-    """Finished sentences: at least three words and closing punctuation.
-
-    "Hi." is not a first sentence and neither is half a thought still being
-    typed, so the first-sentence checkpoint waits for a real one.
-    """
     n = 0
     for _, _, sent in prose.sentences(text or ""):
         t = sent.strip()
@@ -146,12 +133,6 @@ def reached_keys(session: Session, user_id: int) -> set[str]:
 
 
 def award(session: Session, user_id: int, stats: dict | None = None) -> list[dict]:
-    """Write down anything newly earned and pay out its XP.
-
-    Returns the achievements that are new *this call*, so the screen can
-    celebrate them. Safe to call as often as you like: anything already
-    recorded is skipped, so no XP is ever paid twice.
-    """
     if stats is None:
         stats = gather(session, user_id)
 
@@ -190,9 +171,6 @@ def board(session: Session, user_id: int, stats: dict | None = None) -> list[Bad
               percent=100 if a["key"] in reached else content.progress_to(a, stats))
         for a in content.ACHIEVEMENTS
     ]
-    # Category order, then earned ones first inside each category so the board
-    # reads as a record of what you have done rather than a list of what you
-    # have not.
     badges.sort(key=lambda b: (order.get(b.cat, 99), not b.reached, -b.percent))
     return badges
 
@@ -210,9 +188,7 @@ def totals(session: Session, user_id: int) -> dict:
     }
 
 
-# ====================================================================
 # meditation
-# ====================================================================
 
 OPTIONS = [
     {"key": "calm", "title": "Calm meditation",
@@ -279,9 +255,7 @@ def patterns() -> list[dict]:
     return PATTERNS
 
 
-# ====================================================================
 # breaks
-# ====================================================================
 
 XP_PER_MINUTE = 6
 XP_CAP = 150

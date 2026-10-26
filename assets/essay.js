@@ -7,32 +7,6 @@
   var el = function (id) { return document.getElementById(id); };
   var editor = function () { return document.getElementById('vg-editor'); };
 
-  /* ==================================================================== 1
-     READ ALOUD
-
-     Uses the speech synthesiser built into the browser, so there is no
-     network call and the essay never leaves the machine — which matters, this
-     being the most personal thing the app holds.
-  ==================================================================== */
-  /* Four separate things were stopping this from making any sound.
-
-     One: the whole essay went in as a single utterance. Chrome quietly gives
-     up on long ones and cuts off after about fifteen seconds anyway, so an
-     essay — which is the only thing anybody would press this on — was exactly
-     the case that failed. It is now read a sentence at a time.
-
-     Two: cancel() and speak() were called in the same tick. Chrome swallows
-     the speak when you do that. Now nothing is cancelled unless something is
-     actually talking, and the restart waits a beat.
-
-     Three: the voice list is empty until the browser has loaded it, which on
-     a first visit happens after this code runs. It is warmed up below and
-     re-read when the browser says it has changed.
-
-     Four: when it failed it failed silently. The button said "Stop" and no
-     sound came out, and there was no way to tell whether the app was broken
-     or the machine had no voices. It now says so. */
-
   var speaking = false;
   var queue = [], qi = 0, resumeTimer = null, startCheck = null;
   var voice = null, voicesReady = false;
@@ -105,9 +79,6 @@
     setReadLabel(false);
   }
 
-  /* Split on sentence ends, then break anything still too long on a comma or
-     a space. Short pieces are what keep Chrome from cutting out, and they also
-     make the pauses fall where a reader would put them. */
   function chunk(text) {
     var parts = String(text).replace(/\s+/g, ' ').trim()
                   .match(/[^.!?]+[.!?]*\s*/g) || [];
@@ -187,9 +158,6 @@
     }
     if (speaking) { stopSpeech(); return; }
 
-    /* Read the selection if there is one — being able to check a single
-       awkward paragraph is more useful than only ever hearing the whole
-       thing. */
     var text = '';
     if (box.selectionStart !== box.selectionEnd) {
       text = box.value.substring(box.selectionStart, box.selectionEnd);
@@ -201,10 +169,6 @@
     var pieces = chunk(text);
     if (!pieces.length) return;
 
-    /* Speaking straight out of the click keeps the browser's "the user asked
-       for this" permission intact. Only when something is already talking do
-       we cancel, and then the restart waits a beat, because cancelling and
-       speaking in the same tick is what silences Chrome. */
     var ss = window.speechSynthesis;
     if (ss.speaking || ss.pending) {
       try { ss.cancel(); } catch (e) {}
@@ -216,13 +180,6 @@
     }
   }
 
-  /* ==================================================================== 2
-     FOCUS MODE
-
-     Dims everything that is not the words. The score, the problem list and the
-     chips are useful when editing and actively harmful when drafting — you
-     cannot write a first draft while something counts your mistakes.
-  ==================================================================== */
   function toggleFocus(force) {
     var root = document.querySelector('.vg-app');
     if (!root) return;
@@ -239,13 +196,6 @@
     if (on) { var e = editor(); if (e) e.focus(); }
   }
 
-  /* ==================================================================== 3
-     SPRINT
-
-     A countdown with one rule: no editing, no deleting, just get words down.
-     Perfectionism is what stops people finishing a first draft, and a running
-     clock is the cheapest known cure.
-  ==================================================================== */
   var sprint = { end: 0, timer: null, startWords: 0 };
 
   function wordCount() {
@@ -310,9 +260,6 @@
     if (save) save.click();
   }
 
-  /* ==================================================================== 5
-     WIRING — one delegated listener, so React can re-render freely.
-  ==================================================================== */
   document.addEventListener('click', function (e) {
     var t = e.target;
     if (!t || !t.closest) return;

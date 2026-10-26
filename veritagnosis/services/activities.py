@@ -1,43 +1,9 @@
-"""
-Scoring a student's activities for the readiness profile.
-
-Each activity on the profile has a name the student typed, an intensity
-(light / moderate / intense), a number of years and a leadership star. This
-turns those into one 0-100 score and says, in plain words, what counted.
-
-What moves the number, and why
-------------------------------
-Admissions readers say the same thing in every guide they publish: depth over
-breadth. A few things done for years, seriously, with some responsibility,
-read better than a long list of one-off sign-ups. So:
-
-  - Intensity and years are the base. Three years of something intense is
-    worth far more than one year of something light.
-  - Leadership counts once per activity, whether the student starred it or
-    the name says so ("captain", "president", "founder"...).
-  - An organized group ("club", "team", "society", "band"...) counts a little:
-    it means showing up for other people on a schedule.
-  - A high-commitment kind of activity ("varsity", "internship", "research",
-    "job", "volunteer", "competition"...) counts a little more.
-  - Words that say the opposite ("casual", "sometimes", "for fun",
-    "watching"...) take points off that activity.
-  - The strongest activities carry the most weight; the fifth and later add
-    very little. And a long list that is mostly light, with no leadership,
-    is marked down as spread thin.
-
-None of these are statistics. They are the shape of the advice, turned into a
-score a student can move by doing something real, and every point is shown
-next to the activity that earned it.
-"""
 
 from __future__ import annotations
 
 import dataclasses
 import json
 import re
-
-# ---------------------------------------------------------------- signals
-# Matched as whole words against the activity's name, case-insensitively.
 
 LEADERSHIP = [
     "president", "vice president", "vp", "captain", "co-captain", "founder",

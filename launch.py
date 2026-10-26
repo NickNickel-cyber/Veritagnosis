@@ -1,36 +1,3 @@
-"""
-What runs when your client double-clicks Veritagnosis.
-
-This is the entry point PyInstaller packages (see build_exe.py). A packaged app
-has to do four things the development launcher does not:
-
-1. **Keep data outside itself.** A one-file executable unpacks into a temporary
-   directory the operating system deletes on exit. Anything written relative to
-   the code — the database, the keys — would vanish when the window closed, and
-   the next launch would look like a fresh install. So before importing any of
-   the app, VG_BASE_DIR is pointed at the folder the executable sits in.
-
-2. **Serve the web page and the backend from one process.** There is no Node in
-   the bundle and no second process. Reflex supports exactly this:
-   REFLEX_MOUNT_FRONTEND_COMPILED_APP makes it mount the compiled frontend into
-   its own ASGI app. That is used here rather than mounting static files by
-   hand — the hand-rolled version worked for pages and silently broke every
-   interaction, because the thing that has to be served is not just the files
-   but Reflex's whole route table in the right order.
-
-   One port serves both, so it must be the port the frontend was built to talk
-   to (rxconfig.py's api_url).
-
-3. **Run the app WITH its lifespan.** `app()` returns the real ASGI
-   application: a wrapper whose lifespan starts Reflex's event processor.
-   Serving the inner `app._api` instead starts a server that accepts websocket
-   connections and then raises "Event processor is not initialized" on every
-   event — the page renders, nothing responds, and nothing in the browser says
-   why. That was this file's first version.
-
-4. **Make its own keys and database, and open a browser**, because nobody is
-   going to run a setup command or type a URL.
-"""
 
 from __future__ import annotations
 
@@ -57,15 +24,6 @@ def bundle_dir() -> Path:
 
 
 def _beside_the_app() -> Path:
-    """The folder the user sees the program in.
-
-    On Windows that is simply the folder holding the .exe. On macOS the
-    executable lives at Veritagnosis.app/Contents/MacOS/Veritagnosis, so the
-    folder the user actually sees is three levels up — writing "beside the
-    executable" there would put the student's database INSIDE the application
-    bundle, where it is lost the moment the app is replaced and may not be
-    writable at all.
-    """
     exe = Path(sys.executable).resolve()
     if not frozen():
         return Path(__file__).resolve().parent
@@ -89,15 +47,6 @@ def _user_data_dir() -> Path:
 
 
 def home_dir() -> Path:
-    """Where this install keeps its data.
-
-    Beside the program when that folder can be written to — it keeps the whole
-    thing portable and visible, which is what someone who was handed a single
-    file expects. When it cannot be (an app in /Applications, an exe in
-    Program Files, a read-only disk image, a USB stick mounted read-only) it
-    falls back to the per-user location the platform expects, because the
-    alternative is an app that will not start and cannot say why.
-    """
     beside = _beside_the_app()
     try:
         beside.mkdir(parents=True, exist_ok=True)
@@ -111,26 +60,16 @@ def home_dir() -> Path:
         return fallback
 
 
-# ---------------------------------------------------------------------------
 # This block must run before anything from veritagnosis is imported: config.py
 # reads VG_BASE_DIR at import time to decide where the database lives.
-# ---------------------------------------------------------------------------
 HOME = home_dir()
 BUNDLE = bundle_dir()
 os.environ.setdefault("VG_BASE_DIR", str(HOME))
 (HOME / "data").mkdir(parents=True, exist_ok=True)
 
-# The frontend was built expecting the backend at this port (rxconfig.py's
-# api_url). Serving on any other port would load the page and then fail every
-# interaction, which looks like the app is broken rather than busy.
 PORT = 8000
 
 
-# A macOS .app built with --windowed has no console: stdout goes nowhere and
-# sys.stdout may even be None. Everything said here is also appended to a log
-# file so that a failure is recoverable rather than invisible, and so the
-# sign-in code is retrievable when there is no email configured and no window
-# to print it in.
 _LOG: Path | None = None
 
 
@@ -210,11 +149,6 @@ def ensure_env() -> None:
 
 
 def ensure_colleges() -> None:
-    """Copy the bundled college catalogue in on first run.
-
-    Shipped as a separate seed file and copied rather than used in place,
-    because the bundle is read-only and thrown away on exit.
-    """
     seed = BUNDLE / "data" / "colleges.seed.db"
     target = HOME / "data" / "veritagnosis.db"
     if not seed.exists() or target.exists():
@@ -278,32 +212,12 @@ def main() -> int:
         pass
     os.environ["REFLEX_WEB_WORKDIR"] = str(web)
 
-    # Reflex resolves several things relative to the CURRENT DIRECTORY, not to
-    # where its code lives: rxconfig.py, the assets folder named in
-    # App(stylesheets=...), and the .web directory. On a client's machine the
-    # current directory is wherever they put the executable, and it contains
-    # nothing but the executable — so compiling died on
-    # "The stylesheet file .../assets/theme.css does not exist", and rxconfig.py
-    # was never read at all (which silently dropped the Radix plugin config).
-    #
-    # Working from inside the bundle fixes all of those at once. Everything the
-    # student's data touches is given an absolute path below, so moving the
-    # working directory cannot move their essays into a temporary folder.
     if frozen():
         os.chdir(BUNDLE)
 
-    # rxconfig.py sets db_url to the RELATIVE "sqlite:///data/veritagnosis.db",
-    # and db.py prefers Reflex's db_url over its own path — so after the chdir
-    # above the database would be created inside the bundle's temporary
-    # directory and deleted on exit. This is the hook rxconfig.py already reads.
     os.environ.setdefault("VG_DB_URL",
                           f"sqlite:///{(HOME / 'data' / 'veritagnosis.db')}")
 
-    # Not an environment variable. Reflex declares this one internal — its real
-    # name is "__REFLEX_MOUNT_FRONTEND_COMPILED_APP" — so setting the obvious
-    # name does nothing at all, silently, and the frontend simply is not
-    # mounted: every page 404s while /ping answers fine. Reflex's own CLI sets
-    # it through this same call.
     from reflex.config import environment
     environment.REFLEX_MOUNT_FRONTEND_COMPILED_APP.set(True)
 
@@ -313,12 +227,6 @@ def main() -> int:
 
     from veritagnosis.veritagnosis import app
 
-    # No explicit _compile() — app() does it. Calling both compiled the whole
-    # app twice on every launch, which doubled a slow startup for nothing.
-    #
-    # app() — not app._api. The returned wrapper owns the lifespan that starts
-    # the event processor; without it every interaction fails. See the note at
-    # the top of this file.
     asgi = app()
 
     say("  ----------------------------------------------------------")

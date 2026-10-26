@@ -1,19 +1,3 @@
-"""
-Sending the verification code by email, through Gmail.
-
-Gmail will not accept your normal password from a program. You create an
-"App password" instead — a 16-character code Google generates for one app,
-which you can revoke without changing your real password. It requires 2-Step
-Verification to be on for your Google account.
-
-  1. Google Account -> Security -> turn on 2-Step Verification
-  2. Google Account -> Security -> App passwords
-  3. Name it "Veritagnosis", copy the 16 characters
-  4. Put it in .env as VG_SMTP_PASSWORD (spaces are fine, they get stripped)
-
-With nothing configured the app still works: the code prints to the terminal,
-exactly as before. Nothing breaks, you just do the copying yourself.
-"""
 
 from __future__ import annotations
 
@@ -79,24 +63,12 @@ def _html(code: str, minutes: int) -> str:
 
 
 def send_verification_code(to_email: str, code: str, minutes: int = 15) -> bool:
-    """Send the code. Returns True if it was emailed, False if it was only
-    printed to the terminal because email isn't set up.
-
-    Raises MailError when email IS set up but the send failed — the student is
-    waiting on a message that will never arrive, so that must not be silent.
-    """
     if not is_configured():
         print(f"\n[veritagnosis] email not configured — code for {to_email}: {code}\n")
         return False
 
     msg = EmailMessage()
     msg["Subject"] = f"{code} is your Veritagnosis code"
-    # The display name is always "Veritagnosis", whatever account is doing the
-    # sending. A student receiving a code should see the app's name, not
-    # whoever's mailbox it happens to be relayed through — and if
-    # VG_MAIL_FROM_NAME is ever left blank or misconfigured, falling back to a
-    # personal email address in the From line would be a small privacy leak
-    # rather than a cosmetic bug.
     msg["From"] = f"{config.mail_from_name() or 'Veritagnosis'} <{config.smtp_user()}>"
     # Replies go to the sending account rather than nowhere, so a confused
     # student hitting reply reaches a human.

@@ -1,20 +1,3 @@
-"""
-Profile: what the student has told us, and what it adds up to.
-
-The order of this screen is the argument it makes. The numbers come first,
-because a student who opens this wants to know where they stand, not to fill
-in a form. The form is underneath, framed as the thing that sharpens the
-numbers above it.
-
-The loudest element on the page is the mislabel warning: a college the student
-has written "safety" beside that its own published data says is a reach. That
-is a specific, expensive, extremely common mistake, and it is the one thing
-here that genuinely justifies raising a student's pulse.
-
-Every published figure is shown with its source and year attached. Nothing on
-this screen is a number the app made up, and there is deliberately no
-"chance of admission" anywhere in it — see services/fit.py for why.
-"""
 
 from __future__ import annotations
 
@@ -40,7 +23,6 @@ def _pick(label: str, selected, handler) -> rx.Component:
     )
 
 
-# ---------------------------------------------------------------- readiness
 def _dim(d) -> rx.Component:
     """One readiness dimension: label, bar, number, and why."""
     return rx.box(
@@ -72,7 +54,6 @@ def _readiness() -> rx.Component:
     )
 
 
-# --------------------------------------------------------------- the bands
 def _band(f) -> rx.Component:
     """The published middle-50% drawn on a fixed scale, with the student on it."""
     return rx.box(
@@ -104,10 +85,6 @@ def _fix_button(f, key: str) -> rx.Component:
 
 
 def _unmatched(f) -> rx.Component:
-    """A name on the list that is not a college the catalogue knows.
-
-    Says plainly what to do: pick the full name, or re-add it with one. One
-    tap renames the row, and the card fills with that college's data."""
     return rx.cond(
         f["sug1"] != "",
         rx.box(
@@ -213,7 +190,6 @@ def _where_you_stand() -> rx.Component:
     )
 
 
-# ------------------------------------------------------- gaps and next steps
 def _spot(b) -> rx.Component:
     return rx.box(
         rx.box(b["icon"], class_name="spot-i"),
@@ -262,12 +238,6 @@ def _steps() -> rx.Component:
 
 def _num_field(label: str, hint: str, value, problem, handler,
                placeholder: str) -> rx.Component:
-    """One number the student types about themselves.
-
-    The problem line appears while they type rather than after they save,
-    because a GPA of 45 silently dropped by the parser is indistinguishable
-    from one that was never entered.
-    """
     return rx.box(
         rx.el.label(label),
         rx.el.input(
@@ -285,14 +255,6 @@ def _num_field(label: str, hint: str, value, problem, handler,
 
 
 def _your_numbers() -> rx.Component:
-    """GPA and test scores.
-
-    These drive the fit bands and the readiness score, and have done since
-    that engine was written — student_stats() reads user.gpa and the TestScore
-    rows, and every comparison on this screen uses them. There was just nowhere
-    to type them, so the app told every student, permanently, that they had not
-    entered a score. This is that missing form.
-    """
     return rx.box(
         rx.box(
             rx.heading("Your numbers", size="4"),
@@ -326,7 +288,6 @@ def _your_numbers() -> rx.Component:
     )
 
 
-# ------------------------------------------------------------- the form
 def _ec_row(ec, index) -> rx.Component:
     is_lead = ec["leadership"] == "yes"
     return rx.box(
@@ -464,9 +425,6 @@ def profile_page() -> rx.Component:
                        style={"marginBottom": "var(--s4)"}),
                 rx.fragment(),
             ),
-            # Before the readiness panel on purpose: every number in it is
-            # computed from this form, so a student who has not filled it in
-            # should meet the inputs first rather than a score of zero.
             _your_numbers(),
             _readiness(),
             _where_you_stand(),
