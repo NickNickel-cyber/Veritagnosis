@@ -43,7 +43,7 @@ jobs:
             artifact: Veritagnosis-macOS.zip
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 3.12 rather than the newest: the pinned wheels in requirements.txt all
       # have builds for it, which is the whole point of pinning them.
