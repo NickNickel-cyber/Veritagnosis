@@ -34,7 +34,7 @@ uvicorn==0.54.0
 
 # --- security ---
 argon2-cffi==25.1.0        # Argon2id password hashing (OWASP first choice)
-cryptography==50.0.1       # AES-256-GCM field encryption
+cryptography==50.0.2       # AES-256-GCM field encryption
 python-dotenv==1.2.3       # load secrets from .env, never from source
 
 # --- data ---
