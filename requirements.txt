@@ -38,7 +38,7 @@ cryptography==50.0.1       # AES-256-GCM field encryption
 python-dotenv==1.2.3       # load secrets from .env, never from source
 
 # --- data ---
-sqlmodel==0.0.42           # SQLAlchemy + Pydantic; parameterised queries by default
+sqlmodel==0.0.48           # SQLAlchemy + Pydantic; parameterised queries by default
 
 # --- optional: whole-file SQLite encryption ---
 # Prebuilt wheels including Windows, so no compiler needed.
