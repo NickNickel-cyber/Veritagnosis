@@ -54,7 +54,7 @@ jobs:
       # Reflex compiles the web page with Node. Both runners have it, but
       # pinning the major version keeps a surprise upgrade from breaking a
       # release build.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
 
