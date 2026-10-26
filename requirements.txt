@@ -19,7 +19,7 @@
 
 # --- app framework ---
 reflex==0.9.9
-reflex-components-lucide==1.0.4
+reflex-components-lucide==1.1.0
 reflex-components-radix==0.9.8
 reflex-components-core==0.9.9
 
