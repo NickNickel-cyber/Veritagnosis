@@ -47,7 +47,7 @@ jobs:
 
       # 3.12 rather than the newest: the pinned wheels in requirements.txt all
       # have builds for it, which is the whole point of pinning them.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
